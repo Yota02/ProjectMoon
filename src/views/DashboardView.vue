@@ -1,393 +1,178 @@
 <template>
-  <div class="view-container">
-    <div class="dashboard-header">
-      <div class="header-main">
-        <h1>COMMAND CENTER</h1>
-        <div class="mission-timer">
-          <span class="label">MISSION ELAPSED:</span>
-          <span class="value">D-{{ missionDays }} {{ missionTime }}</span>
-        </div>
-      </div>
-      <p class="description">Aperçu stratégique de la base lunaire Project Moon.</p>
-    </div>
+  <div class="p-6 lg:p-10 space-y-6 max-w-7xl mx-auto w-full">
     
-    <div class="dashboard-content">
-      <!-- Section Ressources -->
-      <section class="dashboard-section">
-        <ResourceDashboard />
-      </section>
+    <!-- Indicateurs Clés (KPIs) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <StatCard 
+        title="Fonds Disponibles" 
+        :value="formatCurrency(resourceStore.argent)" 
+        icon="coins" 
+        color-class="bg-emerald-400" 
+        icon-color-class="text-emerald-400"
+        trend="+12% (visée)"
+      />
+      <StatCard 
+        title="Points de Science" 
+        :value="resourceStore.science" 
+        icon="flask" 
+        color-class="bg-blue-400" 
+        icon-color-class="text-blue-400"
+        trend="+45 (généré)"
+      />
+      <StatCard 
+        title="Réputation Globale" 
+        value="87 / 100" 
+        icon="star" 
+        color-class="bg-yellow-400" 
+        icon-color-class="text-yellow-400"
+      />
+      <StatCard 
+        title="Charge Utile Orbite" 
+        value="142 Tonnes" 
+        icon="globe" 
+        color-class="bg-indigo-400" 
+        icon-color-class="text-indigo-400"
+      />
+    </div>
 
-      <!-- Section Graphiques -->
-      <div class="charts-grid">
-        <div class="chart-card">
-          <div class="chart-header">
-            <h3>📊 Répartition du Personnel</h3>
-            <span class="total">Total: {{ totalPersonnel }}</span>
-          </div>
-          <DashboardChart 
-            type="doughnut" 
-            :chart-data="staffChartData" 
-            :options="commonChartOptions"
-          />
-        </div>
-
-        <div class="chart-card">
-          <div class="chart-header">
-            <h3>📈 Capacité de Production</h3>
-            <span class="unit">units/sec</span>
-          </div>
-          <DashboardChart 
-            type="bar" 
-            :chart-data="productionChartData" 
-            :options="productionChartOptions"
-          />
-        </div>
-      </div>
-
-      <!-- Section Actions & Logs -->
-      <div class="bottom-grid">
-        <div class="quick-links">
-          <h3>RACCOURCIS SYSTÈME</h3>
-          <div class="links-container">
-            <router-link to="/personnel" class="quick-link-card">
-              <span class="icon">👨‍🚀</span>
-              <div class="text">
-                <h4>Personnel</h4>
-                <p>Gestion des effectifs</p>
-              </div>
-            </router-link>
-            
-            <router-link to="/missions" class="quick-link-card">
-              <span class="icon">🚀</span>
-              <div class="text">
-                <h4>Missions</h4>
-                <p>Lancements & Exploration</p>
-              </div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Colonne Gauche (Missions & Contrats) -->
+      <div class="lg:col-span-2 space-y-6">
+        
+        <!-- Mission Actuelle -->
+        <section>
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-lg font-bold flex items-center gap-2">
+              <div class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div> 
+              Missions Principales
+            </h3>
+            <router-link to="/missions" class="text-blue-400 hover:text-blue-300 text-sm hover:underline">
+              Gérer les missions
             </router-link>
           </div>
-        </div>
-
-        <div class="recent-logs">
-          <h3>LOGS DE MISSION RÉCENTS</h3>
-          <div class="logs-container">
-            <div v-if="allLogs.length === 0" class="no-logs">Aucun signal détecté...</div>
-            <div 
-              v-for="(log, index) in allLogs.slice(0, 5)" 
-              :key="index" 
-              class="log-entry"
-              :class="{ 'error': log.message.includes('[ERREUR]'), 'success': log.message.includes('[SUCCÈS]') }"
-            >
-              <span class="log-time">[{{ log.temps }}]</span>
-              <span class="log-msg">{{ log.message }}</span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <ActiveMissionCard 
+              name="Projet Artemis V"
+              description="Établissement base lunaire"
+              status="En cours"
+              time-left="14 Jours"
+              phase="Préparation de la charge utile"
+              :progress="82"
+              launcher="SuperHeavy-04"
+            />
+            <div class="bg-slate-800/30 border border-slate-700/50 border-dashed rounded-xl p-5 flex flex-col items-center justify-center text-slate-500 hover:bg-slate-800/50 hover:text-slate-300 transition-colors cursor-pointer group">
+              <div class="bg-slate-800 p-3 rounded-full mb-3 group-hover:scale-110 transition-transform">
+                <BaseIcon name="plus" :size="24" />
+              </div>
+              <span class="font-medium">Planifier une nouvelle mission</span>
+              <span class="text-xs mt-1">Fenêtres de tir : Mars, Vénus, Lune</span>
             </div>
           </div>
-        </div>
+        </section>
+
+        <!-- Contrats -->
+        <section class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+          <div class="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800/80">
+            <h3 class="font-bold flex items-center gap-2">
+              <BaseIcon name="coins" :size="18" class="text-yellow-500" />
+              Contrats Disponibles
+            </h3>
+            <span class="bg-slate-700 text-xs px-2 py-1 rounded font-mono">3 offres</span>
+          </div>
+          <div class="p-2">
+            <ContractItem 
+              v-for="mission in missionStore.missions"
+              :key="mission.id"
+              :title="mission.name" 
+              type="Orbite Géosynchrone (GEO)" 
+              :reward="formatReward(mission.cost.argent * 2.5)" 
+              danger="medium" 
+              @accept="launchMission(mission.id)"
+            />
+          </div>
+          <div class="p-3 bg-slate-800/50 text-center border-t border-slate-700/50">
+            <button class="text-sm text-blue-400 hover:text-blue-300 font-medium">Voir le bureau des contrats</button>
+          </div>
+        </section>
+      </div>
+
+      <!-- Colonne Droite (Flotte & Événements) -->
+      <div class="space-y-6">
+        
+        <!-- Statut de la Flotte -->
+        <section class="bg-slate-800 rounded-xl border border-slate-700 p-5">
+          <h3 class="font-bold mb-4 flex items-center gap-2">
+            <BaseIcon name="rocket" :size="18" class="text-slate-400" />
+            Statut de la Flotte
+          </h3>
+          
+          <div class="space-y-2">
+            <FleetItem name="Falcon-9 Mark II" status="Prêt" :reliability="98" />
+            <FleetItem name="StarLiner Heavy" status="En maintenance" :reliability="85" />
+            <FleetItem name="Ares-V" status="En construction" :reliability="0" />
+          </div>
+          
+          <button class="w-full mt-4 bg-slate-700 hover:bg-slate-600 text-slate-200 py-2 rounded-lg text-sm font-medium transition-colors">
+            Aller au Hangar
+          </button>
+        </section>
+
+        <!-- Timeline / R&D Rapide -->
+        <section class="bg-slate-800 rounded-xl border border-slate-700 p-5">
+          <h3 class="font-bold mb-4 flex items-center gap-2">
+            <BaseIcon name="flask" :size="18" class="text-purple-400" />
+            Recherche Actuelle
+          </h3>
+          
+          <div class="mb-4">
+            <div class="flex justify-between items-end mb-1">
+              <h4 class="text-sm font-bold text-slate-200">Propulsion Nucléaire</h4>
+              <span class="text-xs font-mono text-purple-400">45%</span>
+            </div>
+            <p class="text-xs text-slate-400 mb-2">Débloque les voyages vers Mars</p>
+            <ProgressBar :progress="45" color-class="bg-purple-500" />
+          </div>
+
+          <div class="bg-slate-950 rounded-lg p-3 border border-slate-700">
+            <p class="text-xs text-slate-400 uppercase tracking-wide font-bold mb-2">Journal d'entreprise</p>
+            <ul class="space-y-2 text-sm">
+              <li v-for="(log, idx) in missionStore.logs.slice(0, 2)" :key="idx" class="flex gap-2">
+                <span :class="[log.message.includes('SUCCÈS') ? 'text-emerald-400' : 'text-blue-400', 'font-bold']">•</span>
+                <span class="text-slate-300">{{ log.message }}</span>
+              </li>
+            </ul>
+          </div>
+        </section>
+
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
-import ResourceDashboard from '../components/ResourceDashboard.vue'
-import DashboardChart from '../components/charts/DashboardChart.vue'
-import { usePersonnelStore } from '../stores/usePersonnelStore'
 import { useResourceStore } from '../stores/useResourceStore'
 import { useMissionStore } from '../stores/useMissionStore'
+import StatCard from '../components/ui/StatCard.vue'
+import ActiveMissionCard from '../components/ui/ActiveMissionCard.vue'
+import ContractItem from '../components/ui/ContractItem.vue'
+import FleetItem from '../components/ui/FleetItem.vue'
+import ProgressBar from '../components/ui/ProgressBar.vue'
+import BaseIcon from '../components/ui/BaseIcon.vue'
 
-const personnelStore = usePersonnelStore()
 const resourceStore = useResourceStore()
 const missionStore = useMissionStore()
 
-// Timer - Simulation simple
-const missionDays = ref(12)
-const missionTime = ref('00:00:00')
-let timerInterval: any = null
-
-onMounted(() => {
-  timerInterval = setInterval(() => {
-    const now = new Date()
-    missionTime.value = now.toLocaleTimeString('fr-FR')
-  }, 1000)
-})
-
-onUnmounted(() => {
-  if (timerInterval) clearInterval(timerInterval)
-})
-
-// Data calculée pour les graphiques
-const totalPersonnel = computed(() => {
-  return personnelStore.staff.ingenieur.count + 
-         personnelStore.staff.scientifique.count + 
-         personnelStore.staff.constructeur.count
-})
-
-const staffChartData = computed(() => ({
-  labels: ['Ingénieurs', 'Scientifiques', 'Constructeurs'],
-  datasets: [{
-    data: [
-      personnelStore.staff.ingenieur.count,
-      personnelStore.staff.scientifique.count,
-      personnelStore.staff.constructeur.count
-    ],
-    backgroundColor: [
-      'rgba(233, 69, 96, 0.7)',
-      'rgba(77, 168, 218, 0.7)',
-      'rgba(255, 215, 0, 0.7)'
-    ],
-    borderColor: [
-      '#e94560',
-      '#4da8da',
-      '#ffd700'
-    ],
-    borderWidth: 2,
-    hoverOffset: 15,
-    borderRadius: 5
-  }]
-}))
-
-const productionChartData = computed(() => ({
-  labels: ['Trésorerie', 'Science', 'Propergol'],
-  datasets: [{
-    label: 'Production par seconde',
-    data: [
-      resourceStore.production.argent,
-      resourceStore.production.science,
-      resourceStore.production.carburant
-    ],
-    backgroundColor: [
-      'rgba(255, 215, 0, 0.4)',
-      'rgba(77, 168, 218, 0.4)',
-      'rgba(233, 69, 96, 0.4)'
-    ],
-    borderColor: [
-      '#ffd700',
-      '#4da8da',
-      '#e94560'
-    ],
-    borderWidth: 2,
-    borderRadius: 8
-  }]
-}))
-
-const allLogs = computed(() => {
-  return [...missionStore.logs, ...personnelStore.logs].sort((a, b) => {
-    return b.temps.localeCompare(a.temps)
-  })
-})
-
-const commonChartOptions = {
-  plugins: {
-    legend: {
-      position: 'right' as const
-    }
-  }
+const formatCurrency = (val: number) => {
+  if (val >= 1000) return (val / 1000).toFixed(2) + ' Md €'
+  return val + ' M €'
 }
 
-const productionChartOptions = {
-  scales: {
-    y: {
-      beginAtZero: true
-    }
-  }
+const formatReward = (val: number) => {
+  return Math.round(val).toString() + 'M'
+}
+
+const launchMission = (id: number) => {
+  missionStore.launchMission(id)
 }
 </script>
-
-<style scoped>
-.view-container {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  padding-bottom: 3rem;
-}
-
-.dashboard-header {
-  border-bottom: 2px solid rgba(77, 168, 218, 0.2);
-  padding-bottom: 1.5rem;
-}
-
-.header-main {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-h1 {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 2.5rem;
-  font-weight: 800;
-  letter-spacing: -2px;
-  color: #fff;
-  margin: 0;
-  background: linear-gradient(90deg, #fff, #4da8da);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.mission-timer {
-  background: rgba(0, 0, 0, 0.3);
-  padding: 0.5rem 1.5rem;
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  font-family: 'JetBrains Mono', monospace;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-
-.mission-timer .label {
-  font-size: 0.65rem;
-  color: #4da8da;
-}
-
-.mission-timer .value {
-  font-size: 1.2rem;
-  color: #fff;
-  font-weight: 700;
-}
-
-.description {
-  color: #a2a8d3;
-  font-size: 1rem;
-  margin: 0.5rem 0 0 0;
-  opacity: 0.7;
-}
-
-.charts-grid {
-  display: grid;
-  grid-template-columns: 1fr 1.5fr;
-  gap: 1.5rem;
-  margin-top: 1.5rem;
-}
-
-.chart-card {
-  background: rgba(26, 26, 46, 0.4);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
-  padding: 1.5rem;
-}
-
-.chart-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.chart-header h3 {
-  margin: 0;
-  font-size: 1.1rem;
-  color: #fff;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.chart-header .total, .chart-header .unit {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.8rem;
-  color: #4da8da;
-  background: rgba(77, 168, 218, 0.1);
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-}
-
-.bottom-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-}
-
-.quick-links h3, .recent-logs h3 {
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.4);
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  margin-bottom: 1rem;
-}
-
-.links-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
-.quick-link-card {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  background: rgba(15, 52, 96, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  padding: 1.25rem;
-  text-decoration: none;
-  transition: all 0.2s;
-}
-
-.quick-link-card:hover {
-  background: rgba(15, 52, 96, 0.8);
-  border-color: #4da8da;
-  transform: translateX(5px);
-}
-
-.quick-link-card .icon {
-  font-size: 2rem;
-}
-
-.quick-link-card h4 {
-  margin: 0;
-  color: #fff;
-}
-
-.quick-link-card p {
-  margin: 0;
-  font-size: 0.8rem;
-  color: #a2a8d3;
-}
-
-.logs-container {
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  padding: 1rem;
-  height: 200px;
-  overflow-y: auto;
-}
-
-.log-entry {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.8rem;
-  margin-bottom: 0.5rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
-  display: flex;
-  gap: 0.75rem;
-}
-
-.log-time {
-  color: #4da8da;
-  white-space: nowrap;
-}
-
-.log-msg {
-  color: #e0e0e0;
-}
-
-.log-entry.error .log-msg { color: #e94560; }
-.log-entry.success .log-msg { color: #00f2ff; }
-
-.no-logs {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: rgba(255, 255, 255, 0.2);
-  font-family: 'JetBrains Mono', monospace;
-}
-
-@media (max-width: 1024px) {
-  .charts-grid, .bottom-grid {
-    grid-template-columns: 1fr;
-  }
-}
-</style>

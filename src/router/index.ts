@@ -20,6 +20,21 @@ const router = createRouter({
       path: '/missions',
       name: 'missions',
       component: MissionsView
+    },
+    {
+      path: '/fleet',
+      name: 'fleet',
+      component: DashboardView // Placeholder
+    },
+    {
+      path: '/rd',
+      name: 'rd',
+      component: DashboardView // Placeholder
+    },
+    {
+      path: '/finance',
+      name: 'finance',
+      component: DashboardView // Placeholder
     }
   ],
 })
