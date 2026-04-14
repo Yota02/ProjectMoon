@@ -75,24 +75,26 @@
         <section class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
           <div class="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800/80">
             <h3 class="font-bold flex items-center gap-2">
-              <BaseIcon name="coins" :size="18" class="text-yellow-500" />
+              <BaseIcon name="briefcase" :size="18" class="text-blue-400" />
               Contrats Disponibles
             </h3>
-            <span class="bg-slate-700 text-xs px-2 py-1 rounded font-mono">3 offres</span>
+            <span class="bg-slate-700 text-xs px-2 py-1 rounded font-mono">{{ contractStore.availableContracts.length }} offres</span>
           </div>
           <div class="p-2">
             <ContractItem 
-              v-for="mission in missionStore.missions"
-              :key="mission.id"
-              :title="mission.name" 
-              type="Orbite Géosynchrone (GEO)" 
-              :reward="formatReward(mission.cost.argent * 2.5)" 
-              danger="medium" 
-              @accept="launchMission(mission.id)"
+              v-for="contract in contractStore.availableContracts.slice(0, 3)"
+              :key="contract.id"
+              :title="contract.title" 
+              :type="contract.type" 
+              :reward="(contract.reward / 1000000).toFixed(1) + 'M'" 
+              :danger="contract.danger" 
+              @accept="contractStore.acceptContract(contract.id)"
             />
           </div>
           <div class="p-3 bg-slate-800/50 text-center border-t border-slate-700/50">
-            <button class="text-sm text-blue-400 hover:text-blue-300 font-medium">Voir le bureau des contrats</button>
+            <router-link to="/finance" class="text-sm text-blue-400 hover:text-blue-300 font-medium cursor-pointer">
+              Voir le bureau des contrats
+            </router-link>
           </div>
         </section>
       </div>
@@ -166,6 +168,7 @@
 import { useResourceStore } from '../stores/useResourceStore'
 import { useMissionStore } from '../stores/useMissionStore'
 import { useResearchStore } from '../stores/useResearchStore'
+import { useContractStore } from '../stores/useContractStore'
 import StatCard from '../components/ui/StatCard.vue'
 import ActiveMissionCard from '../components/ui/ActiveMissionCard.vue'
 import ContractItem from '../components/ui/ContractItem.vue'
@@ -176,6 +179,7 @@ import BaseIcon from '../components/ui/BaseIcon.vue'
 const resourceStore = useResourceStore()
 const missionStore = useMissionStore()
 const researchStore = useResearchStore()
+const contractStore = useContractStore()
 
 const formatCurrency = (val: number) => {
   if (val >= 1000) return (val / 1000).toFixed(2) + ' Md €'

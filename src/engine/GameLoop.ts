@@ -47,4 +47,4 @@ export class GameLoop {
 }
 
 // Instance globale prête à l'emploi
-export const gameLoop = new GameLoop(1000); // 1 tick = 1 seconde
+export const gameLoop = new GameLoop(500); // 1 tick = 0.5 seconde (1 jour)

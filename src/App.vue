@@ -44,13 +44,15 @@
       <div class="mt-auto p-6 border-t border-slate-800">
         <div class="flex items-center gap-3 text-sm text-slate-400 mb-2 font-mono">
           <BaseIcon name="calendar" :size="16" />
-          <span>Année 2042 - T3</span>
+          <span class="text-white font-black tracking-widest">{{ gameStore.formattedDate }}</span>
         </div>
-        <button
-          class="w-full mt-2 bg-slate-800 hover:bg-slate-700 text-slate-200 py-2 rounded-lg transition-colors text-sm font-bold border border-slate-700"
-        >
-          Passer le tour
-        </button>
+        <div class="flex items-center justify-between bg-slate-950/80 p-3 rounded-xl border border-slate-800 shadow-inner">
+          <span class="text-[10px] text-slate-500 uppercase font-black tracking-widest">Rythme</span>
+          <div class="flex items-center gap-2">
+             <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse"></div>
+             <span class="text-[10px] font-mono text-emerald-400 font-bold">1 JOUR / 0.5s</span>
+          </div>
+        </div>
       </div>
     </aside>
 
@@ -62,7 +64,7 @@
       >
         <div>
           <h2 class="text-2xl font-bold text-white">
-            {{ $route.name === 'dashboard' ? 'Tableau de Bord' : $route.name }}
+            {{ route.name === 'dashboard' ? 'Tableau de Bord' : route.name }}
           </h2>
           <p class="text-slate-400 text-sm">Bienvenue Directeur. Les systèmes sont nominaux.</p>
         </div>
@@ -104,13 +106,17 @@
 
 <script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { gameLoop } from './engine/GameLoop'
 import { useResourceStore } from './stores/useResourceStore'
 import { useResearchStore } from './stores/useResearchStore'
+import { useGameStore } from './stores/useGameStore'
 import BaseIcon from './components/ui/BaseIcon.vue'
 
+const route = useRoute()
 const resourceStore = useResourceStore()
 const researchStore = useResearchStore()
+const gameStore = useGameStore()
 
 const navItems = [
   { id: 'dashboard', label: "Vue d'ensemble", icon: 'dashboard', to: '/' },
@@ -123,6 +129,7 @@ const navItems = [
 
 onMounted(() => {
   gameLoop.addTickHandler((deltaTime: number) => {
+    gameStore.tick(deltaTime)
     resourceStore.tick(deltaTime)
     researchStore.tick(deltaTime)
   })

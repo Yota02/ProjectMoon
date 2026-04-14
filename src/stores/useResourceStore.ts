@@ -21,11 +21,12 @@ export const useResourceStore = defineStore('resource', {
     addCarburant(amount: number) {
       this.carburant += amount
     },
-    tick(_deltaTime: number) {
-      // _deltaTime est environ 1000ms si le tickRate est à 1000
-      this.argent += this.production.argent
-      this.science += this.production.science
-      this.carburant += this.production.carburant
+    tick(deltaTime: number) {
+      // 1 jour = 500ms. Si deltaTime = 1000ms, on a 2 jours écoulés.
+      const daysPassed = deltaTime / 500
+      this.argent += this.production.argent * daysPassed
+      this.science += this.production.science * daysPassed
+      this.carburant += this.production.carburant * daysPassed
     },
   },
 })

@@ -552,10 +552,14 @@ export const useResearchStore = defineStore('research', {
     activeResearchId: null as string | null,
   }),
   getters: {
-    activeResearch: (state) => state.activeResearchId ? state.researches[state.activeResearchId] : null,
+    activeResearch: (state) => (state.activeResearchId ? state.researches[state.activeResearchId] : null),
+    completedResearchIds: (state) =>
+      Object.values(state.researches)
+        .filter((r) => r.status === 'completed')
+        .map((r) => r.id),
     getByCategory: (state) => (category: string) => {
-      return Object.values(state.researches).filter(r => r.category === category);
-    }
+      return Object.values(state.researches).filter((r) => r.category === category)
+    },
   },
   actions: {
     startResearch(id: string) {
