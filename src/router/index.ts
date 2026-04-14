@@ -3,6 +3,7 @@ import DashboardView from '../views/DashboardView.vue'
 import PersonnelView from '../views/PersonnelView.vue'
 import MissionsView from '../views/MissionsView.vue'
 import ResearchView from '../views/ResearchView.vue'
+import BaseView from '../views/BaseView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -10,33 +11,38 @@ const router = createRouter({
     {
       path: '/',
       name: 'dashboard',
-      component: DashboardView
+      component: DashboardView,
     },
     {
       path: '/personnel',
       name: 'personnel',
-      component: PersonnelView
+      component: PersonnelView,
     },
     {
       path: '/missions',
       name: 'missions',
-      component: MissionsView
+      component: MissionsView,
+    },
+    {
+      path: '/base',
+      name: 'base',
+      component: BaseView,
     },
     {
       path: '/fleet',
       name: 'fleet',
-      component: DashboardView // Placeholder
+      component: DashboardView, // Placeholder
     },
     {
       path: '/rd',
       name: 'rd',
-      component: ResearchView
+      component: ResearchView,
     },
     {
       path: '/finance',
       name: 'finance',
-      component: DashboardView // Placeholder
-    }
+      component: DashboardView, // Placeholder
+    },
   ],
 })
 
