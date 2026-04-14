@@ -1,24 +1,69 @@
 <template>
   <div class="resource-dashboard">
-    <h2>📡 Centre de Ressources</h2>
-    <div class="resources">
-      <div class="resource">
-        <span class="label">Argent</span>
-        <span class="valeur">{{ Math.floor(resourceStore.argent) }}</span>
-        <span class="prod">(+{{ resourceStore.production.argent }}/s)</span>
-        <button @click="resourceStore.addArgent(10)">+10 Manuel</button>
+    <div class="header">
+      <div class="title-group">
+        <h2><span class="icon">📡</span> Centre de Contrôle des Ressources</h2>
+        <p class="subtitle">Surveillance en temps réel de la station</p>
       </div>
-      <div class="resource">
-        <span class="label">Science</span>
-        <span class="valeur">{{ Math.floor(resourceStore.science) }}</span>
-        <span class="prod">(+{{ resourceStore.production.science }}/s)</span>
-        <button @click="resourceStore.addScience(5)">+5 Manuel</button>
+      <div class="status-indicator">
+        <span class="pulse"></span>
+        SYSTÈMES OPÉRATIONNELS
       </div>
-      <div class="resource">
-        <span class="label">Carburant</span>
-        <span class="valeur">{{ Math.floor(resourceStore.carburant) }}</span>
-        <span class="prod">(+{{ resourceStore.production.carburant }}/s)</span>
-        <button @click="resourceStore.addCarburant(2)">+2 Manuel</button>
+    </div>
+
+    <div class="resources-grid">
+      <div class="resource-card money">
+        <div class="card-content">
+          <div class="top">
+            <span class="label">Trésorerie</span>
+            <span class="symbol">€</span>
+          </div>
+          <div class="value-group">
+            <span class="value">{{ Math.floor(resourceStore.argent).toLocaleString() }}</span>
+            <span class="unit">crédits</span>
+          </div>
+          <div class="footer">
+            <span class="trend positive">+{{ resourceStore.production.argent }}/s</span>
+            <button class="manual-btn" @click="resourceStore.addArgent(10)">Extraction</button>
+          </div>
+        </div>
+        <div class="card-bg"></div>
+      </div>
+
+      <div class="resource-card science">
+        <div class="card-content">
+          <div class="top">
+            <span class="label">Recherche</span>
+            <span class="symbol">🧪</span>
+          </div>
+          <div class="value-group">
+            <span class="value">{{ Math.floor(resourceStore.science).toLocaleString() }}</span>
+            <span class="unit">data</span>
+          </div>
+          <div class="footer">
+            <span class="trend positive">+{{ resourceStore.production.science }}/s</span>
+            <button class="manual-btn" @click="resourceStore.addScience(5)">Analyse</button>
+          </div>
+        </div>
+        <div class="card-bg"></div>
+      </div>
+
+      <div class="resource-card fuel">
+        <div class="card-content">
+          <div class="top">
+            <span class="label">Propergol</span>
+            <span class="symbol">🔥</span>
+          </div>
+          <div class="value-group">
+            <span class="value">{{ Math.floor(resourceStore.carburant).toLocaleString() }}</span>
+            <span class="unit">L</span>
+          </div>
+          <div class="footer">
+            <span class="trend positive">+{{ resourceStore.production.carburant }}/s</span>
+            <button class="manual-btn" @click="resourceStore.addCarburant(2)">Raffiner</button>
+          </div>
+        </div>
+        <div class="card-bg"></div>
       </div>
     </div>
   </div>
@@ -31,68 +76,183 @@ const resourceStore = useResourceStore()
 </script>
 
 <style scoped>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
 .resource-dashboard {
-  background-color: #1a1a2e;
-  color: #e0e0e0;
-  padding: 1.5rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  font-family: 'Outfit', sans-serif;
+  padding: 1rem 0;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   margin-bottom: 2rem;
-  border: 1px solid #16213e;
 }
 
 h2 {
-  margin-top: 0;
-  color: #4da8da;
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
-.resources {
+.icon {
+  filter: drop-shadow(0 0 8px rgba(77, 168, 218, 0.5));
+}
+
+.subtitle {
+  color: #a2a8d3;
+  margin: 0.25rem 0 0 0;
+  font-size: 0.95rem;
+  opacity: 0.8;
+}
+
+.status-indicator {
   display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: #00f2ff;
+  background: rgba(0, 242, 255, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 100px;
+  border: 1px solid rgba(0, 242, 255, 0.2);
+}
+
+.pulse {
+  width: 8px;
+  height: 8px;
+  background: #00f2ff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 rgba(0, 242, 255, 0.4);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 242, 255, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(0, 242, 255, 0); }
+  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 242, 255, 0); }
+}
+
+.resources-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1.5rem;
 }
 
-.resource {
-  background-color: #0f3460;
+.resource-card {
+  position: relative;
+  background: rgba(26, 26, 46, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
   padding: 1.5rem;
-  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.resource-card:hover {
+  transform: translateY(-5px);
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4);
+}
+
+.card-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px;
+}
+
+.resource-card.money .card-bg { background: linear-gradient(90deg, #ffd700, #ff8c00); }
+.resource-card.science .card-bg { background: linear-gradient(90deg, #4da8da, #00f2ff); }
+.resource-card.fuel .card-bg { background: linear-gradient(90deg, #e94560, #ff2e63); }
+
+.card-content {
+  position: relative;
+  z-index: 1;
+}
+
+.top {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   align-items: center;
-  flex: 1;
-}
-
-.label {
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-size: 0.9rem;
-  color: #a2a8d3;
-}
-
-.valeur {
-  font-size: 2rem;
-  font-weight: bold;
-  margin: 0.5rem 0;
-}
-
-.prod {
-  font-size: 0.8rem;
-  color: #4da8da;
   margin-bottom: 1rem;
 }
 
-button {
-  background-color: #e94560;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: bold;
-  transition: background-color 0.2s;
+.label {
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
 }
 
-button:hover {
-  background-color: #d13c54;
+.symbol {
+  font-size: 1.2rem;
+  opacity: 0.8;
 }
+
+.value-group {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #fff;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: -1px;
+}
+
+.unit {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 1rem;
+}
+
+.trend {
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.trend.positive { color: #00f2ff; }
+
+.manual-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  padding: 0.4rem 0.8rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.manual-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.resource-card.money:hover .manual-btn { color: #ffd700; }
+.resource-card.science:hover .manual-btn { color: #4da8da; }
+.resource-card.fuel:hover .manual-btn { color: #e94560; }
 </style>
