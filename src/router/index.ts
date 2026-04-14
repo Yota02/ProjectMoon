@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import DashboardView from '../views/DashboardView.vue'
 import PersonnelView from '../views/PersonnelView.vue'
 import MissionsView from '../views/MissionsView.vue'
+import ResearchView from '../views/ResearchView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -29,7 +30,7 @@ const router = createRouter({
     {
       path: '/rd',
       name: 'rd',
-      component: DashboardView // Placeholder
+      component: ResearchView
     },
     {
       path: '/finance',

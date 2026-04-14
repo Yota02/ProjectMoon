@@ -120,18 +120,30 @@
 
         <!-- Timeline / R&D Rapide -->
         <section class="bg-slate-800 rounded-xl border border-slate-700 p-5">
-          <h3 class="font-bold mb-4 flex items-center gap-2">
-            <BaseIcon name="flask" :size="18" class="text-purple-400" />
-            Recherche Actuelle
-          </h3>
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold flex items-center gap-2">
+              <BaseIcon name="flask" :size="18" class="text-purple-400" />
+              Recherche Actuelle
+            </h3>
+            <router-link to="/rd" class="text-[10px] text-blue-400 uppercase font-bold hover:underline">
+              Voir l'arbre
+            </router-link>
+          </div>
           
-          <div class="mb-4">
+          <div v-if="researchStore.activeResearch" class="mb-4">
             <div class="flex justify-between items-end mb-1">
-              <h4 class="text-sm font-bold text-slate-200">Propulsion Nucléaire</h4>
-              <span class="text-xs font-mono text-purple-400">45%</span>
+              <h4 class="text-sm font-bold text-slate-200">{{ researchStore.activeResearch.name }}</h4>
+              <span class="text-xs font-mono text-purple-400">{{ Math.round(researchStore.activeResearch.progress) }}%</span>
             </div>
-            <p class="text-xs text-slate-400 mb-2">Débloque les voyages vers Mars</p>
-            <ProgressBar :progress="45" color-class="bg-purple-500" />
+            <p class="text-xs text-slate-400 mb-2">{{ researchStore.activeResearch.description }}</p>
+            <ProgressBar :progress="researchStore.activeResearch.progress" color-class="bg-purple-500" />
+          </div>
+
+          <div v-else class="mb-4 py-8 text-center border border-dashed border-slate-700 rounded-lg">
+            <p class="text-xs text-slate-500">Aucune recherche en cours</p>
+            <router-link to="/rd" class="inline-block mt-2 text-xs text-blue-400 font-bold hover:text-blue-300">
+              Lancer un projet
+            </router-link>
           </div>
 
           <div class="bg-slate-950 rounded-lg p-3 border border-slate-700">
@@ -153,6 +165,7 @@
 <script setup lang="ts">
 import { useResourceStore } from '../stores/useResourceStore'
 import { useMissionStore } from '../stores/useMissionStore'
+import { useResearchStore } from '../stores/useResearchStore'
 import StatCard from '../components/ui/StatCard.vue'
 import ActiveMissionCard from '../components/ui/ActiveMissionCard.vue'
 import ContractItem from '../components/ui/ContractItem.vue'
@@ -162,6 +175,7 @@ import BaseIcon from '../components/ui/BaseIcon.vue'
 
 const resourceStore = useResourceStore()
 const missionStore = useMissionStore()
+const researchStore = useResearchStore()
 
 const formatCurrency = (val: number) => {
   if (val >= 1000) return (val / 1000).toFixed(2) + ' Md €'

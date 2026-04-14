@@ -1,0 +1,117 @@
+<template>
+  <div 
+    :class="[
+      'p-4 rounded-xl border transition-all duration-300 relative overflow-hidden',
+      statusClasses
+    ]"
+  >
+    <!-- Overlay de progression pour le mode 'researching' -->
+    <div 
+      v-if="research.status === 'researching'" 
+      class="absolute bottom-0 left-0 h-1 bg-blue-500 transition-all duration-500 ease-linear"
+      :style="{ width: `${research.progress}%` }"
+    ></div>
+
+    <div class="flex justify-between items-start mb-2">
+      <div 
+        :class="[
+          'w-10 h-10 rounded-lg flex items-center justify-center mb-3 shadow-inner',
+          iconContainerClasses
+        ]"
+      >
+        <BaseIcon :name="getIconName" :size="20" />
+      </div>
+      
+      <span v-if="research.status === 'completed'" class="text-[10px] font-bold uppercase tracking-widest text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-400/20">
+        Acquis
+      </span>
+      <span v-else-if="research.status === 'researching'" class="text-[10px] font-bold uppercase tracking-widest text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded border border-blue-400/20 animate-pulse">
+        En cours
+      </span>
+      <span v-else class="text-[10px] font-mono text-slate-500">
+        {{ research.cost }} 🧪
+      </span>
+    </div>
+
+    <h3 :class="['font-bold text-sm mb-1', research.status === 'locked' ? 'text-slate-500' : 'text-white']">
+      {{ research.name }}
+    </h3>
+    <p class="text-xs text-slate-400 leading-relaxed mb-4 line-clamp-2">
+      {{ research.description }}
+    </p>
+
+    <button
+      v-if="research.status === 'available'"
+      @click="$emit('start', research.id)"
+      :disabled="hasActiveResearch || !canAfford"
+      :class="[
+        'w-full py-2 rounded-lg text-xs font-bold transition-all',
+        canAfford && !hasActiveResearch
+          ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20'
+          : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+      ]"
+    >
+      {{ hasActiveResearch ? 'Déjà occupé' : (canAfford ? 'Rechercher' : 'Science insuffisante') }}
+    </button>
+    
+    <div v-else-if="research.status === 'researching'" class="w-full py-2 bg-blue-900/20 text-blue-400 rounded-lg text-center text-xs font-bold border border-blue-500/20">
+      {{ Math.round(research.progress) }}%
+    </div>
+
+    <div v-else-if="research.status === 'locked'" class="w-full py-2 bg-slate-900/50 text-slate-600 rounded-lg text-center text-xs font-medium border border-slate-800/50 flex items-center justify-center gap-2">
+      <BaseIcon name="lock" :size="12" />
+      Verrouillé
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { computed } from 'vue'
+import type { ResearchNode } from '../../stores/useResearchStore'
+import BaseIcon from '../ui/BaseIcon.vue'
+
+const props = defineProps<{
+  research: ResearchNode
+  hasActiveResearch: boolean
+  canAfford: boolean
+}>()
+
+defineEmits(['start'])
+
+const statusClasses = computed(() => {
+  switch (props.research.status) {
+    case 'completed':
+      return 'bg-emerald-500/5 border-emerald-500/20'
+    case 'researching':
+      return 'bg-blue-500/10 border-blue-500/30'
+    case 'available':
+      return 'bg-slate-800/40 border-slate-700/50 hover:border-blue-500/50 cursor-default'
+    case 'locked':
+      return 'bg-slate-950 border-slate-900 opacity-60'
+    default:
+      return 'bg-slate-800 border-slate-700'
+  }
+})
+
+const iconContainerClasses = computed(() => {
+  switch (props.research.status) {
+    case 'completed': return 'bg-emerald-500/20 text-emerald-400'
+    case 'researching': return 'bg-blue-500/20 text-blue-400'
+    case 'available': return 'bg-slate-700/50 text-slate-300'
+    case 'locked': return 'bg-slate-900 text-slate-600'
+    default: return 'bg-slate-800 text-slate-400'
+  }
+})
+
+const getIconName = computed(() => {
+  switch (props.research.category) {
+    case 'Lanceurs': return 'rocket'
+    case 'Bâtiments': return 'building'
+    case 'Moteur': return 'battery'
+    case 'Informatique': return 'cpu'
+    case 'Humain': return 'user'
+    case 'Economique': return 'coins'
+    default: return 'flask'
+  }
+})
+</script>
