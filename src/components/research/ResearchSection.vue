@@ -14,15 +14,30 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <ResearchNode 
-        v-for="research in researches" 
-        :key="research.id"
-        :research="research"
-        :has-active-research="hasActiveResearch"
-        :can-afford="sciencePoints >= research.cost"
-        @start="$emit('start', $event)"
-      />
+    <div class="flex flex-col lg:flex-row gap-8 overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+      <div 
+        v-for="tier in maxTier + 1" 
+        :key="tier - 1"
+        class="flex-1 min-w-[300px] space-y-4"
+      >
+        <div class="flex items-center gap-2 mb-4">
+          <div class="px-2 py-1 bg-slate-800 rounded text-[10px] font-bold text-slate-500 uppercase tracking-tighter">
+            Tier {{ tier - 1 }}
+          </div>
+          <div class="h-px flex-1 bg-slate-800"></div>
+        </div>
+
+        <div class="space-y-4">
+          <ResearchNode 
+            v-for="research in researchesByTier(tier - 1)" 
+            :key="research.id"
+            :research="research"
+            :has-active-research="hasActiveResearch"
+            :can-afford="sciencePoints >= research.cost"
+            @start="$emit('start', $event)"
+          />
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -45,6 +60,15 @@ defineEmits(['start'])
 
 const totalCount = computed(() => props.researches.length)
 const completedCount = computed(() => props.researches.filter(r => r.status === 'completed').length)
+
+const maxTier = computed(() => {
+  if (props.researches.length === 0) return 0
+  return Math.max(...props.researches.map(r => r.tier))
+})
+
+const researchesByTier = (tier: number) => {
+  return props.researches.filter(r => r.tier === tier)
+}
 
 const accentColorClass = computed(() => {
   switch (props.title) {

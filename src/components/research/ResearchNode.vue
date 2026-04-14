@@ -40,6 +40,25 @@
       {{ research.description }}
     </p>
 
+    <!-- Prérequis -->
+    <div v-if="research.prerequisites.length > 0 && research.status === 'locked'" class="mb-4 space-y-1">
+      <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Requis :</p>
+      <div class="flex flex-wrap gap-1">
+        <span 
+          v-for="preId in research.prerequisites" 
+          :key="preId"
+          :class="[
+            'text-[9px] px-1.5 py-0.5 rounded border font-medium',
+            isPrerequisiteMet(preId) 
+              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
+              : 'bg-slate-900 border-slate-800 text-slate-500'
+          ]"
+        >
+          {{ getResearchName(preId) }}
+        </span>
+      </div>
+    </div>
+
     <button
       v-if="research.status === 'available'"
       @click="$emit('start', research.id)"
@@ -68,6 +87,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { ResearchNode } from '../../stores/useResearchStore'
+import { useResearchStore } from '../../stores/useResearchStore'
 import BaseIcon from '../ui/BaseIcon.vue'
 
 const props = defineProps<{
@@ -77,6 +97,32 @@ const props = defineProps<{
 }>()
 
 defineEmits(['start'])
+
+const researchStore = useResearchStore()
+
+const getResearchName = (id: string) => {
+  return researchStore.researches[id]?.name || id
+}
+
+const getResearchCategory = (id: string) => {
+  return researchStore.researches[id]?.category || ''
+}
+
+const getCategoryIcon = (category: string) => {
+  switch (category) {
+    case 'Lanceurs': return 'rocket'
+    case 'Bâtiments': return 'building'
+    case 'Moteur': return 'battery'
+    case 'Informatique': return 'cpu'
+    case 'Humain': return 'user'
+    case 'Economique': return 'coins'
+    default: return 'flask'
+  }
+}
+
+const isPrerequisiteMet = (id: string) => {
+  return researchStore.researches[id]?.status === 'completed'
+}
 
 const statusClasses = computed(() => {
   switch (props.research.status) {

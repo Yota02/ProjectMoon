@@ -32,6 +32,7 @@ export interface PlacedBuilding {
   x: number // top-left x
   y: number // top-left y
   buildingId: string
+  rotation: 'horizontal' | 'vertical'
 }
 
 export interface PlacedRoute {
@@ -40,6 +41,58 @@ export interface PlacedRoute {
   routeId: string
   direction: 'horizontal' | 'vertical'
 }
+
+export interface ParcelDefinition {
+  id: string
+  name: string
+  direction: 'top' | 'bottom' | 'left' | 'right'
+  parcelX: number
+  parcelY: number
+  cost: {
+    argent: number
+    science: number
+  }
+  owned: boolean
+}
+
+const PARCELS: ParcelDefinition[] = [
+  {
+    id: 'parcel_top',
+    name: 'Parcelle Nord',
+    direction: 'top',
+    parcelX: 0,
+    parcelY: -1,
+    cost: { argent: 1000, science: 50 },
+    owned: false,
+  },
+  {
+    id: 'parcel_bottom',
+    name: 'Parcelle Sud',
+    direction: 'bottom',
+    parcelX: 0,
+    parcelY: 1,
+    cost: { argent: 1000, science: 50 },
+    owned: false,
+  },
+  {
+    id: 'parcel_left',
+    name: 'Parcelle Ouest',
+    direction: 'left',
+    parcelX: -1,
+    parcelY: 0,
+    cost: { argent: 1000, science: 50 },
+    owned: false,
+  },
+  {
+    id: 'parcel_right',
+    name: 'Parcelle Est',
+    direction: 'right',
+    parcelX: 1,
+    parcelY: 0,
+    cost: { argent: 1000, science: 50 },
+    owned: false,
+  },
+]
 
 const BUILDINGS: BuildingDefinition[] = [
   {
@@ -120,17 +173,35 @@ const ROUTES: RouteDefinition[] = [
 ]
 
 export const useBaseStore = defineStore('base', () => {
-  const mapWidth = ref(20)
-  const mapHeight = ref(20)
+  const PARCEL_SIZE = 10
+  const mapOffsetX = ref(0)
+  const mapOffsetY = ref(0)
+  const mapWidth = ref(PARCEL_SIZE)
+  const mapHeight = ref(PARCEL_SIZE)
+  const parcels = ref<ParcelDefinition[]>(PARCELS.map((p) => ({ ...p, owned: false })))
+  const ownedParcels = ref<Set<string>>(new Set(['center']))
   const buildings = ref<BuildingDefinition[]>(BUILDINGS)
   const routes = ref<RouteDefinition[]>(ROUTES)
-  const placedBuildings = ref<PlacedBuilding[]>([{ x: 9, y: 9, buildingId: 'hq' }])
+  const placedBuildings = ref<PlacedBuilding[]>([])
   const placedRoutes = ref<PlacedRoute[]>([])
   const lastMessage = ref('Selectionnez un batiment puis cliquez sur une case libre.')
 
   // Batiments debloques (par defaut tous pour le moment)
   const unlockedBuildings = ref<Set<string>>(new Set(BUILDINGS.map((b) => b.id)))
   const unlockedRoutes = ref<Set<string>>(new Set(ROUTES.map((r) => r.id)))
+
+  const isTileInOwnedParcel = (x: number, y: number): boolean => {
+    const parcelX = Math.floor(x / PARCEL_SIZE)
+    const parcelY = Math.floor(y / PARCEL_SIZE)
+
+    if (parcelX === 0 && parcelY === 0) {
+      return true
+    }
+
+    return parcels.value.some(
+      (parcel) => parcel.owned && parcel.parcelX === parcelX && parcel.parcelY === parcelY,
+    )
+  }
 
   const totalPlaced = computed(() => placedBuildings.value.length)
 
@@ -140,15 +211,23 @@ export const useBaseStore = defineStore('base', () => {
       const b = buildings.value.find((b) => b.id === p.buildingId)
       if (b) occupiedCount += b.width * b.height
     }
-    // Les routes prennent 1 case de large dans leur direction principale
     for (const r of placedRoutes.value) {
       const route = routes.value.find((rout) => rout.id === r.routeId)
       if (route) {
         occupiedCount += route.width
       }
     }
-    return mapWidth.value * mapHeight.value - occupiedCount
+    const ownedTileCount =
+      (1 + parcels.value.filter((p) => p.owned).length) * PARCEL_SIZE * PARCEL_SIZE
+    return ownedTileCount - occupiedCount
   })
+
+  const mapBounds = computed(() => ({
+    minX: mapOffsetX.value,
+    minY: mapOffsetY.value,
+    maxX: mapOffsetX.value + mapWidth.value - 1,
+    maxY: mapOffsetY.value + mapHeight.value - 1,
+  }))
 
   const isBuildingUnlocked = (buildingId: string): boolean => {
     return unlockedBuildings.value.has(buildingId)
@@ -176,7 +255,12 @@ export const useBaseStore = defineStore('base', () => {
     return resourceStore.argent >= route.cost.argent && resourceStore.science >= route.cost.science
   }
 
-  const buildAndPlaceBuilding = (buildingId: string, x: number, y: number): boolean => {
+  const buildAndPlaceBuilding = (
+    buildingId: string,
+    x: number,
+    y: number,
+    rotation: 'horizontal' | 'vertical' = 'horizontal',
+  ): boolean => {
     const building = buildings.value.find((item) => item.id === buildingId)
     if (!building) {
       lastMessage.value = 'Batiment introuvable.'
@@ -197,30 +281,42 @@ export const useBaseStore = defineStore('base', () => {
       return false
     }
 
+    const width = rotation === 'horizontal' ? building.width : building.height
+    const height = rotation === 'horizontal' ? building.height : building.width
+
+    const bounds = mapBounds.value
     if (
-      x < 0 ||
-      y < 0 ||
-      x + building.width > mapWidth.value ||
-      y + building.height > mapHeight.value
+      x < bounds.minX ||
+      y < bounds.minY ||
+      x + width - 1 > bounds.maxX ||
+      y + height - 1 > bounds.maxY
     ) {
       lastMessage.value = 'Le batiment sort de la carte.'
       return false
     }
 
+    for (let by = 0; by < height; by++) {
+      for (let bx = 0; bx < width; bx++) {
+        if (!isTileInOwnedParcel(x + bx, y + by)) {
+          lastMessage.value = 'Cette case n appartient pas a une parcelle achetee.'
+          return false
+        }
+      }
+    }
+
     // Check collision
-    for (let by = 0; by < building.height; by++) {
-      for (let bx = 0; bx < building.width; bx++) {
+    for (let by = 0; by < height; by++) {
+      for (let bx = 0; bx < width; bx++) {
         const checkX = x + bx
         const checkY = y + by
 
         const isOccupied = placedBuildings.value.some((pb) => {
           const pbDef = buildings.value.find((b) => b.id === pb.buildingId)
           if (!pbDef) return false
+          const pbWidth = pb.rotation === 'horizontal' ? pbDef.width : pbDef.height
+          const pbHeight = pb.rotation === 'horizontal' ? pbDef.height : pbDef.width
           return (
-            checkX >= pb.x &&
-            checkX < pb.x + pbDef.width &&
-            checkY >= pb.y &&
-            checkY < pb.y + pbDef.height
+            checkX >= pb.x && checkX < pb.x + pbWidth && checkY >= pb.y && checkY < pb.y + pbHeight
           )
         })
 
@@ -234,7 +330,7 @@ export const useBaseStore = defineStore('base', () => {
     // Consommer ressources et placer
     resourceStore.addArgent(-building.cost.argent)
     resourceStore.addScience(-building.cost.science)
-    placedBuildings.value.push({ x, y, buildingId })
+    placedBuildings.value.push({ x, y, buildingId, rotation })
     lastMessage.value = `${building.name} place en (${x + 1}, ${y + 1}).`
     return true
   }
@@ -266,9 +362,19 @@ export const useBaseStore = defineStore('base', () => {
     const endX = direction === 'horizontal' ? x + routeLen - 1 : x
     const endY = direction === 'vertical' ? y + routeLen - 1 : y
 
-    if (x < 0 || y < 0 || endX >= mapWidth.value || endY >= mapHeight.value) {
+    const bounds = mapBounds.value
+    if (x < bounds.minX || y < bounds.minY || endX > bounds.maxX || endY > bounds.maxY) {
       lastMessage.value = 'La route sort de la carte.'
       return false
+    }
+
+    for (let i = 0; i < routeLen; i++) {
+      const checkX = direction === 'horizontal' ? x + i : x
+      const checkY = direction === 'vertical' ? y + i : y
+      if (!isTileInOwnedParcel(checkX, checkY)) {
+        lastMessage.value = 'Cette case n appartient pas a une parcelle achetee.'
+        return false
+      }
     }
 
     // Check collision with buildings
@@ -366,9 +472,70 @@ export const useBaseStore = defineStore('base', () => {
     return true
   }
 
+  const calculateMapDimensions = () => {
+    const parcelCoords = [{ x: 0, y: 0 }]
+
+    for (const parcel of parcels.value) {
+      if (parcel.owned) {
+        parcelCoords.push({ x: parcel.parcelX, y: parcel.parcelY })
+      }
+    }
+
+    const minParcelX = Math.min(...parcelCoords.map((p) => p.x))
+    const maxParcelX = Math.max(...parcelCoords.map((p) => p.x))
+    const minParcelY = Math.min(...parcelCoords.map((p) => p.y))
+    const maxParcelY = Math.max(...parcelCoords.map((p) => p.y))
+
+    mapOffsetX.value = minParcelX * PARCEL_SIZE
+    mapOffsetY.value = minParcelY * PARCEL_SIZE
+    mapWidth.value = (maxParcelX - minParcelX + 1) * PARCEL_SIZE
+    mapHeight.value = (maxParcelY - minParcelY + 1) * PARCEL_SIZE
+  }
+
+  const canBuyParcel = (parcelId: string): boolean => {
+    const parcel = parcels.value.find((p) => p.id === parcelId)
+    if (!parcel || parcel.owned) return false
+    const resourceStore = useResourceStore()
+    return (
+      resourceStore.argent >= parcel.cost.argent && resourceStore.science >= parcel.cost.science
+    )
+  }
+
+  const buyParcel = (parcelId: string): boolean => {
+    const parcel = parcels.value.find((p) => p.id === parcelId)
+    if (!parcel) {
+      lastMessage.value = 'Parcelle introuvable.'
+      return false
+    }
+    if (parcel.owned) {
+      lastMessage.value = 'Parcelle deja posee.'
+      return false
+    }
+
+    const resourceStore = useResourceStore()
+    if (resourceStore.argent < parcel.cost.argent || resourceStore.science < parcel.cost.science) {
+      lastMessage.value = `Ressources insuffisantes pour ${parcel.name}.`
+      return false
+    }
+
+    resourceStore.addArgent(-parcel.cost.argent)
+    resourceStore.addScience(-parcel.cost.science)
+    parcel.owned = true
+    ownedParcels.value.add(parcelId)
+    calculateMapDimensions()
+    lastMessage.value = `${parcel.name} achetee!Taille: ${mapWidth.value}x${mapHeight.value}`
+    return true
+  }
+
   return {
     mapWidth,
     mapHeight,
+    mapOffsetX,
+    mapOffsetY,
+    mapBounds,
+    parcels,
+    ownedParcels,
+    calculateMapDimensions,
     buildings,
     routes,
     placedBuildings,
@@ -382,9 +549,12 @@ export const useBaseStore = defineStore('base', () => {
     isRouteUnlocked,
     canBuildBuilding,
     canBuildRoute,
+    isTileInOwnedParcel,
     buildAndPlaceBuilding,
     buildAndPlaceRoute,
     removeBuilding,
     removeRoute,
+    canBuyParcel,
+    buyParcel,
   }
 })

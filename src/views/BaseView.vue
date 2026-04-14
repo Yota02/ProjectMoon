@@ -1,25 +1,31 @@
 <template>
   <div class="p-6 lg:p-10 max-w-7xl mx-auto w-full space-y-6">
-    <section class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <section class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
+        <p class="text-xs uppercase tracking-wide text-slate-400 font-bold">Taille base</p>
+        <p class="text-2xl font-black text-white mt-1">
+          {{ baseStore.mapWidth }}x{{ baseStore.mapHeight }}
+        </p>
+      </div>
       <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
         <p class="text-xs uppercase tracking-wide text-slate-400 font-bold">Cases libres</p>
         <p class="text-2xl font-black text-white mt-1">{{ baseStore.freeTiles }}</p>
       </div>
       <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
-        <p class="text-xs uppercase tracking-wide text-slate-400 font-bold">Batiments places</p>
+        <p class="text-xs uppercase tracking-wide text-slate-400 font-bold">Batiments</p>
         <p class="text-2xl font-black text-white mt-1">{{ baseStore.placedBuildings.length }}</p>
       </div>
       <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
-        <p class="text-xs uppercase tracking-wide text-slate-400 font-bold">Routes posees</p>
-        <p class="text-2xl font-black text-white mt-1">{{ baseStore.placedRoutes.length }}</p>
+        <p class="text-xs uppercase tracking-wide text-slate-400 font-bold">Parcelles</p>
+        <p class="text-2xl font-black text-white mt-1">{{ baseStore.ownedParcels.size }}</p>
       </div>
     </section>
 
     <div class="flex gap-2 mb-2">
       <button
-        v-for="tab in ['batiments', 'routes']"
+        v-for="tab in ['batiments', 'routes', 'parcelles']"
         :key="tab"
-        @click="activeTab = tab as 'batiments' | 'routes'"
+        @click="activeTab = tab as 'batiments' | 'routes' | 'parcelles'"
         class="px-4 py-2 rounded-lg font-bold text-sm transition"
         :class="
           activeTab === tab
@@ -27,7 +33,7 @@
             : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
         "
       >
-        {{ tab === 'batiments' ? 'Batiments' : 'Routes' }}
+        {{ tab === 'batiments' ? 'Batiments' : tab === 'routes' ? 'Routes' : 'Parcelles' }}
       </button>
     </div>
 
@@ -35,49 +41,97 @@
       <section class="xl:col-span-2 bg-slate-900 border border-slate-700 rounded-2xl p-5">
         <div class="flex items-center justify-between mb-4">
           <h3 class="text-lg font-bold text-white">Carte de la base</h3>
-          <div class="flex gap-2 items-center">
-            <div v-if="activeTab === 'routes'" class="flex gap-2">
+          <div class="flex items-center gap-3">
+            <button
+              @click="zoomOut"
+              class="w-8 h-8 rounded bg-slate-700 text-white font-bold hover:bg-slate-600 transition"
+            >
+              -
+            </button>
+            <span class="text-sm text-slate-400 min-w-[50px] text-center"
+              >{{ Math.round(zoom * 100) }}%</span
+            >
+            <button
+              @click="zoomIn"
+              class="w-8 h-8 rounded bg-slate-700 text-white font-bold hover:bg-slate-600 transition"
+            >
+              +
+            </button>
+            <div class="flex flex-col items-end">
+              <p class="text-[10px] text-slate-500 uppercase font-bold mb-1">Aperçu Base</p>
+              <BaseMinimap :scale="4" :view-bounds="viewBounds" />
+            </div>
+            <div class="flex gap-2 items-center">
+              <div v-if="activeTab === 'routes'" class="flex gap-2">
+                <button
+                  v-for="dir in ['horizontal', 'vertical']"
+                  :key="dir"
+                  @click="routeDirection = dir as 'horizontal' | 'vertical'"
+                  class="px-3 py-1 rounded text-xs font-bold transition"
+                  :class="
+                    routeDirection === dir
+                      ? 'bg-amber-500 text-black'
+                      : 'bg-slate-700 text-slate-300'
+                  "
+                >
+                  {{ dir === 'horizontal' ? 'Horizontal' : 'Vertical' }}
+                </button>
+              </div>
               <button
-                v-for="dir in ['horizontal', 'vertical']"
-                :key="dir"
-                @click="routeDirection = dir as 'horizontal' | 'vertical'"
+                v-if="activeTab === 'routes'"
+                @click="toggleTraceMode"
                 class="px-3 py-1 rounded text-xs font-bold transition"
-                :class="
-                  routeDirection === dir ? 'bg-amber-500 text-black' : 'bg-slate-700 text-slate-300'
-                "
+                :class="traceMode ? 'bg-green-500 text-white' : 'bg-slate-700 text-slate-300'"
               >
-                {{ dir === 'horizontal' ? 'Horizontal' : 'Vertical' }}
+                {{ traceMode ? 'Mode trace: ON' : 'Mode trace: OFF' }}
               </button>
             </div>
-            <button
-              v-if="activeTab === 'routes'"
-              @click="toggleTraceMode"
-              class="px-3 py-1 rounded text-xs font-bold transition"
-              :class="traceMode ? 'bg-green-500 text-white' : 'bg-slate-700 text-slate-300'"
-            >
-              {{ traceMode ? 'Mode trace: ON' : 'Mode trace: OFF' }}
-            </button>
           </div>
         </div>
 
         <div
-          class="overflow-auto max-h-[60vh] rounded-xl border border-slate-700 bg-slate-900 custom-scrollbar"
+          ref="mapContainer"
+          @scroll="updateViewBounds"
+          class="overflow-auto max-h-[60vh] rounded-xl border border-slate-700 bg-slate-900 custom-scrollbar flex items-center justify-center"
         >
           <div
             class="grid min-w-max p-4 relative gap-1"
             :style="{
-              gridTemplateColumns: `repeat(${baseStore.mapWidth}, 48px)`,
-              gridAutoRows: '48px',
+              gridTemplateColumns: `repeat(${baseStore.mapWidth}, ${tileSize}px)`,
+              gridAutoRows: `${tileSize}px`,
             }"
           >
             <div
               v-for="tile in tiles"
               :key="'bg-' + tile.id"
-              class="border border-slate-700/50 rounded flex items-center justify-center bg-slate-800/20 text-[10px] text-slate-600 font-mono transition-colors cursor-pointer hover:bg-slate-700/50"
-              :style="{ gridColumn: tile.x + 1, gridRow: tile.y + 1 }"
-              @click="onTileClick(tile.x, tile.y)"
+              class="border rounded flex items-center justify-center text-[10px] font-mono transition-colors"
+              :class="
+                tile.owned
+                  ? 'border-slate-700/50 bg-slate-800/20 text-slate-600 cursor-pointer hover:bg-slate-700/50'
+                  : 'border-slate-800/70 bg-slate-950/40 text-slate-800 cursor-not-allowed'
+              "
+              :style="{ gridColumn: tile.displayX, gridRow: tile.displayY }"
+              @click="tile.owned && onTileClick(tile.x, tile.y)"
+              @mouseenter="tile.owned && onTileHover(tile.x, tile.y)"
+              @mouseleave="clearPreviews"
             >
               <span class="opacity-30 pointer-events-none">{{ tile.x }},{{ tile.y }}</span>
+            </div>
+
+            <div
+              v-if="routePreview && activeTab === 'routes'"
+              class="z-30 flex"
+              :style="getRoutePreviewStyle()"
+            >
+              <div class="w-full h-full rounded border-2 border-amber-400 bg-amber-400/30"></div>
+            </div>
+
+            <div
+              v-if="buildingPreview && activeTab === 'batiments'"
+              class="z-30 flex p-[2px]"
+              :style="getBuildingPreviewStyle()"
+            >
+              <div class="w-full h-full rounded border-2 border-blue-400 bg-blue-400/20"></div>
             </div>
 
             <div
@@ -110,8 +164,11 @@
               :key="'b-' + b.buildingId + '-' + i"
               class="z-20 flex flex-col group p-[2px]"
               :style="{
-                gridColumn: `${b.x + 1} / span ${getBuildingDef(b.buildingId)?.width || 1}`,
-                gridRow: `${b.y + 1} / span ${getBuildingDef(b.buildingId)?.height || 1}`,
+                ...getBuildingDisplayPos(b.x, b.y),
+                gridColumnStart: undefined,
+                gridRowStart: undefined,
+                gridColumn: `${b.x - baseStore.mapOffsetX + 1} / span ${getBuildingDef(b.buildingId)?.width || 1}`,
+                gridRow: `${b.y - baseStore.mapOffsetY + 1} / span ${getBuildingDef(b.buildingId)?.height || 1}`,
               }"
             >
               <div
@@ -209,6 +266,38 @@
           </div>
         </div>
 
+        <div
+          v-if="activeTab === 'parcelles'"
+          class="bg-slate-900 border border-slate-700 rounded-2xl p-5"
+        >
+          <h3 class="text-lg font-bold text-white mb-4">Parcelles</h3>
+          <p class="text-xs text-slate-400 mb-3">
+            Taille actuelle: {{ baseStore.mapWidth }}x{{ baseStore.mapHeight }} ({{
+              baseStore.ownedParcels.size
+            }}
+            / 5)
+          </p>
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              v-for="parcel in baseStore.parcels"
+              :key="parcel.id"
+              class="p-3 rounded-lg border text-center transition"
+              :class="
+                parcel.owned
+                  ? 'border-emerald-500 bg-emerald-500/20 text-emerald-400'
+                  : baseStore.canBuyParcel(parcel.id)
+                    ? 'border-emerald-400 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/30'
+                    : 'border-slate-700 bg-slate-800/60 text-slate-500'
+              "
+              :disabled="parcel.owned || !baseStore.canBuyParcel(parcel.id)"
+              @click="baseStore.buyParcel(parcel.id)"
+            >
+              <span class="text-xl font-bold">{{ getParcelButtonLabel(parcel.direction) }}</span>
+              <span class="block text-xs mt-1">{{ parcel.owned ? 'Achetee' : '10x10' }}</span>
+            </button>
+          </div>
+        </div>
+
         <div class="bg-slate-900 border border-slate-700 rounded-2xl p-5">
           <h3 class="text-lg font-bold text-white mb-3">Journal</h3>
           <p class="text-sm text-slate-300 mb-3">{{ baseStore.lastMessage }}</p>
@@ -231,21 +320,76 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useBaseStore } from '../stores/useBaseStore'
+import BaseMinimap from '../components/BaseMinimap.vue'
 
 const baseStore = useBaseStore()
 
-const activeTab = ref<'batiments' | 'routes'>('batiments')
+const activeTab = ref<'batiments' | 'routes' | 'parcelles'>('batiments')
 const selectedBuildingId = ref(baseStore.buildings[0]?.id ?? '')
 const selectedRouteId = ref(baseStore.routes[0]?.id ?? '')
 const routeDirection = ref<'horizontal' | 'vertical'>('horizontal')
 const traceMode = ref(false)
 const lastTraceTile = ref<{ x: number; y: number } | null>(null)
+const buildingRotation = ref<'horizontal' | 'vertical'>('horizontal')
+
+const buildingPreview = ref<{ x: number; y: number } | null>(null)
+const routePreview = ref<{ x: number; y: number } | null>(null)
+
+const mapContainer = ref<HTMLElement | null>(null)
+const viewBounds = ref({ x: 0, y: 0, w: 0, h: 0 })
+const zoom = ref(1)
+const ZOOM_STEP = 0.25
+const MIN_ZOOM = 0.5
+const MAX_ZOOM = 2
+
+const tileSize = computed(() => Math.round(48 * zoom.value))
+
+const zoomIn = () => {
+  if (zoom.value < MAX_ZOOM) zoom.value = Math.min(MAX_ZOOM, zoom.value + ZOOM_STEP)
+}
+const zoomOut = () => {
+  if (zoom.value > MIN_ZOOM) zoom.value = Math.max(MIN_ZOOM, zoom.value - ZOOM_STEP)
+}
+
+const updateViewBounds = () => {
+  if (mapContainer.value) {
+    viewBounds.value = {
+      x: mapContainer.value.scrollLeft,
+      y: mapContainer.value.scrollTop,
+      w: mapContainer.value.clientWidth,
+      h: mapContainer.value.clientHeight,
+    }
+  }
+}
+
+// Update bounds initially and on scroll
+import { onMounted } from 'vue'
+onMounted(() => {
+  updateViewBounds()
+  window.addEventListener('resize', updateViewBounds)
+})
 
 const tiles = computed(() => {
-  const output: { id: string; x: number; y: number }[] = []
+  const output: {
+    id: string
+    x: number
+    y: number
+    displayX: number
+    displayY: number
+    owned: boolean
+  }[] = []
   for (let y = 0; y < baseStore.mapHeight; y += 1) {
     for (let x = 0; x < baseStore.mapWidth; x += 1) {
-      output.push({ id: `${x}-${y}`, x, y })
+      const worldX = baseStore.mapOffsetX + x
+      const worldY = baseStore.mapOffsetY + y
+      output.push({
+        id: `${x}-${y}`,
+        x: worldX,
+        y: worldY,
+        displayX: x + 1,
+        displayY: y + 1,
+        owned: baseStore.isTileInOwnedParcel(worldX, worldY),
+      })
     }
   }
   return output
@@ -264,11 +408,25 @@ const getRouteStyle = (r: {
   const route = getRouteDef(r.routeId)
   if (!route) return {}
   const len = route.width
+  const displayX = r.x - baseStore.mapOffsetX + 1
+  const displayY = r.y - baseStore.mapOffsetY + 1
   if (r.direction === 'horizontal') {
-    return { gridColumn: `${r.x + 1} / span ${len}`, gridRow: `${r.y + 1} / span 1` }
+    return { gridColumn: `${displayX} / span ${len}`, gridRow: `${displayY} / span 1` }
   } else {
-    return { gridColumn: `${r.x + 1} / span 1`, gridRow: `${r.y + 1} / span ${len}` }
+    return { gridColumn: `${displayX} / span 1`, gridRow: `${displayY} / span ${len}` }
   }
+}
+
+const getBuildingDisplayPos = (x: number, y: number) => ({
+  gridColumn: `${x - baseStore.mapOffsetX + 1}`,
+  gridRow: `${y - baseStore.mapOffsetY + 1}`,
+})
+
+const getParcelButtonLabel = (direction: 'top' | 'bottom' | 'left' | 'right') => {
+  if (direction === 'top') return '+ Nord'
+  if (direction === 'bottom') return '+ Sud'
+  if (direction === 'left') return '+ Ouest'
+  return '+ Est'
 }
 
 const getAccessLabel = (minWidth: number) => {
@@ -299,19 +457,66 @@ const onTileClick = (x: number, y: number) => {
   }
 }
 
+const onTileHover = (x: number, y: number) => {
+  if (activeTab.value === 'routes' && selectedRouteId.value) {
+    routePreview.value = { x, y }
+    buildingPreview.value = null
+  } else if (activeTab.value === 'batiments' && selectedBuildingId.value) {
+    buildingPreview.value = { x, y }
+    routePreview.value = null
+  }
+}
+
+const clearPreviews = () => {
+  buildingPreview.value = null
+  routePreview.value = null
+}
+
+const getRoutePreviewStyle = () => {
+  if (!routePreview.value || !selectedRouteId.value) return {}
+  const route = getRouteDef(selectedRouteId.value)
+  if (!route) return {}
+  const len = route.width
+  if (routeDirection.value === 'horizontal') {
+    return {
+      gridColumn: `${routePreview.value.x + 1} / span ${len}`,
+      gridRow: `${routePreview.value.y + 1} / span 1`,
+    }
+  } else {
+    return {
+      gridColumn: `${routePreview.value.x + 1} / span 1`,
+      gridRow: `${routePreview.value.y + 1} / span ${len}`,
+    }
+  }
+}
+
+const getBuildingPreviewStyle = () => {
+  if (!buildingPreview.value || !selectedBuildingId.value) return {}
+  const building = getBuildingDef(selectedBuildingId.value)
+  if (!building) return {}
+  const w = buildingRotation.value === 'horizontal' ? building.width : building.height
+  const h = buildingRotation.value === 'horizontal' ? building.height : building.width
+  return {
+    gridColumn: `${buildingPreview.value.x + 1} / span ${w}`,
+    gridRow: `${buildingPreview.value.y + 1} / span ${h}`,
+  }
+}
+
 const placedSummary = computed(() => {
   const map: Record<string, { id: string; name: string; count: number }> = {}
   for (const placed of baseStore.placedBuildings) {
     const building = baseStore.buildings.find((item) => item.id === placed.buildingId)
     if (!building) continue
     if (!map[building.id]) map[building.id] = { id: building.id, name: building.name, count: 0 }
-    map[building.id].count += 1
+    const entry = map[building.id]
+    if (entry) entry.count += 1
   }
   for (const placed of baseStore.placedRoutes) {
     const route = baseStore.routes.find((item) => item.id === placed.routeId)
     if (!route) continue
     if (!map[route.id]) map[route.id] = { id: route.id, name: route.name, count: 0 }
-    map[route.id].count += 1
+    const entry = map[route.id]
+    if (entry) entry.count += 1
   }
   return Object.values(map)
 })

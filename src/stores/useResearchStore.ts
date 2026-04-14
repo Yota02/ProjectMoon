@@ -13,7 +13,7 @@ export interface ResearchNode {
   progress: number; // 0 à 100
   status: ResearchStatus;
   prerequisites: string[];
-  unlockedBy?: string[]; // Pour la logique inverse si besoin
+  tier: number;
 }
 
 export const useResearchStore = defineStore('research', {
@@ -29,7 +29,32 @@ export const useResearchStore = defineStore('research', {
         duration: 10,
         progress: 0,
         status: 'available',
-        prerequisites: []
+        prerequisites: [],
+        tier: 0
+      },
+      'l-booster': {
+        id: 'l-booster',
+        name: 'Boosters à Poudre',
+        description: 'Augmente la poussée initiale pour des charges plus lourdes.',
+        category: 'Lanceurs',
+        cost: 45,
+        duration: 20,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['l-micro'],
+        tier: 1
+      },
+      'l-medium': {
+        id: 'l-medium',
+        name: 'Lanceurs Moyens',
+        description: 'Équilibre parfait entre coût et capacité d\'emport.',
+        category: 'Lanceurs',
+        cost: 80,
+        duration: 40,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['l-micro'],
+        tier: 1
       },
       'l-heavy': {
         id: 'l-heavy',
@@ -40,7 +65,44 @@ export const useResearchStore = defineStore('research', {
         duration: 60,
         progress: 0,
         status: 'locked',
-        prerequisites: ['l-micro']
+        prerequisites: ['l-medium', 'l-booster'],
+        tier: 2
+      },
+      'l-reusable': {
+        id: 'l-reusable',
+        name: 'Étages Réutilisables',
+        description: 'Technologie de rentrée atmosphérique contrôlée pour réduire les coûts.',
+        category: 'Lanceurs',
+        cost: 250,
+        duration: 90,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['l-heavy', 'i-ia'],
+        tier: 3
+      },
+      'l-super-heavy': {
+        id: 'l-super-heavy',
+        name: 'Lanceurs Super-Lourds',
+        description: 'Vaisseaux capables de transporter des modules de colonisation entiers.',
+        category: 'Lanceurs',
+        cost: 400,
+        duration: 120,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['l-heavy', 'm-ionique'],
+        tier: 3
+      },
+      'l-starship': {
+        id: 'l-starship',
+        name: 'Vaisseau Interplanétaire',
+        description: 'Le summum du transport spatial, entièrement réutilisable et habitable.',
+        category: 'Lanceurs',
+        cost: 1000,
+        duration: 300,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['l-super-heavy', 'l-reusable', 'h-survie'],
+        tier: 4
       },
 
       // BÂTIMENTS
@@ -53,7 +115,8 @@ export const useResearchStore = defineStore('research', {
         duration: 20,
         progress: 0,
         status: 'available',
-        prerequisites: []
+        prerequisites: [],
+        tier: 0
       },
       'b-usine': {
         id: 'b-usine',
@@ -64,7 +127,56 @@ export const useResearchStore = defineStore('research', {
         duration: 40,
         progress: 0,
         status: 'locked',
-        prerequisites: ['b-labo']
+        prerequisites: ['b-labo'],
+        tier: 1
+      },
+      'b-control': {
+        id: 'b-control',
+        name: 'Centre de Contrôle Avancé',
+        description: 'Optimise la gestion de plusieurs missions simultanées.',
+        category: 'Bâtiments',
+        cost: 150,
+        duration: 50,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['b-labo', 'i-guidage'],
+        tier: 1
+      },
+      'b-hangar': {
+        id: 'b-hangar',
+        name: 'Hangar de Stockage',
+        description: 'Permet de stocker plusieurs lanceurs prêts au tir.',
+        category: 'Bâtiments',
+        cost: 180,
+        duration: 50,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['b-usine'],
+        tier: 2
+      },
+      'b-complex': {
+        id: 'b-complex',
+        name: 'Complexe de Recherche',
+        description: 'Installation massive pour les percées technologiques majeures.',
+        category: 'Bâtiments',
+        cost: 500,
+        duration: 150,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['b-labo', 'b-control'],
+        tier: 2
+      },
+      'b-drydock': {
+        id: 'b-drydock',
+        name: 'Cale Sèche Orbitale',
+        description: 'Permet l\'assemblage de vaisseaux directement dans l\'espace.',
+        category: 'Bâtiments',
+        cost: 1200,
+        duration: 400,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['b-hangar', 'l-super-heavy'],
+        tier: 4
       },
 
       // MOTEUR
@@ -77,7 +189,20 @@ export const useResearchStore = defineStore('research', {
         duration: 15,
         progress: 0,
         status: 'available',
-        prerequisites: []
+        prerequisites: [],
+        tier: 0
+      },
+      'm-solid': {
+        id: 'm-solid',
+        name: 'Carburant Solide Haute Densité',
+        description: 'Améliore la puissance des boosters.',
+        category: 'Moteur',
+        cost: 60,
+        duration: 25,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['m-chimique'],
+        tier: 1
       },
       'm-ionique': {
         id: 'm-ionique',
@@ -88,7 +213,44 @@ export const useResearchStore = defineStore('research', {
         duration: 120,
         progress: 0,
         status: 'locked',
-        prerequisites: ['m-chimique']
+        prerequisites: ['m-chimique'],
+        tier: 1
+      },
+      'm-plasma': {
+        id: 'm-plasma',
+        name: 'Propulsion Plasma (VASIMR)',
+        description: 'Accélération constante pour les voyages interplanétaires rapides.',
+        category: 'Moteur',
+        cost: 450,
+        duration: 180,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['m-ionique'],
+        tier: 2
+      },
+      'm-nucleaire': {
+        id: 'm-nucleaire',
+        name: 'Propulsion Nucléaire Thermique',
+        description: 'Le summum de l\'efficacité pour les voyages interplanétaires.',
+        category: 'Moteur',
+        cost: 600,
+        duration: 240,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['m-plasma', 'i-ia'],
+        tier: 3
+      },
+      'm-antimatter': {
+        id: 'm-antimatter',
+        name: 'Moteur à Antimatière',
+        description: 'Technologie théorique permettant d\'atteindre des vitesses relativistes.',
+        category: 'Moteur',
+        cost: 5000,
+        duration: 1000,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['m-nucleaire', 'i-quantum'],
+        tier: 4
       },
 
       // INFORMATIQUE
@@ -101,7 +263,20 @@ export const useResearchStore = defineStore('research', {
         duration: 10,
         progress: 0,
         status: 'available',
-        prerequisites: []
+        prerequisites: [],
+        tier: 0
+      },
+      'i-sat': {
+        id: 'i-sat',
+        name: 'Réseau de Satellites Relais',
+        description: 'Améliore la communication avec les sondes lointaines.',
+        category: 'Informatique',
+        cost: 70,
+        duration: 30,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['i-guidage'],
+        tier: 1
       },
       'i-ia': {
         id: 'i-ia',
@@ -112,7 +287,44 @@ export const useResearchStore = defineStore('research', {
         duration: 180,
         progress: 0,
         status: 'locked',
-        prerequisites: ['i-guidage']
+        prerequisites: ['i-guidage'],
+        tier: 1
+      },
+      'i-automation': {
+        id: 'i-automation',
+        name: 'Automatisation Totale',
+        description: 'Réduit drastiquement le personnel nécessaire au sol.',
+        category: 'Informatique',
+        cost: 500,
+        duration: 150,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['i-ia'],
+        tier: 2
+      },
+      'i-quantum': {
+        id: 'i-quantum',
+        name: 'Calcul Quantique',
+        description: 'Précision de navigation quasi-parfaite.',
+        category: 'Informatique',
+        cost: 800,
+        duration: 300,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['i-ia'],
+        tier: 2
+      },
+      'i-singularity': {
+        id: 'i-singularity',
+        name: 'IA de Niveau Singularité',
+        description: 'Gestion autonome complète de l\'expansion galactique.',
+        category: 'Informatique',
+        cost: 3000,
+        duration: 600,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['i-quantum'],
+        tier: 4
       },
 
       // HUMAIN
@@ -125,7 +337,20 @@ export const useResearchStore = defineStore('research', {
         duration: 30,
         progress: 0,
         status: 'available',
-        prerequisites: []
+        prerequisites: [],
+        tier: 0
+      },
+      'h-psy': {
+        id: 'h-psy',
+        name: 'Psychologie de l\'Isolement',
+        description: 'Améliore le moral des équipages lors des missions longues.',
+        category: 'Humain',
+        cost: 100,
+        duration: 40,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['h-entraînement'],
+        tier: 1
       },
       'h-survie': {
         id: 'h-survie',
@@ -136,7 +361,44 @@ export const useResearchStore = defineStore('research', {
         duration: 150,
         progress: 0,
         status: 'locked',
-        prerequisites: ['h-entraînement']
+        prerequisites: ['h-entraînement'],
+        tier: 1
+      },
+      'h-medecine': {
+        id: 'h-medecine',
+        name: 'Médecine de l\'Espace',
+        description: 'Réduit les risques de santé liés à la micro-gravité.',
+        category: 'Humain',
+        cost: 350,
+        duration: 100,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['h-survie', 'h-psy'],
+        tier: 2
+      },
+      'h-cryo': {
+        id: 'h-cryo',
+        name: 'Cryostase Avancée',
+        description: 'Réduit les besoins vitaux lors des longs transits.',
+        category: 'Humain',
+        cost: 500,
+        duration: 200,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['h-survie'],
+        tier: 2
+      },
+      'h-genetics': {
+        id: 'h-genetics',
+        name: 'Adaptation Génétique',
+        description: 'Modification biologique pour survivre sur d\'autres planètes.',
+        category: 'Humain',
+        cost: 2000,
+        duration: 500,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['h-medecine', 'h-cryo'],
+        tier: 4
       },
 
       // ECONOMIQUE
@@ -149,7 +411,8 @@ export const useResearchStore = defineStore('research', {
         duration: 15,
         progress: 0,
         status: 'available',
-        prerequisites: []
+        prerequisites: [],
+        tier: 0
       },
       'e-assurance': {
         id: 'e-assurance',
@@ -160,20 +423,82 @@ export const useResearchStore = defineStore('research', {
         duration: 45,
         progress: 0,
         status: 'locked',
-        prerequisites: ['e-marketing']
+        prerequisites: ['e-marketing'],
+        tier: 1
+      },
+      'e-tourism': {
+        id: 'e-tourism',
+        name: 'Tourisme Orbital',
+        description: 'Nouvelle source de revenus grâce aux civils fortunés.',
+        category: 'Economique',
+        cost: 280,
+        duration: 80,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['e-assurance', 'l-medium'],
+        tier: 2
+      },
+      'e-fondation': {
+        id: 'e-fondation',
+        name: 'Fondation Spatiale Internationale',
+        description: 'Subventions permanentes pour l\'exploration.',
+        category: 'Economique',
+        cost: 450,
+        duration: 100,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['e-assurance'],
+        tier: 2
+      },
+      'e-asteroid': {
+        id: 'e-asteroid',
+        name: 'Exploitation des Astéroïdes',
+        description: 'Extraction de métaux précieux dans la ceinture d\'astéroïdes.',
+        category: 'Economique',
+        cost: 1500,
+        duration: 350,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['e-fondation', 'm-ionique'],
+        tier: 3
+      },
+      'e-galactic-trade': {
+        id: 'e-galactic-trade',
+        name: 'Commerce Interplanétaire',
+        description: 'Établissement d\'un réseau économique autosuffisant.',
+        category: 'Economique',
+        cost: 4000,
+        duration: 800,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['e-asteroid', 'c-dome'],
+        tier: 4
       },
 
       // COLONISATION
       'c-ferme': {
         id: 'c-ferme',
         name: 'Ferme Hydroponique',
-        description: 'Permet de produire de la nourriture dans l\'espace, réduisant les coûts de maintenance.',
+        description: 'Permet de produire de la nourriture dans l\'espace.',
         category: 'Colonisation',
         cost: 80,
         duration: 40,
         progress: 0,
         status: 'available',
-        prerequisites: []
+        prerequisites: [],
+        tier: 0
+      },
+      'c-outpost': {
+        id: 'c-outpost',
+        name: 'Avant-poste Lunaire',
+        description: 'Première base permanente sur un autre corps céleste.',
+        category: 'Colonisation',
+        cost: 200,
+        duration: 80,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['c-ferme', 'l-medium'],
+        tier: 1
       },
       'c-mine': {
         id: 'c-mine',
@@ -184,18 +509,44 @@ export const useResearchStore = defineStore('research', {
         duration: 60,
         progress: 0,
         status: 'locked',
-        prerequisites: ['c-ferme']
+        prerequisites: ['c-ferme'],
+        tier: 1
       },
       'c-dome': {
         id: 'c-dome',
         name: 'Dômes Habitables',
-        description: 'Infrastructures pressurisées pour établir des colonies permanentes.',
+        description: 'Infrastructures pressurisées pour colonies permanentes.',
         category: 'Colonisation',
         cost: 400,
         duration: 180,
         progress: 0,
         status: 'locked',
-        prerequisites: ['c-mine']
+        prerequisites: ['c-mine', 'c-outpost'],
+        tier: 2
+      },
+      'c-mars': {
+        id: 'c-mars',
+        name: 'Première Ville Martienne',
+        description: 'Établissement d\'une présence humaine pérenne sur Mars.',
+        category: 'Colonisation',
+        cost: 1200,
+        duration: 450,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['c-dome', 'l-super-heavy'],
+        tier: 3
+      },
+      'c-terraforming': {
+        id: 'c-terraforming',
+        name: 'Terraformation Alpha',
+        description: 'Modification de l\'atmosphère planétaire pour la vie humaine.',
+        category: 'Colonisation',
+        cost: 10000,
+        duration: 2000,
+        progress: 0,
+        status: 'locked',
+        prerequisites: ['c-mars', 'm-nucleaire', 'h-genetics'],
+        tier: 4
       }
     } as Record<string, ResearchNode>,
     activeResearchId: null as string | null,
