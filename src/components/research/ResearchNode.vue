@@ -22,15 +22,21 @@
         <BaseIcon :name="getIconName" :size="20" />
       </div>
       
-      <span v-if="research.status === 'completed'" class="text-[10px] font-bold uppercase tracking-widest text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-400/20">
-        Acquis
-      </span>
-      <span v-else-if="research.status === 'researching'" class="text-[10px] font-bold uppercase tracking-widest text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded border border-blue-400/20 animate-pulse">
-        En cours
-      </span>
-      <span v-else class="text-[10px] font-mono text-slate-500">
-        {{ research.cost }} 🧪
-      </span>
+      <div class="flex flex-col items-end gap-1">
+        <span v-if="research.status === 'completed'" class="text-[10px] font-bold uppercase tracking-widest text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-400/20">
+          Acquis
+        </span>
+        <span v-else-if="research.status === 'researching'" class="text-[10px] font-bold uppercase tracking-widest text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded border border-blue-400/20 animate-pulse">
+          En cours
+        </span>
+        <span v-else class="text-[10px] font-mono text-slate-500">
+          {{ adjustedCost }} 🧪
+        </span>
+
+        <span :class="['text-[9px] font-bold px-1.5 py-0.5 rounded border whitespace-nowrap', difficultyClasses]">
+          {{ forecastYear }} • {{ difficultyLabel }}
+        </span>
+      </div>
     </div>
 
     <h3 :class="['font-bold text-sm mb-1', research.status === 'locked' ? 'text-slate-500' : 'text-white']">
@@ -88,36 +94,42 @@
 import { computed } from 'vue'
 import type { ResearchNode } from '../../stores/useResearchStore'
 import { useResearchStore } from '../../stores/useResearchStore'
+import { useResourceStore } from '../../stores/useResourceStore'
 import BaseIcon from '../ui/BaseIcon.vue'
 
 const props = defineProps<{
   research: ResearchNode
   hasActiveResearch: boolean
-  canAfford: boolean
 }>()
 
 defineEmits(['start'])
 
 const researchStore = useResearchStore()
+const resourceStore = useResourceStore()
+
+const forecastYear = computed(() => researchStore.getTierYear(props.research.tier))
+const multiplier = computed(() => researchStore.getDifficultyMultiplier(props.research.id))
+const adjustedCost = computed(() => Math.round(props.research.cost * multiplier.value))
+const canAfford = computed(() => resourceStore.science >= adjustedCost.value)
+
+const difficultyLabel = computed(() => {
+  if (multiplier.value > 1.2) return 'Expérimental'
+  if (multiplier.value > 1) return 'Avancé'
+  if (multiplier.value < 0.8) return 'Standardisé'
+  if (multiplier.value < 1) return 'Facilité'
+  return 'Époque idéale'
+})
+
+const difficultyClasses = computed(() => {
+  if (multiplier.value > 1.2) return 'bg-amber-500/10 border-amber-500/30 text-amber-500'
+  if (multiplier.value > 1) return 'bg-blue-500/10 border-blue-500/30 text-blue-400'
+  if (multiplier.value < 0.8) return 'bg-emerald-500/10 border-emerald-500/30 text-emerald-500'
+  if (multiplier.value < 1) return 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400'
+  return 'bg-slate-500/10 border-slate-500/30 text-slate-400'
+})
 
 const getResearchName = (id: string) => {
   return researchStore.researches[id]?.name || id
-}
-
-const getResearchCategory = (id: string) => {
-  return researchStore.researches[id]?.category || ''
-}
-
-const getCategoryIcon = (category: string) => {
-  switch (category) {
-    case 'Lanceurs': return 'rocket'
-    case 'Bâtiments': return 'building'
-    case 'Moteur': return 'battery'
-    case 'Informatique': return 'cpu'
-    case 'Humain': return 'user'
-    case 'Economique': return 'coins'
-    default: return 'flask'
-  }
 }
 
 const isPrerequisiteMet = (id: string) => {

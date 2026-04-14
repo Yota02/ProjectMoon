@@ -92,7 +92,7 @@ export const useContractStore = defineStore('contract', {
         amount: 55,
         description: 'Développement de lanceurs Longue Marche.',
         status: 'locked',
-        requirement: '3 Contrats d\'État complétés',
+        requirement: "3 Contrats d'État complétés",
       },
       {
         id: 'sub-jaxa',
@@ -118,27 +118,27 @@ export const useContractStore = defineStore('contract', {
         agency: 'Bonus Course (USA)',
         faction: 'USA',
         amount: 120,
-        description: 'Fonds d\'urgence pour la suprématie technologique.',
+        description: "Fonds d'urgence pour la suprématie technologique.",
         status: 'locked',
         requirement: 'Événement: Course Spatiale',
-        eventRequired: 'spaceRace'
+        eventRequired: 'spaceRace',
       },
       {
         id: 'sub-race-china',
         agency: 'Bonus Course (Chine)',
         faction: 'Chine',
         amount: 125,
-        description: 'Plan quinquennal d\'accélération spatiale.',
+        description: "Plan quinquennal d'accélération spatiale.",
         status: 'locked',
         requirement: 'Événement: Course Spatiale',
-        eventRequired: 'spaceRace'
-      }
+        eventRequired: 'spaceRace',
+      },
     ] as Subsidy[],
     contracts: [
       {
         id: 'gov-001',
         title: 'Surveillance Orbitale',
-        description: 'Surveillance de débris pour le compte de l\'ONU.',
+        description: "Surveillance de débris pour le compte de l'ONU.",
         type: 'État',
         reward: 500000,
         monthlyReward: 50,
@@ -156,36 +156,39 @@ export const useContractStore = defineStore('contract', {
         danger: 'medium',
         status: 'available',
         requirements: { science: 500, researchId: 'l-micro' },
-      }
+      },
     ] as Contract[],
   }),
   getters: {
-    availableContracts: (state) => state.contracts.filter(c => c.status === 'available'),
-    activeContracts: (state) => state.contracts.filter(c => c.status === 'active'),
-    signedSubsidies: (state) => state.subsidies.filter(s => s.status === 'signed'),
+    availableContracts: (state) => state.contracts.filter((c) => c.status === 'available'),
+    activeContracts: (state) => state.contracts.filter((c) => c.status === 'active'),
+    signedSubsidies: (state) => state.subsidies.filter((s) => s.status === 'signed'),
     totalMonthlyRevenue: (state) => {
       const subsidiesRevenue = state.subsidies
-        .filter(s => s.status === 'signed')
+        .filter((s) => s.status === 'signed')
         .reduce((sum, s) => sum + s.amount, 0)
       const contractsRevenue = state.contracts
-        .filter(c => c.status === 'active')
+        .filter((c) => c.status === 'active')
         .reduce((sum, c) => sum + c.monthlyReward, 0)
       return subsidiesRevenue + contractsRevenue
-    }
+    },
   },
   actions: {
     triggerEvent(eventId: string) {
       if (!this.activeEvents.includes(eventId)) {
         this.activeEvents.push(eventId)
-        this.subsidies.forEach(s => {
+        this.subsidies.forEach((s) => {
           if (s.eventRequired === eventId) s.status = 'available'
         })
       }
     },
 
     signSubsidy(subsidyId: string) {
-      const subsidy = this.subsidies.find(s => s.id === subsidyId)
+      const resourceStore = useResourceStore()
+      const subsidy = this.subsidies.find((s) => s.id === subsidyId)
       if (!subsidy || subsidy.status !== 'available') return
+
+      resourceStore.addArgent(subsidy.amount * 1000000)
 
       // Reputation Logic
       const faction = subsidy.faction
@@ -208,7 +211,7 @@ export const useContractStore = defineStore('contract', {
       }
 
       // Clamp reputation between 0 and 100
-      Object.keys(this.factionsReputation).forEach(key => {
+      Object.keys(this.factionsReputation).forEach((key) => {
         const k = key as keyof typeof this.factionsReputation
         this.factionsReputation[k] = Math.max(0, Math.min(100, this.factionsReputation[k]))
       })
@@ -219,7 +222,7 @@ export const useContractStore = defineStore('contract', {
     },
 
     checkGeopolitics() {
-      Object.keys(this.factionsReputation).forEach(faction => {
+      Object.keys(this.factionsReputation).forEach((faction) => {
         const rep = this.factionsReputation[faction as keyof typeof this.factionsReputation]
         if (rep < 15) {
           this.cancelFactionSubsidies(faction as Faction)
@@ -228,7 +231,7 @@ export const useContractStore = defineStore('contract', {
     },
 
     cancelFactionSubsidies(faction: Faction) {
-      this.subsidies.forEach(s => {
+      this.subsidies.forEach((s) => {
         if (s.faction === faction && s.status === 'signed') {
           s.status = 'locked'
         }
@@ -237,27 +240,19 @@ export const useContractStore = defineStore('contract', {
     },
 
     updateProduction() {
-      const resourceStore = useResourceStore()
-      const revenue = this.subsidies
-        .filter(s => s.status === 'signed')
-        .reduce((sum, s) => sum + s.amount, 0)
-      
-      const contractsRevenue = this.contracts
-        .filter(c => c.status === 'active')
-        .reduce((sum, c) => sum + c.monthlyReward, 0)
-        
-      resourceStore.production.argent = 2 + revenue + contractsRevenue
+      // Production is now handled in gameStore.tick() - monthly payments
+      // Only used to track active contracts/subsidies for display purposes
     },
 
     acceptContract(contractId: string) {
       const resourceStore = useResourceStore()
-      const contract = this.contracts.find(c => c.id === contractId)
-      
+      const contract = this.contracts.find((c) => c.id === contractId)
+
       if (contract && contract.status === 'available') {
         contract.status = 'active'
         resourceStore.addArgent(contract.reward)
         this.updateProduction()
       }
-    }
-  }
+    },
+  },
 })

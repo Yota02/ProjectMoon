@@ -55,7 +55,6 @@
           :description="activeTabDescription"
           :researches="researchStore.getByCategory(activeTab)"
           :has-active-research="!!researchStore.activeResearchId"
-          :science-points="resourceStore.science"
           @start="researchStore.startResearch($event)"
         />
       </transition>

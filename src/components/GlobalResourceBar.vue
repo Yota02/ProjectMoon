@@ -5,9 +5,9 @@
         <span class="label">CREDITS</span>
         <span class="value">{{ Math.floor(resourceStore.argent).toLocaleString() }}</span>
       </div>
-      <div class="trend">+{{ resourceStore.production.argent }}/s</div>
+      <div class="trend">+{{ contractStore.totalMonthlyRevenue.toFixed(0) }}M/mois</div>
     </div>
-    
+
     <div class="divider"></div>
 
     <div class="resource-item science">
@@ -32,8 +32,10 @@
 
 <script setup lang="ts">
 import { useResourceStore } from '../stores/useResourceStore'
+import { useContractStore } from '../stores/useContractStore'
 
 const resourceStore = useResourceStore()
+const contractStore = useContractStore()
 </script>
 
 <style scoped>
@@ -76,9 +78,18 @@ const resourceStore = useResourceStore()
   background: rgba(255, 255, 255, 0.05);
 }
 
-.money .trend { color: #ffd700; background: rgba(255, 215, 0, 0.1); }
-.science .trend { color: var(--primary); background: rgba(77, 168, 218, 0.1); }
-.fuel .trend { color: var(--secondary); background: rgba(233, 69, 96, 0.1); }
+.money .trend {
+  color: #ffd700;
+  background: rgba(255, 215, 0, 0.1);
+}
+.science .trend {
+  color: var(--primary);
+  background: rgba(77, 168, 218, 0.1);
+}
+.fuel .trend {
+  color: var(--secondary);
+  background: rgba(233, 69, 96, 0.1);
+}
 
 .divider {
   width: 1px;
@@ -87,7 +98,8 @@ const resourceStore = useResourceStore()
 }
 
 @media (max-width: 900px) {
-  .divider, .trend {
+  .divider,
+  .trend {
     display: none;
   }
   .global-resource-bar {

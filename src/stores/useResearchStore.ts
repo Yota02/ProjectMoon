@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
 import { useResourceStore } from './useResourceStore';
+import { useGameStore } from './useGameStore';
 
 export type ResearchStatus = 'locked' | 'available' | 'researching' | 'completed';
 
@@ -15,6 +16,14 @@ export interface ResearchNode {
   prerequisites: string[];
   tier: number;
 }
+
+const TIER_YEARS: Record<number, number> = {
+  0: 2014,
+  1: 2015,
+  2: 2020,
+  3: 2023,
+  4: 2030,
+};
 
 export const useResearchStore = defineStore('research', {
   state: () => ({
@@ -560,6 +569,29 @@ export const useResearchStore = defineStore('research', {
     getByCategory: (state) => (category: string) => {
       return Object.values(state.researches).filter((r) => r.category === category)
     },
+    getTierYear: () => (tier: number) => {
+      return TIER_YEARS[tier] || 2030;
+    },
+    getDifficultyMultiplier: (state) => (id: string) => {
+      const research = state.researches[id];
+      if (!research) return 1;
+      
+      const gameStore = useGameStore();
+      const currentYear = gameStore.currentYear;
+      const forecastYear = TIER_YEARS[research.tier] || 2030;
+      
+      const diff = forecastYear - currentYear;
+      
+      if (diff > 0) {
+        // En avance sur son temps: plus cher et plus long (20% par an)
+        return 1 + (diff * 0.2);
+      } else if (diff < 0) {
+        // En retard: plus facile (10% de réduction par an, min 50%)
+        return Math.max(0.5, 1 / (1 + Math.abs(diff) * 0.1));
+      }
+      
+      return 1;
+    }
   },
   actions: {
     startResearch(id: string) {
@@ -568,8 +600,11 @@ export const useResearchStore = defineStore('research', {
 
       if (!research || research.status !== 'available' || this.activeResearchId) return;
 
-      if (resourceStore.science >= research.cost) {
-        resourceStore.addScience(-research.cost);
+      const multiplier = this.getDifficultyMultiplier(id);
+      const adjustedCost = Math.round(research.cost * multiplier);
+
+      if (resourceStore.science >= adjustedCost) {
+        resourceStore.addScience(-adjustedCost);
         research.status = 'researching';
         this.activeResearchId = id;
       }
@@ -581,9 +616,11 @@ export const useResearchStore = defineStore('research', {
       const research = this.researches[this.activeResearchId];
       if (!research) return;
 
+      const multiplier = this.getDifficultyMultiplier(this.activeResearchId);
+      const adjustedDuration = research.duration * multiplier;
+
       // deltaTime est en ms, on convertit en progression
-      // Si duration est en secondes, 1 tick = 1 seconde = 100 / duration pourcentages
-      const increment = (deltaTime / 1000) * (100 / research.duration);
+      const increment = (deltaTime / 1000) * (100 / adjustedDuration);
       research.progress += increment;
 
       if (research.progress >= 100) {

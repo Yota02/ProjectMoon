@@ -23,8 +23,9 @@
             <span class="unit">crédits</span>
           </div>
           <div class="footer">
-            <span class="trend positive">+{{ resourceStore.production.argent }}/s</span>
-            <button class="manual-btn" @click="resourceStore.addArgent(10)">Extraction</button>
+            <span class="trend positive"
+              >+{{ contractStore.totalMonthlyRevenue.toFixed(0) }}M/mois</span
+            >
           </div>
         </div>
         <div class="card-bg"></div>
@@ -71,8 +72,10 @@
 
 <script setup lang="ts">
 import { useResourceStore } from '../stores/useResourceStore'
+import { useContractStore } from '../stores/useContractStore'
 
 const resourceStore = useResourceStore()
+const contractStore = useContractStore()
 </script>
 
 <style scoped>
@@ -134,9 +137,18 @@ h2 {
 }
 
 @keyframes pulse {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 242, 255, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(0, 242, 255, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 242, 255, 0); }
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(0, 242, 255, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 10px rgba(0, 242, 255, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(0, 242, 255, 0);
+  }
 }
 
 .resources-grid {
@@ -170,9 +182,15 @@ h2 {
   height: 4px;
 }
 
-.resource-card.money .card-bg { background: linear-gradient(90deg, #ffd700, #ff8c00); }
-.resource-card.science .card-bg { background: linear-gradient(90deg, #4da8da, #00f2ff); }
-.resource-card.fuel .card-bg { background: linear-gradient(90deg, #e94560, #ff2e63); }
+.resource-card.money .card-bg {
+  background: linear-gradient(90deg, #ffd700, #ff8c00);
+}
+.resource-card.science .card-bg {
+  background: linear-gradient(90deg, #4da8da, #00f2ff);
+}
+.resource-card.fuel .card-bg {
+  background: linear-gradient(90deg, #e94560, #ff2e63);
+}
 
 .card-content {
   position: relative;
@@ -233,7 +251,9 @@ h2 {
   font-family: 'JetBrains Mono', monospace;
 }
 
-.trend.positive { color: #00f2ff; }
+.trend.positive {
+  color: #00f2ff;
+}
 
 .manual-btn {
   background: rgba(255, 255, 255, 0.05);
@@ -252,7 +272,13 @@ h2 {
   border-color: rgba(255, 255, 255, 0.2);
 }
 
-.resource-card.money:hover .manual-btn { color: #ffd700; }
-.resource-card.science:hover .manual-btn { color: #4da8da; }
-.resource-card.fuel:hover .manual-btn { color: #e94560; }
+.resource-card.money:hover .manual-btn {
+  color: #ffd700;
+}
+.resource-card.science:hover .manual-btn {
+  color: #4da8da;
+}
+.resource-card.fuel:hover .manual-btn {
+  color: #e94560;
+}
 </style>

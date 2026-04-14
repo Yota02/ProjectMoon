@@ -31,7 +31,7 @@
           <p class="text-xs text-slate-500 uppercase font-bold mb-1">Production d'Argent</p>
           <div class="flex items-baseline gap-2">
             <span class="text-2xl font-mono font-bold text-emerald-400"
-              >+{{ resourceStore.production.argent }}</span
+              >+{{ contractStore.totalMonthlyRevenue }}</span
             >
             <span class="text-xs text-slate-500">M€ / mois</span>
           </div>
@@ -103,15 +103,19 @@
             Nouvelle Course Spatiale Mondiale (2018)
           </h4>
           <p class="text-sm text-indigo-400/80">
-            L'escalade des tensions forcera les grandes puissances à financer massivement les agences
-            privées dès 2018.
+            L'escalade des tensions forcera les grandes puissances à financer massivement les
+            agences privées dès 2018.
           </p>
         </div>
       </div>
       <div class="text-right">
-        <p class="text-xs text-indigo-400 font-mono uppercase font-bold tracking-widest mb-1">Démarrage automatique en</p>
+        <p class="text-xs text-indigo-400 font-mono uppercase font-bold tracking-widest mb-1">
+          Démarrage automatique en
+        </p>
         <p class="text-2xl font-black text-white font-mono">
-          {{ 2018 - gameStore.currentYear > 0 ? (2018 - gameStore.currentYear) + ' ans' : 'Imminent' }}
+          {{
+            2018 - gameStore.currentYear > 0 ? 2018 - gameStore.currentYear + ' ans' : 'Imminent'
+          }}
         </p>
       </div>
     </div>

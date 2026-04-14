@@ -33,7 +33,6 @@
             :key="research.id"
             :research="research"
             :has-active-research="hasActiveResearch"
-            :can-afford="sciencePoints >= research.cost"
             @start="$emit('start', $event)"
           />
         </div>
@@ -53,7 +52,6 @@ const props = defineProps<{
   description: string
   researches: ResearchNodeType[]
   hasActiveResearch: boolean
-  sciencePoints: number
 }>()
 
 defineEmits(['start'])

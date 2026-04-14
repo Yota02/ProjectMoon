@@ -22,9 +22,7 @@ export const useResourceStore = defineStore('resource', {
       this.carburant += amount
     },
     tick(deltaTime: number) {
-      // 1 jour = 500ms. Si deltaTime = 1000ms, on a 2 jours écoulés.
       const daysPassed = deltaTime / 500
-      this.argent += this.production.argent * daysPassed
       this.science += this.production.science * daysPassed
       this.carburant += this.production.carburant * daysPassed
     },
