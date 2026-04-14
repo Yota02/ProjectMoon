@@ -1,18 +1,19 @@
-import { defineStore } from 'pinia';
-import { useResourceStore } from './useResourceStore';
+import { defineStore } from 'pinia'
+import { useResourceStore } from './useResourceStore'
+import { usePersonnelStore } from './usePersonnelStore'
 
 export interface Mission {
-  id: number;
-  name: string;
-  cost: { argent: number; carburant: number };
-  successChance: number;
-  reward: { science: number };
-  status: string;
+  id: number
+  name: string
+  cost: { argent: number; carburant: number }
+  successChance: number
+  reward: { science: number }
+  status: string
 }
 
 export interface MissionLog {
-  temps: string;
-  message: string;
+  temps: string
+  message: string
 }
 
 export const useMissionStore = defineStore('mission', {
@@ -20,59 +21,72 @@ export const useMissionStore = defineStore('mission', {
     missions: [
       {
         id: 1,
-        name: "Lancer un satellite météo",
+        name: 'Lancer un satellite météo',
         cost: { argent: 100, carburant: 20 },
-        successChance: 0.70, // 70% de chance de succès
+        successChance: 0.7, // 70% de chance de succès
         reward: { science: 50 },
-        status: "Disponible"
+        status: 'Disponible',
       },
       {
         id: 2,
-        name: "Sonde vers la Lune",
+        name: 'Sonde vers la Lune',
         cost: { argent: 500, carburant: 150 },
-        successChance: 0.40, // 40% de chance de succès
+        successChance: 0.4, // 40% de chance de succès
         reward: { science: 300 },
-        status: "Disponible"
-      }
+        status: 'Disponible',
+      },
     ] as Mission[],
-    logs: [] as MissionLog[] // Historique des missions
+    logs: [] as MissionLog[], // Historique des missions
   }),
   actions: {
     launchMission(missionId: number) {
-      const resourceStore = useResourceStore();
-      const mission = this.missions.find(m => m.id === missionId);
-      
-      if (!mission) return;
+      const resourceStore = useResourceStore()
+      const personnelStore = usePersonnelStore()
+      const mission = this.missions.find((m) => m.id === missionId)
+
+      if (!mission) return
+
+      if (!personnelStore.hasIngenieur) {
+        this.log(`[ERREUR] Un Ingenieur est requis pour lancer "${mission.name}".`)
+        return
+      }
 
       // Vérifier si le joueur a assez de ressources
-      if (resourceStore.argent >= mission.cost.argent && 
-          resourceStore.carburant >= mission.cost.carburant) {
-        
+      if (
+        resourceStore.argent >= mission.cost.argent &&
+        resourceStore.carburant >= mission.cost.carburant
+      ) {
         // Consommer les ressources
-        resourceStore.addArgent(-mission.cost.argent);
-        resourceStore.addCarburant(-mission.cost.carburant);
+        resourceStore.addArgent(-mission.cost.argent)
+        resourceStore.addCarburant(-mission.cost.carburant)
 
         // Calculer la réussite avec la probabilité
-        const roll = Math.random();
-        const isSuccess = roll <= mission.successChance;
+        const effectiveSuccessChance = Math.min(
+          0.95,
+          mission.successChance + personnelStore.missionSuccessBonus,
+        )
+        const roll = Math.random()
+        const isSuccess = roll <= effectiveSuccessChance
 
         if (isSuccess) {
-          mission.status = "Succès";
-          resourceStore.addScience(mission.reward.science);
-          this.log(`[SUCCÈS] Mission "${mission.name}" a réussi ! Récompense: +${mission.reward.science} Science.`);
+          mission.status = 'Succès'
+          resourceStore.addScience(mission.reward.science)
+          this.log(
+            `[SUCCÈS] Mission "${mission.name}" a réussi ! Récompense: +${mission.reward.science} Science.`,
+          )
         } else {
-          mission.status = "Échec";
-          this.log(`[ÉCHEC] Mission "${mission.name}" a échoué... Pensez à améliorer vos lanceurs.`);
+          mission.status = 'Échec'
+          this.log(`[ÉCHEC] Mission "${mission.name}" a échoué... Pensez à améliorer vos lanceurs.`)
         }
       } else {
-         this.log(`[ERREUR] Pas assez de ressources pour "${mission.name}".`);
+        this.log(`[ERREUR] Pas assez de ressources pour "${mission.name}".`)
       }
     },
-    
+
     log(message: string) {
       // On garde max 10 logs
-      this.logs.unshift({ temps: new Date().toLocaleTimeString(), message });
-      if (this.logs.length > 10) this.logs.pop();
-    }
-  }
-});
+      this.logs.unshift({ temps: new Date().toLocaleTimeString(), message })
+      if (this.logs.length > 10) this.logs.pop()
+    },
+  },
+})

@@ -7,6 +7,7 @@
 
     <main>
       <ResourceDashboard />
+      <PersonnelCenter />
       <MissionList />
     </main>
   </div>
@@ -16,6 +17,7 @@
 import { onMounted, onUnmounted } from 'vue'
 import ResourceDashboard from './components/ResourceDashboard.vue'
 import MissionList from './components/MissionList.vue'
+import PersonnelCenter from './components/PersonnelCenter.vue'
 import { gameLoop } from './engine/GameLoop'
 import { useResourceStore } from './stores/useResourceStore'
 
@@ -26,7 +28,7 @@ onMounted(() => {
   gameLoop.addTickHandler((deltaTime: number) => {
     resourceStore.tick(deltaTime)
   })
-  
+
   // Démarrer la boucle de jeu
   gameLoop.start()
 })

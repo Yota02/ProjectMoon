@@ -5,11 +5,14 @@
       <div v-for="mission in missionStore.missions" :key="mission.id" class="mission-card">
         <h3>{{ mission.name }}</h3>
         <ul class="costs-rewards">
-          <li><strong>Coût :</strong> {{ mission.cost.argent }} Argent | {{ mission.cost.carburant }} Carburant</li>
+          <li>
+            <strong>Coût :</strong> {{ mission.cost.argent }} Argent |
+            {{ mission.cost.carburant }} Carburant
+          </li>
           <li><strong>Succès :</strong> {{ mission.successChance * 100 }}%</li>
           <li><strong>Récompense :</strong> +{{ mission.reward.science }} Science</li>
         </ul>
-        <button 
+        <button
           @click="missionStore.launchMission(mission.id)"
           :disabled="!canAfford(mission)"
           class="launch-btn"
@@ -17,8 +20,8 @@
           LANCER
         </button>
         <div class="status" v-if="mission.status !== 'Disponible'">
-          Dernier lancement : 
-          <span :class="{'success': mission.status === 'Succès', 'fail': mission.status === 'Échec'}">
+          Dernier lancement :
+          <span :class="{ success: mission.status === 'Succès', fail: mission.status === 'Échec' }">
             {{ mission.status }}
           </span>
         </div>
@@ -40,13 +43,18 @@
 <script setup lang="ts">
 import { useMissionStore, type Mission } from '../stores/useMissionStore'
 import { useResourceStore } from '../stores/useResourceStore'
+import { usePersonnelStore } from '../stores/usePersonnelStore'
 
 const missionStore = useMissionStore()
 const resourceStore = useResourceStore()
+const personnelStore = usePersonnelStore()
 
 const canAfford = (mission: Mission) => {
-  return resourceStore.argent >= mission.cost.argent && 
-         resourceStore.carburant >= mission.cost.carburant
+  return (
+    resourceStore.argent >= mission.cost.argent &&
+    resourceStore.carburant >= mission.cost.carburant &&
+    personnelStore.hasIngenieur
+  )
 }
 </script>
 
@@ -60,7 +68,8 @@ const canAfford = (mission: Mission) => {
   border: 1px solid #16213e;
 }
 
-h2, h3 {
+h2,
+h3 {
   color: #4da8da;
   margin-top: 0;
 }
@@ -115,8 +124,14 @@ h2, h3 {
   font-size: 0.9rem;
 }
 
-.success { color: #4ade80; font-weight: bold; }
-.fail { color: #f87171; font-weight: bold; }
+.success {
+  color: #4ade80;
+  font-weight: bold;
+}
+.fail {
+  color: #f87171;
+  font-weight: bold;
+}
 
 .logs-section {
   background-color: #0d1b2a;
@@ -131,6 +146,11 @@ h2, h3 {
   overflow-y: auto;
 }
 
-.time { color: #4da8da; }
-.empty-log { color: #555; font-style: italic; }
+.time {
+  color: #4da8da;
+}
+.empty-log {
+  color: #555;
+  font-style: italic;
+}
 </style>
