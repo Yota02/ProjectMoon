@@ -12,16 +12,16 @@ export const useResourceStore = defineStore('resource', {
     }
   }),
   actions: {
-    addArgent(amount) {
+    addArgent(amount: number) {
       this.argent += amount;
     },
-    addScience(amount) {
+    addScience(amount: number) {
       this.science += amount;
     },
-    addCarburant(amount) {
+    addCarburant(amount: number) {
       this.carburant += amount;
     },
-    tick(_deltaTime) {
+    tick(_deltaTime: number) {
       // _deltaTime est environ 1000ms si le tickRate est à 1000
       this.argent += this.production.argent;
       this.science += this.production.science;

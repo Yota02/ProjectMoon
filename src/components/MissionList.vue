@@ -37,14 +37,14 @@
   </div>
 </template>
 
-<script setup>
-import { useMissionStore } from '../stores/useMissionStore'
+<script setup lang="ts">
+import { useMissionStore, type Mission } from '../stores/useMissionStore'
 import { useResourceStore } from '../stores/useResourceStore'
 
 const missionStore = useMissionStore()
 const resourceStore = useResourceStore()
 
-const canAfford = (mission) => {
+const canAfford = (mission: Mission) => {
   return resourceStore.argent >= mission.cost.argent && 
          resourceStore.carburant >= mission.cost.carburant
 }

@@ -12,7 +12,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { onMounted, onUnmounted } from 'vue'
 import ResourceDashboard from './components/ResourceDashboard.vue'
 import MissionList from './components/MissionList.vue'
@@ -23,7 +23,7 @@ const resourceStore = useResourceStore()
 
 // Relier le store de ressources au système de tick
 onMounted(() => {
-  gameLoop.addTickHandler((deltaTime) => {
+  gameLoop.addTickHandler((deltaTime: number) => {
     resourceStore.tick(deltaTime)
   })
   

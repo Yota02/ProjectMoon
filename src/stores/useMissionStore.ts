@@ -1,6 +1,20 @@
 import { defineStore } from 'pinia';
 import { useResourceStore } from './useResourceStore';
 
+export interface Mission {
+  id: number;
+  name: string;
+  cost: { argent: number; carburant: number };
+  successChance: number;
+  reward: { science: number };
+  status: string;
+}
+
+export interface MissionLog {
+  temps: string;
+  message: string;
+}
+
 export const useMissionStore = defineStore('mission', {
   state: () => ({
     missions: [
@@ -20,11 +34,11 @@ export const useMissionStore = defineStore('mission', {
         reward: { science: 300 },
         status: "Disponible"
       }
-    ],
-    logs: [] // Historique des missions
+    ] as Mission[],
+    logs: [] as MissionLog[] // Historique des missions
   }),
   actions: {
-    launchMission(missionId) {
+    launchMission(missionId: number) {
       const resourceStore = useResourceStore();
       const mission = this.missions.find(m => m.id === missionId);
       
@@ -55,7 +69,7 @@ export const useMissionStore = defineStore('mission', {
       }
     },
     
-    log(message) {
+    log(message: string) {
       // On garde max 10 logs
       this.logs.unshift({ temps: new Date().toLocaleTimeString(), message });
       if (this.logs.length > 10) this.logs.pop();

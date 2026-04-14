@@ -1,4 +1,9 @@
 export class GameLoop {
+  tickRate: number;
+  lastTime: number;
+  timerId: number | null;
+  callbacks: Array<(deltaTime: number) => void>;
+
   constructor(tickRate = 1000) {
     this.tickRate = tickRate; // en millisecondes
     this.lastTime = 0;
@@ -7,7 +12,7 @@ export class GameLoop {
   }
 
   // Ajoute une fonction à exécuter à chaque tick
-  addTickHandler(callback) {
+  addTickHandler(callback: (deltaTime: number) => void) {
     this.callbacks.push(callback);
   }
 
