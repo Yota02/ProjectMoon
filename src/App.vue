@@ -111,12 +111,14 @@ import { gameLoop } from './engine/GameLoop'
 import { useResourceStore } from './stores/useResourceStore'
 import { useResearchStore } from './stores/useResearchStore'
 import { useGameStore } from './stores/useGameStore'
+import { useFleetStore } from './stores/useFleetStore'
 import BaseIcon from './components/ui/BaseIcon.vue'
 
 const route = useRoute()
 const resourceStore = useResourceStore()
 const researchStore = useResearchStore()
 const gameStore = useGameStore()
+const fleetStore = useFleetStore()
 
 const navItems = [
   { id: 'dashboard', label: "Vue d'ensemble", icon: 'dashboard', to: '/' },
@@ -132,6 +134,7 @@ onMounted(() => {
     gameStore.tick(deltaTime)
     resourceStore.tick(deltaTime)
     researchStore.tick(deltaTime)
+    fleetStore.tick(deltaTime)
   })
   gameLoop.start()
 })

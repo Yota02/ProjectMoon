@@ -59,7 +59,7 @@
             </button>
             <div class="flex flex-col items-end">
               <p class="text-[10px] text-slate-500 uppercase font-bold mb-1">Aperçu Base</p>
-              <BaseMinimap :scale="4" :view-bounds="viewBounds" />
+              <BaseMinimap :scale="4" :view-bounds="viewBounds" :tile-size="tileSize" />
             </div>
             <div class="flex gap-2 items-center">
               <div v-if="activeTab === 'routes'" class="flex gap-2">
@@ -92,102 +92,98 @@
         <div
           ref="mapContainer"
           @scroll="updateViewBounds"
-          class="overflow-auto max-h-[60vh] rounded-xl border border-slate-700 bg-slate-900 custom-scrollbar flex items-center justify-center"
+          class="overflow-auto max-h-[70vh] rounded-xl border border-slate-700 bg-slate-950 custom-scrollbar flex"
         >
-          <div
-            class="grid min-w-max p-4 relative gap-1"
-            :style="{
-              gridTemplateColumns: `repeat(${baseStore.mapWidth}, ${tileSize}px)`,
-              gridAutoRows: `${tileSize}px`,
-            }"
-          >
+          <div class="m-auto p-12 min-w-max">
             <div
-              v-for="tile in tiles"
-              :key="'bg-' + tile.id"
-              class="border rounded flex items-center justify-center text-[10px] font-mono transition-colors"
-              :class="
-                tile.owned
-                  ? 'border-slate-700/50 bg-slate-800/20 text-slate-600 cursor-pointer hover:bg-slate-700/50'
-                  : 'border-slate-800/70 bg-slate-950/40 text-slate-800 cursor-not-allowed'
-              "
-              :style="{ gridColumn: tile.displayX, gridRow: tile.displayY }"
-              @click="tile.owned && onTileClick(tile.x, tile.y)"
-              @mouseenter="tile.owned && onTileHover(tile.x, tile.y)"
-              @mouseleave="clearPreviews"
-            >
-              <span class="opacity-30 pointer-events-none">{{ tile.x }},{{ tile.y }}</span>
-            </div>
-
-            <div
-              v-if="routePreview && activeTab === 'routes'"
-              class="z-30 flex"
-              :style="getRoutePreviewStyle()"
-            >
-              <div class="w-full h-full rounded border-2 border-amber-400 bg-amber-400/30"></div>
-            </div>
-
-            <div
-              v-if="buildingPreview && activeTab === 'batiments'"
-              class="z-30 flex p-[2px]"
-              :style="getBuildingPreviewStyle()"
-            >
-              <div class="w-full h-full rounded border-2 border-blue-400 bg-blue-400/20"></div>
-            </div>
-
-            <div
-              v-for="(r, i) in baseStore.placedRoutes"
-              :key="'r-' + r.routeId + '-' + i"
-              class="z-10 flex group"
-              :style="getRouteStyle(r)"
-            >
-              <div
-                class="w-full h-full rounded border flex items-center justify-center shadow relative"
-                :class="getRouteDef(r.routeId)?.colorClass"
-              >
-                <span class="font-bold text-white font-mono text-sm">{{
-                  getRouteDef(r.routeId)?.symbol
-                }}</span>
-                <span class="absolute -top-2 -right-2 text-[10px] text-white/70 font-bold">{{
-                  getRouteDef(r.routeId)?.width
-                }}</span>
-                <button
-                  @click.stop="baseStore.removeRoute(r.x, r.y)"
-                  class="absolute -top-2 -right-2 bg-red-500 hover:bg-red-400 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-20"
-                >
-                  X
-                </button>
-              </div>
-            </div>
-
-            <div
-              v-for="(b, i) in baseStore.placedBuildings"
-              :key="'b-' + b.buildingId + '-' + i"
-              class="z-20 flex flex-col group p-[2px]"
+              class="grid relative gap-1 bg-slate-900/50 p-1 rounded-lg border border-slate-800"
               :style="{
-                ...getBuildingDisplayPos(b.x, b.y),
-                gridColumnStart: undefined,
-                gridRowStart: undefined,
-                gridColumn: `${b.x - baseStore.mapOffsetX + 1} / span ${getBuildingDef(b.buildingId)?.width || 1}`,
-                gridRow: `${b.y - baseStore.mapOffsetY + 1} / span ${getBuildingDef(b.buildingId)?.height || 1}`,
+                gridTemplateColumns: `repeat(${baseStore.mapWidth}, ${tileSize}px)`,
+                gridTemplateRows: `repeat(${baseStore.mapHeight}, ${tileSize}px)`,
               }"
             >
               <div
-                class="w-full h-full rounded border flex flex-col items-center justify-center shadow-lg relative"
-                :class="getBuildingDef(b.buildingId)?.colorClass"
+                v-for="tile in tiles"
+                :key="'bg-' + tile.id"
+                class="border flex items-center justify-center text-[10px] font-mono transition-colors"
+                :class="
+                  tile.owned
+                    ? 'border-slate-700 bg-slate-800/40 text-slate-500 cursor-pointer hover:bg-slate-700 hover:text-slate-300'
+                    : 'border-slate-800/50 bg-slate-950/40 text-slate-800 cursor-not-allowed'
+                "
+                :style="{ gridColumn: tile.displayX, gridRow: tile.displayY }"
+                @click="tile.owned && onTileClick(tile.x, tile.y)"
+                @mouseenter="tile.owned && onTileHover(tile.x, tile.y)"
+                @mouseleave="clearPreviews"
               >
-                <span class="font-bold text-white font-mono text-lg">{{
-                  getBuildingDef(b.buildingId)?.symbol
-                }}</span>
-                <span
-                  class="text-[10px] text-white/80 font-bold uppercase mt-1 text-center max-w-[90%] truncate px-1"
-                  >{{ getBuildingDef(b.buildingId)?.name }}</span
+                <span class="opacity-40 pointer-events-none">{{ tile.x }},{{ tile.y }}</span>
+              </div>
+
+              <div
+                v-if="routePreview && activeTab === 'routes'"
+                class="z-30 flex"
+                :style="getRoutePreviewStyle()"
+              >
+                <div class="w-full h-full rounded border-2 border-amber-400 bg-amber-400/30"></div>
+              </div>
+
+              <div
+                v-if="buildingPreview && activeTab === 'batiments'"
+                class="z-30 flex p-[2px]"
+                :style="getBuildingPreviewStyle()"
+              >
+                <div class="w-full h-full rounded border-2 border-blue-400 bg-blue-400/20"></div>
+              </div>
+
+              <div
+                v-for="(r, i) in baseStore.placedRoutes"
+                :key="'r-' + r.routeId + '-' + i"
+                class="z-10 flex group"
+                :style="getRouteStyle(r)"
+              >
+                <div
+                  class="w-full h-full rounded border flex items-center justify-center shadow relative"
+                  :class="getRouteDef(r.routeId)?.colorClass"
                 >
-                <button
-                  @click.stop="baseStore.removeBuilding(b.x, b.y)"
-                  class="absolute -top-2 -right-2 bg-red-500 hover:bg-red-400 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                  <span class="font-bold text-white font-mono text-sm">{{
+                    getRouteDef(r.routeId)?.symbol
+                  }}</span>
+                  <span class="absolute -top-2 -right-2 text-[10px] text-white/70 font-bold">{{
+                    getRouteDef(r.routeId)?.width
+                  }}</span>
+                  <button
+                    @click.stop="baseStore.removeRoute(r.x, r.y)"
+                    class="absolute -top-2 -right-2 bg-red-500 hover:bg-red-400 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                  >
+                    X
+                  </button>
+                </div>
+              </div>
+
+              <div
+                v-for="(b, i) in baseStore.placedBuildings"
+                :key="'b-' + b.buildingId + '-' + i"
+                class="z-20 flex flex-col group p-[2px]"
+                :style="getBuildingStyle(b)"
+              >
+                <div
+                  class="w-full h-full rounded border flex flex-col items-center justify-center shadow-lg relative"
+                  :class="getBuildingDef(b.buildingId)?.colorClass"
                 >
-                  X
-                </button>
+                  <span class="font-bold text-white font-mono text-lg">{{
+                    getBuildingDef(b.buildingId)?.symbol
+                  }}</span>
+                  <span
+                    class="text-[10px] text-white/80 font-bold uppercase mt-1 text-center max-w-[90%] truncate px-1"
+                    >{{ getBuildingDef(b.buildingId)?.name }}</span
+                  >
+                  <button
+                    @click.stop="baseStore.removeBuilding(b.x, b.y)"
+                    class="absolute -top-2 -right-2 bg-red-500 hover:bg-red-400 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                  >
+                    X
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -472,20 +468,38 @@ const clearPreviews = () => {
   routePreview.value = null
 }
 
+const getBuildingStyle = (b: {
+  x: number
+  y: number
+  buildingId: string
+  rotation: 'horizontal' | 'vertical'
+}) => {
+  const def = getBuildingDef(b.buildingId)
+  if (!def) return {}
+  const w = b.rotation === 'horizontal' ? def.width : def.height
+  const h = b.rotation === 'horizontal' ? def.height : def.width
+  return {
+    gridColumn: `${b.x - baseStore.mapOffsetX + 1} / span ${w}`,
+    gridRow: `${b.y - baseStore.mapOffsetY + 1} / span ${h}`,
+  }
+}
+
 const getRoutePreviewStyle = () => {
   if (!routePreview.value || !selectedRouteId.value) return {}
   const route = getRouteDef(selectedRouteId.value)
   if (!route) return {}
   const len = route.width
+  const displayX = routePreview.value.x - baseStore.mapOffsetX + 1
+  const displayY = routePreview.value.y - baseStore.mapOffsetY + 1
   if (routeDirection.value === 'horizontal') {
     return {
-      gridColumn: `${routePreview.value.x + 1} / span ${len}`,
-      gridRow: `${routePreview.value.y + 1} / span 1`,
+      gridColumn: `${displayX} / span ${len}`,
+      gridRow: `${displayY} / span 1`,
     }
   } else {
     return {
-      gridColumn: `${routePreview.value.x + 1} / span 1`,
-      gridRow: `${routePreview.value.y + 1} / span ${len}`,
+      gridColumn: `${displayX} / span 1`,
+      gridRow: `${displayY} / span ${len}`,
     }
   }
 }
@@ -496,9 +510,11 @@ const getBuildingPreviewStyle = () => {
   if (!building) return {}
   const w = buildingRotation.value === 'horizontal' ? building.width : building.height
   const h = buildingRotation.value === 'horizontal' ? building.height : building.width
+  const displayX = buildingPreview.value.x - baseStore.mapOffsetX + 1
+  const displayY = buildingPreview.value.y - baseStore.mapOffsetY + 1
   return {
-    gridColumn: `${buildingPreview.value.x + 1} / span ${w}`,
-    gridRow: `${buildingPreview.value.y + 1} / span ${h}`,
+    gridColumn: `${displayX} / span ${w}`,
+    gridRow: `${displayY} / span ${h}`,
   }
 }
 

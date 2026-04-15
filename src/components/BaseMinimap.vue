@@ -57,6 +57,10 @@ const props = defineProps({
     type: Number,
     default: 6,
   },
+  tileSize: {
+    type: Number,
+    default: 48,
+  },
   viewBounds: {
     type: Object as () => { x: number; y: number; w: number; h: number } | null,
     default: null,
@@ -114,11 +118,12 @@ const getRouteStyle = (r: PlacedRoute) => {
 
 const getViewStyle = () => {
   if (!props.viewBounds) return {}
-  const cellSize = 48 + 4 // 48px tile + 4px gap
+  const cellSize = props.tileSize + 4
+  const padding = 52 // p-12 (48px) + p-1 (4px)
 
   return {
-    left: `${(props.viewBounds.x / cellSize) * props.scale}px`,
-    top: `${(props.viewBounds.y / cellSize) * props.scale}px`,
+    left: `${((props.viewBounds.x - padding) / cellSize) * props.scale}px`,
+    top: `${((props.viewBounds.y - padding) / cellSize) * props.scale}px`,
     width: `${(props.viewBounds.w / cellSize) * props.scale}px`,
     height: `${(props.viewBounds.h / cellSize) * props.scale}px`,
   }

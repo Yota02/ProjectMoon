@@ -2,11 +2,17 @@
   <div class="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-slate-800/50 rounded-lg border border-slate-700/50 mb-2">
     <div class="flex items-center gap-3 mb-2 sm:mb-0">
       <div class="bg-slate-700 p-2 rounded-lg text-slate-300">
-        <BaseIcon name="rocket" />
+        <BaseIcon :name="icon" />
       </div>
       <div>
         <h4 class="font-bold text-slate-200">{{ name }}</h4>
-        <div class="flex items-center gap-2 mt-1">
+        <div v-if="status === 'En construction'" class="flex items-center gap-2 mt-1 min-w-[120px]">
+          <div class="flex-1">
+            <ProgressBar :progress="progress" color-class="bg-blue-500" class="!mt-0" />
+          </div>
+          <span class="text-[10px] font-mono text-blue-400">{{ Math.floor(progress || 0) }}%</span>
+        </div>
+        <div v-else class="flex items-center gap-2 mt-1">
           <span class="text-xs text-slate-400">Fiabilité:</span>
           <div class="w-16 h-1.5 bg-slate-700 rounded-full">
             <div 
@@ -27,6 +33,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import BaseIcon from './BaseIcon.vue'
+import ProgressBar from './ProgressBar.vue'
 
 const props = defineProps({
   name: String,
@@ -34,7 +41,15 @@ const props = defineProps({
     type: String,
     validator: (v: string) => ['Prêt', 'En maintenance', 'En construction'].includes(v)
   },
-  reliability: Number
+  reliability: Number,
+  progress: {
+    type: Number,
+    default: 0
+  },
+  icon: {
+    type: String,
+    default: 'rocket'
+  }
 })
 
 const statusClasses = computed(() => {
