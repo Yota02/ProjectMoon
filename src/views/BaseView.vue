@@ -121,7 +121,7 @@
 
               <div
                 v-if="routePreview && activeTab === 'routes'"
-                class="z-30 flex"
+                class="z-30 flex pointer-events-none"
                 :style="getRoutePreviewStyle()"
               >
                 <div class="w-full h-full rounded border-2 border-amber-400 bg-amber-400/30"></div>
@@ -129,7 +129,7 @@
 
               <div
                 v-if="buildingPreview && activeTab === 'batiments'"
-                class="z-30 flex p-[2px]"
+                class="z-30 flex p-[2px] pointer-events-none"
                 :style="getBuildingPreviewStyle()"
               >
                 <div class="w-full h-full rounded border-2 border-blue-400 bg-blue-400/20"></div>
@@ -195,7 +195,18 @@
           v-if="activeTab === 'batiments'"
           class="bg-slate-900 border border-slate-700 rounded-2xl p-5"
         >
-          <h3 class="text-lg font-bold text-white mb-4">Batiments</h3>
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-bold text-white">Batiments</h3>
+            <button
+              @click="
+                buildingRotation = buildingRotation === 'horizontal' ? 'vertical' : 'horizontal'
+              "
+              class="px-3 py-1 rounded bg-slate-700 text-xs font-bold text-slate-300 hover:bg-slate-600 transition"
+              :class="{ 'bg-blue-600 text-white': buildingRotation === 'vertical' }"
+            >
+              Rotation: {{ buildingRotation === 'horizontal' ? 'Horizontale' : 'Verticale' }}
+            </button>
+          </div>
           <div class="space-y-2">
             <div
               v-for="building in baseStore.buildings"
@@ -449,7 +460,7 @@ const onTileClick = (x: number, y: number) => {
     baseStore.buildAndPlaceRoute(selectedRouteId.value, x, y, routeDirection.value)
     lastTraceTile.value = { x, y }
   } else if (activeTab.value === 'batiments' && selectedBuildingId.value) {
-    baseStore.buildAndPlaceBuilding(selectedBuildingId.value, x, y)
+    baseStore.buildAndPlaceBuilding(selectedBuildingId.value, x, y, buildingRotation.value)
   }
 }
 

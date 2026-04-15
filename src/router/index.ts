@@ -6,6 +6,8 @@ import ResearchView from '../views/ResearchView.vue'
 import BaseView from '../views/BaseView.vue'
 import FinanceView from '../views/FinanceView.vue'
 import FleetView from '../views/FleetView.vue'
+import TrainingView from '../views/TrainingView.vue'
+import SolarSystemView from '../views/SolarSystemView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -14,6 +16,11 @@ const router = createRouter({
       path: '/',
       name: 'dashboard',
       component: DashboardView,
+    },
+    {
+      path: '/solar',
+      name: 'système solaire',
+      component: SolarSystemView,
     },
     {
       path: '/personnel',
@@ -44,6 +51,11 @@ const router = createRouter({
       path: '/finance',
       name: 'finance',
       component: FinanceView,
+    },
+    {
+      path: '/training',
+      name: 'training',
+      component: TrainingView,
     },
   ],
 })

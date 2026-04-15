@@ -321,7 +321,26 @@ export const useBaseStore = defineStore('base', () => {
         })
 
         if (isOccupied) {
-          lastMessage.value = 'Espace deja occupe.'
+          lastMessage.value = 'Espace deja occupe par un batiment.'
+          return false
+        }
+
+        const hasRoute = placedRoutes.value.some((pr) => {
+          const prDef = routes.value.find((r) => r.id === pr.routeId)
+          if (!prDef) return false
+          const prLen = prDef.width
+          const prEndX = pr.direction === 'horizontal' ? pr.x + prLen - 1 : pr.x
+          const prEndY = pr.direction === 'vertical' ? pr.y + prLen - 1 : pr.y
+
+          if (pr.direction === 'horizontal') {
+            return checkX >= pr.x && checkX <= prEndX && checkY === pr.y
+          } else {
+            return checkY >= pr.y && checkY <= prEndY && checkX === pr.x
+          }
+        })
+
+        if (hasRoute) {
+          lastMessage.value = 'Espace deja occupe par une route.'
           return false
         }
       }
@@ -436,7 +455,9 @@ export const useBaseStore = defineStore('base', () => {
     const index = placedBuildings.value.findIndex((pb) => {
       const pbDef = buildings.value.find((b) => b.id === pb.buildingId)
       if (!pbDef) return false
-      return x >= pb.x && x < pb.x + pbDef.width && y >= pb.y && y < pb.y + pbDef.height
+      const w = pb.rotation === 'horizontal' ? pbDef.width : pbDef.height
+      const h = pb.rotation === 'horizontal' ? pbDef.height : pbDef.width
+      return x >= pb.x && x < pb.x + w && y >= pb.y && y < pb.y + h
     })
 
     if (index === -1) {

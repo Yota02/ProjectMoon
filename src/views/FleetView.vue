@@ -98,18 +98,34 @@
               </div>
             </div>
 
-            <div class="space-y-3 mb-6">
-              <div class="flex justify-between text-xs">
+            <div class="space-y-2 mb-6">
+              <div class="flex justify-between text-[10px] uppercase font-bold tracking-wider">
                 <span class="text-slate-500">Coût:</span>
                 <span class="font-mono text-emerald-400 font-bold">{{ design.cost.toLocaleString() }} €</span>
               </div>
-              <div class="flex justify-between text-xs">
+              <div class="flex justify-between text-[10px] uppercase font-bold tracking-wider">
                 <span class="text-slate-500">Temps:</span>
                 <span class="font-mono text-slate-300">{{ design.constructionTime }}j</span>
               </div>
-              <div class="flex justify-between text-xs">
-                <span class="text-slate-500">Fiabilité:</span>
-                <span class="font-mono text-blue-400">{{ design.baseReliability }}%</span>
+              <div class="flex justify-between text-[10px] uppercase font-bold tracking-wider">
+                <span class="text-slate-500">Vitesse Max:</span>
+                <span class="font-mono text-cyan-400">{{ design.maxSpeed }} km/s</span>
+              </div>
+              <div class="flex justify-between text-[10px] uppercase font-bold tracking-wider">
+                <span class="text-slate-500">Réutilisable:</span>
+                <span class="font-mono" :class="design.isReusable ? 'text-emerald-400' : 'text-slate-500'">{{ design.isReusable ? 'OUI' : 'NON' }}</span>
+              </div>
+              <div class="flex justify-between text-[10px] uppercase font-bold tracking-wider">
+                <span class="text-slate-500">Lune:</span>
+                <span class="font-mono" :class="design.canReachMoon ? 'text-emerald-400' : 'text-slate-500'">{{ design.canReachMoon ? 'OUI' : 'NON' }}</span>
+              </div>
+              <div class="flex flex-col gap-1 pt-1">
+                <span class="text-[9px] uppercase font-black text-slate-600 tracking-tighter">Orbites Supportées</span>
+                <div class="flex flex-wrap gap-1">
+                  <span v-for="orbit in design.supportedOrbits" :key="orbit" class="px-1.5 py-0.5 bg-slate-800 text-[9px] font-mono text-slate-400 rounded border border-slate-700">
+                    {{ orbit }}
+                  </span>
+                </div>
               </div>
             </div>
 

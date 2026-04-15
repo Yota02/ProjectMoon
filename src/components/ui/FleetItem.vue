@@ -6,11 +6,13 @@
       </div>
       <div>
         <h4 class="font-bold text-slate-200">{{ name }}</h4>
-        <div v-if="status === 'En construction'" class="flex items-center gap-2 mt-1 min-w-[120px]">
+        <div v-if="status === 'En construction' || status === 'En maintenance'" class="flex items-center gap-2 mt-1 min-w-[120px]">
           <div class="flex-1">
-            <ProgressBar :progress="progress" color-class="bg-blue-500" class="!mt-0" />
+            <ProgressBar :progress="status === 'En maintenance' ? (100 - progress) : progress" :color-class="status === 'En maintenance' ? 'bg-orange-500' : 'bg-blue-500'" class="!mt-0" />
           </div>
-          <span class="text-[10px] font-mono text-blue-400">{{ Math.floor(progress || 0) }}%</span>
+          <span class="text-[10px] font-mono" :class="status === 'En maintenance' ? 'text-orange-400' : 'text-blue-400'">
+            {{ Math.floor(status === 'En maintenance' ? (100 - progress) : (progress || 0)) }}%
+          </span>
         </div>
         <div v-else class="flex items-center gap-2 mt-1">
           <span class="text-xs text-slate-400">Fiabilité:</span>

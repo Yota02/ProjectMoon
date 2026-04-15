@@ -21,6 +21,7 @@
         <div class="dossier-id">ID-{{ mission.id.toString().padStart(3, '0') }}</div>
         <div class="dossier-content">
           <h3 class="mission-name">{{ mission.name.toUpperCase() }}</h3>
+          <div class="mission-orbit-tag">ORBITE REQUISE: {{ mission.requiredOrbit }}</div>
           
           <div class="probability-section">
             <div class="prob-header">
@@ -32,10 +33,29 @@
             </div>
           </div>
 
+          <div class="launcher-select-section">
+            <label class="launcher-label">SÉLECTION DU LANCEUR</label>
+            <select 
+              v-model="selectedLaunchers[mission.id]" 
+              class="launcher-select"
+            >
+              <option value="" disabled selected>Choisir un lanceur...</option>
+              <option 
+                v-for="launcher in readyLaunchers" 
+                :key="launcher.id" 
+                :value="launcher.id"
+                :disabled="!isLauncherCompatible(launcher, mission)"
+              >
+                {{ launcher.name }} ({{ launcher.reliability }}%) {{ !isLauncherCompatible(launcher, mission) ? '[INCOMPATIBLE]' : '' }}
+              </option>
+            </select>
+            <p v-if="readyLaunchers.length === 0" class="no-launcher-warn">Aucun lanceur disponible</p>
+          </div>
+
           <div class="data-row">
             <div class="data-item">
               <span class="l">COÛT ARGENT</span>
-              <span class="v">{{ mission.cost.argent }}</span>
+              <span class="v">{{ mission.cost.argent.toLocaleString() }}</span>
             </div>
             <div class="data-item">
               <span class="l">COÛT CARBURANT</span>
@@ -49,15 +69,15 @@
           </div>
 
           <button 
-            @click="missionStore.launchMission(mission.id)"
-            :disabled="!canAfford(mission)"
+            @click="missionStore.launchMission(mission.id, selectedLaunchers[mission.id])"
+            :disabled="!canLaunch(mission)"
             class="launch-btn"
           >
             LANCER LA SÉQUENCE
           </button>
 
           <div class="mission-status" v-if="mission.status !== 'Disponible'">
-            DERNIER RÉSULTAT: <span class="status-val">{{ mission.status.toUpperCase() }}</span>
+            DERNIER RÉSULTAT: <span class="status-val" :class="mission.status.toLowerCase()">{{ mission.status.toUpperCase() }}</span>
           </div>
         </div>
       </div>
@@ -77,19 +97,40 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed } from 'vue'
 import { useMissionStore, type Mission } from '../stores/useMissionStore'
 import { useResourceStore } from '../stores/useResourceStore'
 import { usePersonnelStore } from '../stores/usePersonnelStore'
+import { useFleetStore } from '../stores/useFleetStore'
 
 const missionStore = useMissionStore()
 const resourceStore = useResourceStore()
 const personnelStore = usePersonnelStore()
+const fleetStore = useFleetStore()
 
-const canAfford = (mission: Mission) => {
+const selectedLaunchers = ref<Record<number, string>>({})
+
+const readyLaunchers = computed(() => {
+  return fleetStore.items.filter(i => i.status === 'Prêt')
+})
+
+const isLauncherCompatible = (launcher: any, mission: Mission) => {
+  const design = fleetStore.designs.find(d => d.id === launcher.designId)
+  if (!design) return false
+  return design.supportedOrbits.includes(mission.requiredOrbit)
+}
+
+const canLaunch = (mission: Mission) => {
+  const launcherId = selectedLaunchers.value[mission.id]
+  const launcher = fleetStore.items.find(i => i.id === launcherId)
+  
   return (
     resourceStore.argent >= mission.cost.argent &&
     resourceStore.carburant >= mission.cost.carburant &&
-    personnelStore.hasIngenieur
+    personnelStore.hasIngenieur &&
+    launcherId &&
+    launcher &&
+    isLauncherCompatible(launcher, mission)
   )
 }
 </script>
@@ -180,8 +221,53 @@ const canAfford = (mission: Mission) => {
 .mission-name {
   font-family: 'Orbitron', sans-serif;
   font-size: 1.1rem;
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 0.5rem 0;
   letter-spacing: 1px;
+}
+
+.mission-orbit-tag {
+  font-size: 0.6rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--primary);
+  margin-bottom: 1.5rem;
+  opacity: 0.8;
+}
+
+.launcher-select-section {
+  margin-bottom: 1.5rem;
+}
+
+.launcher-label {
+  display: block;
+  font-size: 0.55rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--text-dim);
+  margin-bottom: 0.4rem;
+  opacity: 0.6;
+}
+
+.launcher-select {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-bright);
+  font-size: 0.75rem;
+  padding: 0.6rem;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  cursor: pointer;
+}
+
+.launcher-select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+.no-launcher-warn {
+  font-size: 0.6rem;
+  color: var(--secondary);
+  margin-top: 0.4rem;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .probability-section {
@@ -275,6 +361,9 @@ const canAfford = (mission: Mission) => {
 }
 
 .status-val { font-weight: 700; color: var(--primary); }
+.status-val.succès { color: #00f2ff; }
+.status-val.échec { color: var(--secondary); }
+
 .mission-dossier.succès { border-color: #00f2ff; }
 .mission-dossier.échec { border-color: var(--secondary); }
 

@@ -46,11 +46,17 @@
           <BaseIcon name="calendar" :size="16" />
           <span class="text-white font-black tracking-widest">{{ gameStore.formattedDate }}</span>
         </div>
-        <div class="flex items-center justify-between bg-slate-950/80 p-3 rounded-xl border border-slate-800 shadow-inner">
-          <span class="text-[10px] text-slate-500 uppercase font-black tracking-widest">Rythme</span>
+        <div
+          class="flex items-center justify-between bg-slate-950/80 p-3 rounded-xl border border-slate-800 shadow-inner"
+        >
+          <span class="text-[10px] text-slate-500 uppercase font-black tracking-widest"
+            >Rythme</span
+          >
           <div class="flex items-center gap-2">
-             <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse"></div>
-             <span class="text-[10px] font-mono text-emerald-400 font-bold">1 JOUR / 0.5s</span>
+            <div
+              class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse"
+            ></div>
+            <span class="text-[10px] font-mono text-emerald-400 font-bold">1 JOUR / 0.5s</span>
           </div>
         </div>
       </div>
@@ -122,7 +128,9 @@ const fleetStore = useFleetStore()
 
 const navItems = [
   { id: 'dashboard', label: "Vue d'ensemble", icon: 'dashboard', to: '/' },
+  { id: 'solar', label: 'Système Solaire', icon: 'globe', to: '/solar' },
   { id: 'base', label: 'Base', icon: 'home', to: '/base' },
+  { id: 'training', label: 'Entraînement', icon: 'graduation', to: '/training' },
   { id: 'missions', label: 'Missions', icon: 'globe', to: '/missions' },
   { id: 'fleet', label: 'Flotte & Lanceurs', icon: 'rocket', to: '/fleet' },
   { id: 'rd', label: 'Recherche (R&D)', icon: 'flask', to: '/rd' },
