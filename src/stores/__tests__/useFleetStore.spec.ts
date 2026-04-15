@@ -3,10 +3,14 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useFleetStore } from '../useFleetStore'
 import { useResourceStore } from '../useResourceStore'
 import { useResearchStore } from '../useResearchStore'
+import { useBaseStore } from '../useBaseStore'
 
 describe('Fleet Store', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    const baseStore = useBaseStore()
+    baseStore.placedBuildings = []
+    baseStore.placedRoutes = []
   })
 
   it('filters available designs based on research', () => {
@@ -38,8 +42,17 @@ describe('Fleet Store', () => {
 
   it('advances construction progress on tick', () => {
     const fleetStore = useFleetStore()
+    const baseStore = useBaseStore()
+    const resourceStore = useResourceStore()
     const design = fleetStore.designs[0] // 30 days construction time
     
+    resourceStore.argent = 10000
+    resourceStore.science = 10000
+    
+    // Need a connected launch pad for progress
+    baseStore.buildAndPlaceBuilding('launch_pad', 0, 0)
+    baseStore.buildAndPlaceRoute('route_small', 1, 2, 'horizontal')
+
     fleetStore.items.push({
       id: 'test-item',
       designId: design.id,
@@ -59,8 +72,17 @@ describe('Fleet Store', () => {
 
   it('completes construction when progress reaches 100%', () => {
     const fleetStore = useFleetStore()
+    const baseStore = useBaseStore()
+    const resourceStore = useResourceStore()
     const design = fleetStore.designs[0]
     
+    resourceStore.argent = 10000
+    resourceStore.science = 10000
+    
+    // Need a connected launch pad for progress
+    baseStore.buildAndPlaceBuilding('launch_pad', 0, 0)
+    baseStore.buildAndPlaceRoute('route_small', 1, 2, 'horizontal')
+
     fleetStore.items.push({
       id: 'test-item',
       designId: design.id,

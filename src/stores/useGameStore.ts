@@ -1,6 +1,9 @@
 import { defineStore } from 'pinia'
 import { useContractStore } from './useContractStore'
 import { useResourceStore } from './useResourceStore'
+import { useBaseStore } from './useBaseStore'
+import { useStationStore } from './useStationStore'
+import { useMissionStore } from './useMissionStore'
 
 export const useGameStore = defineStore('game', {
   state: () => ({
@@ -19,13 +22,18 @@ export const useGameStore = defineStore('game', {
       return date
     },
     formattedDate: (state) => {
-      const date = state.currentDate
+      const date = new Date(state.startDate)
+      date.setDate(date.getDate() + state.elapsedDays)
       const day = date.getDate().toString().padStart(2, '0')
       const month = (date.getMonth() + 1).toString().padStart(2, '0')
       const year = date.getFullYear()
       return `${day}/${month}/${year}`
     },
-    currentYear: (state) => state.currentDate.getFullYear(),
+    currentYear: (state) => {
+      const date = new Date(state.startDate)
+      date.setDate(date.getDate() + state.elapsedDays)
+      return date.getFullYear()
+    },
   },
   actions: {
     tick(deltaTime: number) {
@@ -35,6 +43,15 @@ export const useGameStore = defineStore('game', {
         const daysToPass = Math.floor(this.dayTimer / this.msPerDay)
         this.elapsedDays += daysToPass
         this.dayTimer %= this.msPerDay
+
+        this.applyBuildingAdjacencyBonuses(daysToPass)
+        this.applyStationBonuses(daysToPass)
+        this.applyStationConsumption(daysToPass)
+
+        const missionStore = useMissionStore()
+        missionStore.ensureStationResupplyMissions(this.elapsedDays)
+        missionStore.refreshWeeklyMissions(this.elapsedDays)
+        missionStore.runResupplyForecasts(this.currentDate, this.elapsedDays)
 
         const currentMonth = Math.floor(this.elapsedDays / 30)
         const lastMonth = Math.floor(this.lastMonthDay / 30)
@@ -53,6 +70,61 @@ export const useGameStore = defineStore('game', {
       const monthlyRevenue = contractStore.totalMonthlyRevenue
       if (monthlyRevenue > 0) {
         resourceStore.addArgent(monthlyRevenue * 1000000)
+      }
+    },
+    applyBuildingAdjacencyBonuses(daysPassed: number) {
+      if (daysPassed <= 0) return
+
+      const baseStore = useBaseStore()
+      const resourceStore = useResourceStore()
+      const { totalArgentPerDay, totalSciencePerDay, totalCarburantPerDay } =
+        baseStore.allBasesAdjacencyBonuses
+
+      if (totalArgentPerDay !== 0) {
+        resourceStore.addArgent(totalArgentPerDay * daysPassed)
+      }
+      if (totalSciencePerDay !== 0) {
+        resourceStore.addScience(totalSciencePerDay * daysPassed)
+      }
+      if (totalCarburantPerDay !== 0) {
+        resourceStore.addCarburant(totalCarburantPerDay * daysPassed)
+      }
+    },
+    applyStationBonuses(daysPassed: number) {
+      if (daysPassed <= 0) return
+
+      const stationStore = useStationStore()
+      const resourceStore = useResourceStore()
+      const { argentPerDay, sciencePerDay, carburantPerDay } = stationStore.stationBonuses
+
+      if (argentPerDay !== 0) {
+        resourceStore.addArgent(argentPerDay * daysPassed)
+      }
+      if (sciencePerDay !== 0) {
+        resourceStore.addScience(sciencePerDay * daysPassed)
+      }
+      if (carburantPerDay !== 0) {
+        resourceStore.addCarburant(carburantPerDay * daysPassed)
+      }
+    },
+    applyStationConsumption(daysPassed: number) {
+      if (daysPassed <= 0) return
+
+      const stationStore = useStationStore()
+      const resourceStore = useResourceStore()
+      const { nourriture, eau, o2, piecesDetachees } = stationStore.stationConsumption
+
+      if (nourriture !== 0) {
+        resourceStore.addNourriture(-nourriture * daysPassed)
+      }
+      if (eau !== 0) {
+        resourceStore.addEau(-eau * daysPassed)
+      }
+      if (o2 !== 0) {
+        resourceStore.addO2(-o2 * daysPassed)
+      }
+      if (piecesDetachees !== 0) {
+        resourceStore.addPiecesDetachees(-piecesDetachees * daysPassed)
       }
     },
     checkEvents() {

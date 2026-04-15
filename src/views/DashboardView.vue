@@ -34,6 +34,9 @@
       />
     </div>
 
+    <!-- Dashboard des Ressources -->
+    <ResourceDashboard />
+
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <!-- Colonne Gauche (Missions & Contrats) -->
       <div class="lg:col-span-2 space-y-6">
@@ -225,6 +228,7 @@ import ContractItem from '../components/ui/ContractItem.vue'
 import FleetItem from '../components/ui/FleetItem.vue'
 import ProgressBar from '../components/ui/ProgressBar.vue'
 import BaseIcon from '../components/ui/BaseIcon.vue'
+import ResourceDashboard from '../components/ResourceDashboard.vue'
 
 const resourceStore = useResourceStore()
 const missionStore = useMissionStore()

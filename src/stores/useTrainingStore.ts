@@ -147,6 +147,8 @@ function createMarket(startId: number, count: number) {
 
 const initialMarket = createMarket(1, 8)
 
+const isDebugMode = import.meta.env.VITE_DEBUG_MODE === 'test'
+
 export const useTrainingStore = defineStore('training', {
   state: () => ({
     trainees: {
@@ -163,7 +165,10 @@ export const useTrainingStore = defineStore('training', {
         ...profileByType.specialiste,
       },
     } as Record<TrainingType, TraineeProfile>,
-    astronauts: [] as AstronautProfile[],
+    astronauts: isDebugMode ? [
+      createAstronautCandidate('pilote', 999),
+      createAstronautCandidate('ingenieur_vol', 1000)
+    ] : [] as AstronautProfile[],
     market: initialMarket.market,
     nextAstronautId: initialMarket.nextId,
     activeSessions: 0,

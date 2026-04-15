@@ -2,6 +2,20 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { useGameStore } from './useGameStore'
 
+export interface Zone {
+  id: string
+  name: string
+  description: string
+  resources: {
+    minerals: number // 0 to 1 abundance
+    water: number    // 0 to 1 abundance
+    energy: number   // 0 to 1 abundance (solar/geothermal)
+    science: number  // 0 to 1 abundance
+  }
+  unlocked: boolean
+  baseId?: string
+}
+
 export interface CelestialBody {
   id: string
   name: string
@@ -9,6 +23,7 @@ export interface CelestialBody {
   distance: number // Distance moyenne au soleil (AU simplifiée pour le rendu)
   period: number // Période orbitale en jours terrestres
   color: string
+  zones?: Zone[]
 }
 
 export interface Travel {
@@ -24,21 +39,76 @@ export const PLANETS: CelestialBody[] = [
   { id: 'sun', name: 'Soleil', radius: 25, distance: 0, period: 1, color: '#facc15' },
   { id: 'mercury', name: 'Mercure', radius: 4, distance: 50, period: 88, color: '#9ca3af' },
   { id: 'venus', name: 'Vénus', radius: 7, distance: 80, period: 225, color: '#fb923c' },
-  { id: 'earth', name: 'Terre', radius: 8, distance: 120, period: 365, color: '#3b82f6' },
+  {
+    id: 'earth',
+    name: 'Terre',
+    radius: 8,
+    distance: 120,
+    period: 365,
+    color: '#3b82f6',
+    zones: [
+      {
+        id: 'earth-kourou',
+        name: 'Kourou',
+        description: 'Centre spatial de Guyane. Zone idéale pour les lancements orbitaux.',
+        resources: { minerals: 0.5, water: 0.8, energy: 0.9, science: 0.6 },
+        unlocked: true,
+        baseId: 'base-kourou',
+      },
+      {
+        id: 'earth-baikonur',
+        name: 'Baïkonour',
+        description: 'Cosmodrome historique dans les steppes du Kazakhstan.',
+        resources: { minerals: 0.4, water: 0.3, energy: 0.7, science: 0.5 },
+        unlocked: true,
+      },
+    ],
+  },
   { id: 'moon', name: 'Lune', radius: 3, distance: 15, period: 27, color: '#d1d5db' }, // Distance par rapport à la Terre
-  { id: 'mars', name: 'Mars', radius: 6, distance: 170, period: 687, color: '#ef4444' },
+  {
+    id: 'mars',
+    name: 'Mars',
+    radius: 6,
+    distance: 170,
+    period: 687,
+    color: '#ef4444',
+    zones: [
+      {
+        id: 'mars-valles-marineris',
+        name: 'Valles Marineris',
+        description: 'Le plus grand canyon du système solaire, riche en minéraux.',
+        resources: { minerals: 0.9, water: 0.4, energy: 0.6, science: 0.8 },
+        unlocked: false,
+      },
+      {
+        id: 'mars-jezero-crater',
+        name: 'Cratère Jezero',
+        description: 'Ancien delta fluvial, parfait pour la recherche de traces de vie.',
+        resources: { minerals: 0.6, water: 0.7, energy: 0.5, science: 0.9 },
+        unlocked: false,
+      },
+      {
+        id: 'mars-olympus-mons',
+        name: 'Olympus Mons',
+        description: 'Le plus haut volcan du système solaire.',
+        resources: { minerals: 0.8, water: 0.2, energy: 0.4, science: 0.7 },
+        unlocked: false,
+      },
+    ],
+  },
   { id: 'jupiter', name: 'Jupiter', radius: 18, distance: 280, period: 4333, color: '#d97706' },
   { id: 'saturn', name: 'Saturne', radius: 15, distance: 380, period: 10759, color: '#eab308' },
 ]
 
 export const useSolarSystemStore = defineStore('solarSystem', () => {
   const gameStore = useGameStore()
+  const planets = ref<CelestialBody[]>(PLANETS)
   const activeTravels = ref<Travel[]>([
     { id: 't1', name: 'Sonde Mars 1', originId: 'earth', destinationId: 'mars', departureDay: 0, duration: 200 }
   ])
 
   const getBodyPositionAt = (id: string, elapsedDays: number): { x: number, y: number } => {
-    const planet = PLANETS.find(p => p.id === id)
+    const planet = planets.value.find(p => p.id === id)
     if (!planet) return { x: 0, y: 0 }
     if (planet.id === 'sun') return { x: 0, y: 0 }
 
@@ -61,7 +131,7 @@ export const useSolarSystemStore = defineStore('solarSystem', () => {
   }
 
   const planetPositions = computed(() => {
-    return PLANETS.map(planet => ({
+    return planets.value.map(planet => ({
       ...planet,
       ...getBodyPositionAt(planet.id, gameStore.elapsedDays)
     }))
@@ -103,12 +173,34 @@ export const useSolarSystemStore = defineStore('solarSystem', () => {
     })
   }
 
+  const unlockZone = (zoneId: string) => {
+    for (const planet of planets.value) {
+      const zone = planet.zones?.find(z => z.id === zoneId)
+      if (zone) {
+        zone.unlocked = true
+        return
+      }
+    }
+  }
+
+  const establishBase = (zoneId: string, baseId: string) => {
+    for (const planet of planets.value) {
+      const zone = planet.zones?.find(z => z.id === zoneId)
+      if (zone) {
+        zone.baseId = baseId
+        return
+      }
+    }
+  }
+
   return {
-    planets: PLANETS,
+    planets,
     planetPositions,
     activeTravels,
     travelPositions,
     startTravel,
-    getBodyPositionAt
+    getBodyPositionAt,
+    unlockZone,
+    establishBase
   }
 })

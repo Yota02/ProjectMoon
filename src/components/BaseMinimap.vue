@@ -20,6 +20,15 @@
         }"
       ></div>
 
+      <!-- Pipelines -->
+      <div
+        v-for="(p, i) in baseStore.placedPipelines"
+        :key="'mp-' + i"
+        class="absolute"
+        :class="getPipelineColor(p.pipelineId)"
+        :style="getPipelineStyle(p)"
+      ></div>
+
       <!-- Routes -->
       <div
         v-for="(r, i) in baseStore.placedRoutes"
@@ -50,7 +59,12 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useBaseStore, type PlacedBuilding, type PlacedRoute } from '../stores/useBaseStore'
+import {
+  useBaseStore,
+  type PlacedBuilding,
+  type PlacedRoute,
+  type PlacedPipeline,
+} from '../stores/useBaseStore'
 
 const props = defineProps({
   scale: {
@@ -72,7 +86,7 @@ const baseStore = useBaseStore()
 const ownedParcels = computed(() => {
   const list = [{ id: 'center', parcelX: 0, parcelY: 0 }]
   for (const p of baseStore.parcels) {
-    if (p.owned) {
+    if (baseStore.ownedParcels.has(p.id)) {
       list.push({ id: p.id, parcelX: p.parcelX, parcelY: p.parcelY })
     }
   }
@@ -89,16 +103,25 @@ const getRouteColor = (id: string) => {
   return def?.colorClass.split(' ')[0] || 'bg-slate-500'
 }
 
+const getPipelineColor = (id: string) => {
+  const def = baseStore.pipelines.find((p) => p.id === id)
+  return def?.colorClass.split(' ')[0] || 'bg-cyan-500'
+}
+
 const getBuildingStyle = (b: PlacedBuilding) => {
   const def = baseStore.buildings.find((item) => item.id === b.buildingId)
   if (!def) return {}
   const w = b.rotation === 'horizontal' ? def.width : def.height
-  const h = b.rotation === 'horizontal' ? def.height : def.width
+  const h =
+    b.rotation === 'horizontal' ? def.height : b.rotation === 'vertical' ? def.width : def.height // wait, previous logic was simpler
+  // ... let's just keep the existing logic and adapt
+  const currentW = b.rotation === 'horizontal' ? def.width : def.height
+  const currentH = b.rotation === 'horizontal' ? def.height : def.width
   return {
     left: `${(b.x - baseStore.mapOffsetX) * props.scale}px`,
     top: `${(b.y - baseStore.mapOffsetY) * props.scale}px`,
-    width: `${w * props.scale}px`,
-    height: `${h * props.scale}px`,
+    width: `${currentW * props.scale}px`,
+    height: `${currentH * props.scale}px`,
   }
 }
 
@@ -113,6 +136,15 @@ const getRouteStyle = (r: PlacedRoute) => {
     top: `${(r.y - baseStore.mapOffsetY) * props.scale}px`,
     width: `${w * props.scale}px`,
     height: `${h * props.scale}px`,
+  }
+}
+
+const getPipelineStyle = (p: PlacedPipeline) => {
+  return {
+    left: `${(p.x - baseStore.mapOffsetX) * props.scale}px`,
+    top: `${(p.y - baseStore.mapOffsetY) * props.scale}px`,
+    width: `${props.scale}px`,
+    height: `${props.scale}px`,
   }
 }
 

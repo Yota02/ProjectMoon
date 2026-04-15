@@ -66,6 +66,82 @@
         </div>
         <div class="card-bg"></div>
       </div>
+
+      <div class="resource-card food">
+        <div class="card-content">
+          <div class="top">
+            <span class="label">Nourriture</span>
+            <span class="symbol">🍎</span>
+          </div>
+          <div class="value-group">
+            <span class="value">{{ Math.floor(resourceStore.nourriture).toLocaleString() }}</span>
+            <span class="unit">rations</span>
+          </div>
+          <div class="footer">
+            <span class="trend" :class="stationStore.stationConsumption.nourriture > 0 ? 'negative' : 'neutral'">
+              -{{ stationStore.stationConsumption.nourriture.toFixed(1) }}/j
+            </span>
+          </div>
+        </div>
+        <div class="card-bg"></div>
+      </div>
+
+      <div class="resource-card water">
+        <div class="card-content">
+          <div class="top">
+            <span class="label">Eau</span>
+            <span class="symbol">💧</span>
+          </div>
+          <div class="value-group">
+            <span class="value">{{ Math.floor(resourceStore.eau).toLocaleString() }}</span>
+            <span class="unit">L</span>
+          </div>
+          <div class="footer">
+            <span class="trend" :class="stationStore.stationConsumption.eau > 0 ? 'negative' : 'neutral'">
+              -{{ stationStore.stationConsumption.eau.toFixed(1) }}/j
+            </span>
+          </div>
+        </div>
+        <div class="card-bg"></div>
+      </div>
+
+      <div class="resource-card o2">
+        <div class="card-content">
+          <div class="top">
+            <span class="label">Oxygène</span>
+            <span class="symbol">🌬️</span>
+          </div>
+          <div class="value-group">
+            <span class="value">{{ Math.floor(resourceStore.o2).toLocaleString() }}</span>
+            <span class="unit">m³</span>
+          </div>
+          <div class="footer">
+            <span class="trend" :class="stationStore.stationConsumption.o2 > 0 ? 'negative' : 'neutral'">
+              -{{ stationStore.stationConsumption.o2.toFixed(1) }}/j
+            </span>
+          </div>
+        </div>
+        <div class="card-bg"></div>
+      </div>
+
+      <div class="resource-card parts">
+        <div class="card-content">
+          <div class="top">
+            <span class="label">Pièces Détachées</span>
+            <span class="symbol">⚙️</span>
+          </div>
+          <div class="value-group">
+            <span class="value">{{ Math.floor(resourceStore.piecesDetachees).toLocaleString() }}</span>
+            <span class="unit">unités</span>
+          </div>
+          <div class="footer">
+            <span class="trend" :class="stationStore.stationConsumption.piecesDetachees > 0 ? 'negative' : 'neutral'">
+              -{{ stationStore.stationConsumption.piecesDetachees.toFixed(1) }}/j
+            </span>
+          </div>
+        </div>
+        <div class="card-bg"></div>
+      </div>
     </div>
   </div>
 </template>
@@ -73,9 +149,11 @@
 <script setup lang="ts">
 import { useResourceStore } from '../stores/useResourceStore'
 import { useContractStore } from '../stores/useContractStore'
+import { useStationStore } from '../stores/useStationStore'
 
 const resourceStore = useResourceStore()
 const contractStore = useContractStore()
+const stationStore = useStationStore()
 </script>
 
 <style scoped>
@@ -191,6 +269,18 @@ h2 {
 .resource-card.fuel .card-bg {
   background: linear-gradient(90deg, #e94560, #ff2e63);
 }
+.resource-card.food .card-bg {
+  background: linear-gradient(90deg, #4ade80, #22c55e);
+}
+.resource-card.water .card-bg {
+  background: linear-gradient(90deg, #38bdf8, #0ea5e9);
+}
+.resource-card.o2 .card-bg {
+  background: linear-gradient(90deg, #f472b6, #db2777);
+}
+.resource-card.parts .card-bg {
+  background: linear-gradient(90deg, #94a3b8, #475569);
+}
 
 .card-content {
   position: relative;
@@ -253,6 +343,14 @@ h2 {
 
 .trend.positive {
   color: #00f2ff;
+}
+
+.trend.negative {
+  color: #ef4444;
+}
+
+.trend.neutral {
+  color: #94a3b8;
 }
 
 .manual-btn {

@@ -1,5 +1,41 @@
 <template>
   <div class="p-6 lg:p-10 max-w-7xl mx-auto w-full space-y-6">
+    <!-- Zone Header -->
+    <header v-if="currentZone" class="bg-slate-900 border border-slate-700 rounded-2xl p-6 flex flex-col md:flex-row justify-between items-center gap-6">
+      <div class="flex items-center gap-4">
+        <div class="p-4 bg-blue-600/20 rounded-xl border border-blue-500/30">
+          <BaseIcon name="globe" :size="32" class="text-blue-400" />
+        </div>
+        <div>
+          <h1 class="text-2xl font-black text-white leading-tight">
+            Base de {{ currentZone.name }}
+          </h1>
+          <p class="text-slate-400 font-bold uppercase tracking-widest text-[10px]">
+            {{ currentZone.planetName }} • {{ currentZone.description }}
+          </p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-4 gap-4 w-full md:w-auto">
+        <div class="bg-slate-950/50 p-2 rounded-lg border border-slate-800/50 text-center min-w-[80px]">
+          <p class="text-[8px] text-slate-500 uppercase font-black">Minéraux</p>
+          <p class="text-xs font-bold text-emerald-400">{{ (currentZone.resources.minerals * 100).toFixed(0) }}%</p>
+        </div>
+        <div class="bg-slate-950/50 p-2 rounded-lg border border-slate-800/50 text-center min-w-[80px]">
+          <p class="text-[8px] text-slate-500 uppercase font-black">Eau</p>
+          <p class="text-xs font-bold text-blue-400">{{ (currentZone.resources.water * 100).toFixed(0) }}%</p>
+        </div>
+        <div class="bg-slate-950/50 p-2 rounded-lg border border-slate-800/50 text-center min-w-[80px]">
+          <p class="text-[8px] text-slate-500 uppercase font-black">Énergie</p>
+          <p class="text-xs font-bold text-yellow-400">{{ (currentZone.resources.energy * 100).toFixed(0) }}%</p>
+        </div>
+        <div class="bg-slate-950/50 p-2 rounded-lg border border-slate-800/50 text-center min-w-[80px]">
+          <p class="text-[8px] text-slate-500 uppercase font-black">Science</p>
+          <p class="text-xs font-bold text-purple-400">{{ (currentZone.resources.science * 100).toFixed(0) }}%</p>
+        </div>
+      </div>
+    </header>
+
     <section class="grid grid-cols-1 lg:grid-cols-4 gap-4">
       <div class="bg-slate-800 border border-slate-700 rounded-xl p-4">
         <p class="text-xs uppercase tracking-wide text-slate-400 font-bold">Taille base</p>
@@ -23,9 +59,9 @@
 
     <div class="flex gap-2 mb-2">
       <button
-        v-for="tab in ['batiments', 'routes', 'parcelles']"
+        v-for="tab in ['batiments', 'routes', 'pipelines', 'parcelles']"
         :key="tab"
-        @click="activeTab = tab as 'batiments' | 'routes' | 'parcelles'"
+        @click="activeTab = tab as 'batiments' | 'routes' | 'pipelines' | 'parcelles'"
         class="px-4 py-2 rounded-lg font-bold text-sm transition"
         :class="
           activeTab === tab
@@ -33,7 +69,15 @@
             : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
         "
       >
-        {{ tab === 'batiments' ? 'Batiments' : tab === 'routes' ? 'Routes' : 'Parcelles' }}
+        {{
+          tab === 'batiments'
+            ? 'Batiments'
+            : tab === 'routes'
+              ? 'Routes'
+              : tab === 'pipelines'
+                ? 'Pipelines'
+                : 'Parcelles'
+        }}
       </button>
     </div>
 
@@ -62,14 +106,18 @@
               <BaseMinimap :scale="4" :view-bounds="viewBounds" :tile-size="tileSize" />
             </div>
             <div class="flex gap-2 items-center">
-              <div v-if="activeTab === 'routes'" class="flex gap-2">
+              <div v-if="activeTab === 'routes' || activeTab === 'pipelines'" class="flex gap-2">
                 <button
                   v-for="dir in ['horizontal', 'vertical']"
                   :key="dir"
-                  @click="routeDirection = dir as 'horizontal' | 'vertical'"
+                  @click="
+                    activeTab === 'routes'
+                      ? (routeDirection = dir as 'horizontal' | 'vertical')
+                      : (pipelineDirection = dir as 'horizontal' | 'vertical')
+                  "
                   class="px-3 py-1 rounded text-xs font-bold transition"
                   :class="
-                    routeDirection === dir
+                    (activeTab === 'routes' ? routeDirection : pipelineDirection) === dir
                       ? 'bg-amber-500 text-black'
                       : 'bg-slate-700 text-slate-300'
                   "
@@ -78,7 +126,7 @@
                 </button>
               </div>
               <button
-                v-if="activeTab === 'routes'"
+                v-if="activeTab === 'routes' || activeTab === 'pipelines'"
                 @click="toggleTraceMode"
                 class="px-3 py-1 rounded text-xs font-bold transition"
                 :class="traceMode ? 'bg-green-500 text-white' : 'bg-slate-700 text-slate-300'"
@@ -128,17 +176,38 @@
               </div>
 
               <div
+                v-if="pipelinePreview && activeTab === 'pipelines'"
+                class="z-30 flex pointer-events-none"
+                :style="getPipelinePreviewStyle()"
+              >
+                <div class="w-full h-full rounded border-2 border-cyan-400 bg-cyan-400/30"></div>
+              </div>
+
+              <div
                 v-if="buildingPreview && activeTab === 'batiments'"
                 class="z-30 flex p-[2px] pointer-events-none"
                 :style="getBuildingPreviewStyle()"
               >
-                <div class="w-full h-full rounded border-2 border-blue-400 bg-blue-400/20"></div>
+                <div class="w-full h-full rounded border-2 border-blue-400 bg-blue-400/20 relative">
+                  <!-- Indicateur d'entrée en prévisualisation -->
+                  <div
+                    class="absolute w-2 h-2 bg-yellow-400 rounded-full border border-black shadow-[0_0_5px_rgba(250,204,21,0.5)] z-10"
+                    :style="
+                      getEntranceMarkerStyle({
+                        x: buildingPreview.x,
+                        y: buildingPreview.y,
+                        buildingId: selectedBuildingId,
+                        rotation: buildingRotation,
+                      })
+                    "
+                  ></div>
+                </div>
               </div>
 
               <div
                 v-for="(r, i) in baseStore.placedRoutes"
                 :key="'r-' + r.routeId + '-' + i"
-                class="z-10 flex group"
+                class="z-20 flex group"
                 :style="getRouteStyle(r)"
               >
                 <div
@@ -161,15 +230,58 @@
               </div>
 
               <div
+                v-for="(p, i) in baseStore.placedPipelines"
+                :key="'p-' + p.pipelineId + '-' + i"
+                class="z-0 flex group"
+                :style="getPipelineStyle(p)"
+              >
+                <div
+                  class="w-full h-full rounded border flex items-center justify-center shadow relative"
+                  :class="getPipelineDef(p.pipelineId)?.colorClass"
+                >
+                  <span class="font-bold text-white font-mono text-sm">{{
+                    getPipelineDef(p.pipelineId)?.symbol
+                  }}</span>
+                  <button
+                    @click.stop="baseStore.removePipeline(p.x, p.y)"
+                    class="absolute -top-2 -right-2 bg-red-500 hover:bg-red-400 text-white w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold shadow-xl opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                  >
+                    X
+                  </button>
+                </div>
+              </div>
+
+              <div
                 v-for="(b, i) in baseStore.placedBuildings"
                 :key="'b-' + b.buildingId + '-' + i"
-                class="z-20 flex flex-col group p-[2px]"
+                class="z-30 flex flex-col group p-[2px]"
                 :style="getBuildingStyle(b)"
               >
                 <div
-                  class="w-full h-full rounded border flex flex-col items-center justify-center shadow-lg relative"
-                  :class="getBuildingDef(b.buildingId)?.colorClass"
+                  class="w-full h-full rounded border flex flex-col items-center justify-center shadow-lg relative transition-all"
+                  :class="[
+                    getBuildingDef(b.buildingId)?.colorClass,
+                    !baseStore.isBuildingConnected(b)
+                      ? 'grayscale opacity-70 border-red-500/50'
+                      : '',
+                  ]"
                 >
+                  <!-- Indicateur d'entrée -->
+                  <div
+                    class="absolute w-2 h-2 bg-yellow-400 rounded-full border border-black shadow-[0_0_5px_rgba(250,204,21,0.5)] z-10"
+                    :style="getEntranceMarkerStyle(b)"
+                    title="Entrée"
+                  ></div>
+
+                  <!-- Alerte route manquante -->
+                  <div
+                    v-if="!baseStore.isBuildingConnected(b)"
+                    class="absolute -top-2 -left-2 bg-red-600 text-[8px] font-black text-white px-1.5 py-0.5 rounded shadow-lg border border-red-400 z-30 animate-pulse flex items-center gap-1"
+                  >
+                    <span class="text-[10px]">⚠️</span>
+                    PAS DE ROUTE
+                  </div>
+
                   <span class="font-bold text-white font-mono text-lg">{{
                     getBuildingDef(b.buildingId)?.symbol
                   }}</span>
@@ -274,6 +386,40 @@
         </div>
 
         <div
+          v-if="activeTab === 'pipelines'"
+          class="bg-slate-900 border border-slate-700 rounded-2xl p-5"
+        >
+          <h3 class="text-lg font-bold text-white mb-4">Pipelines</h3>
+          <p class="text-xs text-slate-400 mb-3">Raccordez vos batiments industriels</p>
+          <div class="space-y-2">
+            <div
+              v-for="pipe in baseStore.pipelines"
+              :key="pipe.id"
+              class="w-full text-left px-3 py-3 rounded-lg border transition cursor-pointer"
+              :class="
+                selectedPipelineId === pipe.id
+                  ? 'border-cyan-400 bg-cyan-500/10'
+                  : 'border-slate-700 bg-slate-800/60 hover:bg-slate-800'
+              "
+              @click="selectedPipelineId = pipe.id"
+            >
+              <div class="flex items-center justify-between">
+                <p class="font-bold text-slate-100">{{ pipe.name }}</p>
+                <span
+                  class="text-xs font-mono"
+                  :class="baseStore.canBuildPipeline(pipe.id) ? 'text-emerald-400' : 'text-red-400'"
+                >
+                  {{ baseStore.isPipelineUnlocked(pipe.id) ? 'OK' : 'Bloque' }}
+                </span>
+              </div>
+              <p class="text-xs text-slate-400 mt-1">
+                Cout: {{ pipe.cost.argent }} ME / {{ pipe.cost.science }} science
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div
           v-if="activeTab === 'parcelles'"
           class="bg-slate-900 border border-slate-700 rounded-2xl p-5"
         >
@@ -308,6 +454,40 @@
         <div class="bg-slate-900 border border-slate-700 rounded-2xl p-5">
           <h3 class="text-lg font-bold text-white mb-3">Journal</h3>
           <p class="text-sm text-slate-300 mb-3">{{ baseStore.lastMessage }}</p>
+          <div class="mb-4 rounded-lg border border-emerald-900/60 bg-emerald-950/20 p-3">
+            <p class="text-xs uppercase tracking-wide text-emerald-300 font-bold mb-2">
+              Bonus de voisinage
+            </p>
+            <p
+              class="text-xs text-emerald-200 mb-2"
+              v-if="baseStore.adjacencyBonuses.activeBonuses.length > 0"
+            >
+              +{{ baseStore.adjacencyBonuses.totalArgentPerDay }} Argent/jour, +{{
+                baseStore.adjacencyBonuses.totalSciencePerDay
+              }}
+              Science/jour, +{{ baseStore.adjacencyBonuses.totalCarburantPerDay }} Carburant/jour
+            </p>
+            <p class="text-xs text-slate-400" v-else>
+              Placez des batiments cote a cote pour activer des synergies.
+            </p>
+            <ul
+              v-if="baseStore.adjacencyBonuses.activeBonuses.length > 0"
+              class="space-y-1 text-xs text-slate-300"
+            >
+              <li
+                v-for="bonus in baseStore.adjacencyBonuses.activeBonuses"
+                :key="bonus.id"
+                class="flex items-center justify-between"
+              >
+                <span>{{ bonus.name }} (x{{ bonus.triggerCount }})</span>
+                <span class="font-mono text-emerald-300"
+                  >+{{ bonus.argentPerDay }}A +{{ bonus.sciencePerDay }}S +{{
+                    bonus.carburantPerDay
+                  }}C</span
+                >
+              </li>
+            </ul>
+          </div>
           <ul class="space-y-2 text-sm text-slate-300">
             <li
               v-for="item in placedSummary"
@@ -325,22 +505,65 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useBaseStore } from '../stores/useBaseStore'
+import { useSolarSystemStore } from '../stores/useSolarSystemStore'
 import BaseMinimap from '../components/BaseMinimap.vue'
+import BaseIcon from '../components/ui/BaseIcon.vue'
 
 const baseStore = useBaseStore()
+const solarStore = useSolarSystemStore()
+const route = useRoute()
 
-const activeTab = ref<'batiments' | 'routes' | 'parcelles'>('batiments')
+const currentZone = computed(() => {
+  const zoneId = route.query.zoneId as string || 'earth-kourou'
+  for (const planet of solarStore.planets) {
+    const zone = planet.zones?.find(z => z.id === zoneId)
+    if (zone) return { ...zone, planetName: planet.name }
+  }
+  return null
+})
+
+onMounted(() => {
+  const zoneId = route.query.zoneId as string || 'earth-kourou'
+  if (currentZone.value) {
+    baseStore.setActiveBase(zoneId, currentZone.value.resources)
+  } else {
+    baseStore.setActiveBase(zoneId)
+  }
+  
+  if (currentZone.value && !currentZone.value.baseId) {
+    solarStore.establishBase(zoneId, `base-${zoneId}`)
+  }
+})
+
+watch(() => route.query.zoneId, (newZoneId) => {
+  const id = newZoneId as string || 'earth-kourou'
+  if (currentZone.value) {
+    baseStore.setActiveBase(id, currentZone.value.resources)
+  } else {
+    baseStore.setActiveBase(id)
+  }
+  
+  if (currentZone.value && !currentZone.value.baseId) {
+    solarStore.establishBase(id, `base-${id}`)
+  }
+})
+
+const activeTab = ref<'batiments' | 'routes' | 'pipelines' | 'parcelles'>('batiments')
 const selectedBuildingId = ref(baseStore.buildings[0]?.id ?? '')
 const selectedRouteId = ref(baseStore.routes[0]?.id ?? '')
+const selectedPipelineId = ref(baseStore.pipelines[0]?.id ?? '')
 const routeDirection = ref<'horizontal' | 'vertical'>('horizontal')
+const pipelineDirection = ref<'horizontal' | 'vertical'>('horizontal')
 const traceMode = ref(false)
 const lastTraceTile = ref<{ x: number; y: number } | null>(null)
 const buildingRotation = ref<'horizontal' | 'vertical'>('horizontal')
 
 const buildingPreview = ref<{ x: number; y: number } | null>(null)
 const routePreview = ref<{ x: number; y: number } | null>(null)
+const pipelinePreview = ref<{ x: number; y: number } | null>(null)
 
 const mapContainer = ref<HTMLElement | null>(null)
 const viewBounds = ref({ x: 0, y: 0, w: 0, h: 0 })
@@ -405,6 +628,8 @@ const tiles = computed(() => {
 const getBuildingDef = (buildingId: string) =>
   baseStore.buildings.find((item) => item.id === buildingId)
 const getRouteDef = (routeId: string) => baseStore.routes.find((item) => item.id === routeId)
+const getPipelineDef = (pipelineId: string) =>
+  baseStore.pipelines.find((item) => item.id === pipelineId)
 
 const getRouteStyle = (r: {
   x: number
@@ -422,6 +647,17 @@ const getRouteStyle = (r: {
   } else {
     return { gridColumn: `${displayX} / span 1`, gridRow: `${displayY} / span ${len}` }
   }
+}
+
+const getPipelineStyle = (p: {
+  x: number
+  y: number
+  pipelineId: string
+  direction: 'horizontal' | 'vertical'
+}) => {
+  const displayX = p.x - baseStore.mapOffsetX + 1
+  const displayY = p.y - baseStore.mapOffsetY + 1
+  return { gridColumn: `${displayX} / span 1`, gridRow: `${displayY} / span 1` }
 }
 
 const getBuildingDisplayPos = (x: number, y: number) => ({
@@ -459,6 +695,14 @@ const onTileClick = (x: number, y: number) => {
     }
     baseStore.buildAndPlaceRoute(selectedRouteId.value, x, y, routeDirection.value)
     lastTraceTile.value = { x, y }
+  } else if (activeTab.value === 'pipelines' && selectedPipelineId.value) {
+    if (traceMode.value && lastTraceTile.value) {
+      const last = lastTraceTile.value
+      if (x === last.x) pipelineDirection.value = 'vertical'
+      else if (y === last.y) pipelineDirection.value = 'horizontal'
+    }
+    baseStore.buildAndPlacePipeline(selectedPipelineId.value, x, y, pipelineDirection.value)
+    lastTraceTile.value = { x, y }
   } else if (activeTab.value === 'batiments' && selectedBuildingId.value) {
     baseStore.buildAndPlaceBuilding(selectedBuildingId.value, x, y, buildingRotation.value)
   }
@@ -468,15 +712,22 @@ const onTileHover = (x: number, y: number) => {
   if (activeTab.value === 'routes' && selectedRouteId.value) {
     routePreview.value = { x, y }
     buildingPreview.value = null
+    pipelinePreview.value = null
+  } else if (activeTab.value === 'pipelines' && selectedPipelineId.value) {
+    pipelinePreview.value = { x, y }
+    routePreview.value = null
+    buildingPreview.value = null
   } else if (activeTab.value === 'batiments' && selectedBuildingId.value) {
     buildingPreview.value = { x, y }
     routePreview.value = null
+    pipelinePreview.value = null
   }
 }
 
 const clearPreviews = () => {
   buildingPreview.value = null
   routePreview.value = null
+  pipelinePreview.value = null
 }
 
 const getBuildingStyle = (b: {
@@ -492,6 +743,28 @@ const getBuildingStyle = (b: {
   return {
     gridColumn: `${b.x - baseStore.mapOffsetX + 1} / span ${w}`,
     gridRow: `${b.y - baseStore.mapOffsetY + 1} / span ${h}`,
+  }
+}
+
+const getEntranceMarkerStyle = (b: {
+  x: number
+  y: number
+  buildingId: string
+  rotation: 'horizontal' | 'vertical'
+}) => {
+  const def = getBuildingDef(b.buildingId)
+  if (!def) return {}
+  const entrance = baseStore.getBuildingEntrancePos(b)
+  const relX = entrance.x - b.x
+  const relY = entrance.y - b.y
+
+  const w = b.rotation === 'horizontal' ? def.width : def.height
+  const h = b.rotation === 'horizontal' ? def.height : def.width
+
+  return {
+    left: `${(relX + 0.5) * (100 / w)}%`,
+    top: `${(relY + 0.5) * (100 / h)}%`,
+    transform: 'translate(-50%, -50%)',
   }
 }
 
@@ -512,6 +785,16 @@ const getRoutePreviewStyle = () => {
       gridColumn: `${displayX} / span 1`,
       gridRow: `${displayY} / span ${len}`,
     }
+  }
+}
+
+const getPipelinePreviewStyle = () => {
+  if (!pipelinePreview.value || !selectedPipelineId.value) return {}
+  const displayX = pipelinePreview.value.x - baseStore.mapOffsetX + 1
+  const displayY = pipelinePreview.value.y - baseStore.mapOffsetY + 1
+  return {
+    gridColumn: `${displayX} / span 1`,
+    gridRow: `${displayY} / span 1`,
   }
 }
 
@@ -543,6 +826,13 @@ const placedSummary = computed(() => {
     if (!route) continue
     if (!map[route.id]) map[route.id] = { id: route.id, name: route.name, count: 0 }
     const entry = map[route.id]
+    if (entry) entry.count += 1
+  }
+  for (const placed of baseStore.placedPipelines) {
+    const pipe = baseStore.pipelines.find((item) => item.id === placed.pipelineId)
+    if (!pipe) continue
+    if (!map[pipe.id]) map[pipe.id] = { id: pipe.id, name: pipe.name, count: 0 }
+    const entry = map[pipe.id]
     if (entry) entry.count += 1
   }
   return Object.values(map)

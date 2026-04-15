@@ -10,13 +10,13 @@ test('navigates to different sections', async ({ page }) => {
   
   // Navigate to Base
   await page.click('button:has-text("Base")')
-  await expect(page.locator('h2')).toContainText('base')
+  await expect(page.locator('header h2')).toContainText('base')
   
   // Navigate to Missions
   await page.click('button:has-text("Missions")')
-  await expect(page.locator('h2')).toContainText('missions')
+  await expect(page.locator('header h2')).toContainText('missions')
   
   // Navigate to R&D
   await page.click('button:has-text("Recherche (R&D)")')
-  await expect(page.locator('h2')).toContainText('rd')
+  await expect(page.locator('header h2')).toContainText('rd')
 })

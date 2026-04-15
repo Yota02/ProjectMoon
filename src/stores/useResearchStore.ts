@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { useResourceStore } from './useResourceStore'
 import { useGameStore } from './useGameStore'
+import { useBaseStore } from './useBaseStore'
 
 const isDebugMode = import.meta.env.VITE_DEBUG_MODE === 'test'
 
@@ -553,6 +554,54 @@ function createInitialResearches() {
       prerequisites: ['c-dome', 'l-super-heavy'],
       tier: 3,
     },
+    'c-station-base': {
+      id: 'c-station-base',
+      name: 'Infrastructure Station Orbitale',
+      description: 'Permet de construire des stations spatiales modulaires.',
+      category: 'Colonisation',
+      cost: 150,
+      duration: 60,
+      progress: 0,
+      status: isDebugMode ? 'completed' : 'locked',
+      prerequisites: ['c-ferme'],
+      tier: 1,
+    },
+    'c-station-habitat': {
+      id: 'c-station-habitat',
+      name: 'Habitation Longue Durée',
+      description: "Modules d'habitation avancés pour les stations spatiales.",
+      category: 'Colonisation',
+      cost: 200,
+      duration: 80,
+      progress: 0,
+      status: isDebugMode ? 'completed' : 'locked',
+      prerequisites: ['c-station-base'],
+      tier: 1,
+    },
+    'c-station-lab': {
+      id: 'c-station-lab',
+      name: 'Laboratoires Orbitaux',
+      description: 'Recherche scientifique en microgravité.',
+      category: 'Colonisation',
+      cost: 250,
+      duration: 100,
+      progress: 0,
+      status: isDebugMode ? 'completed' : 'locked',
+      prerequisites: ['c-station-base', 'b-labo'],
+      tier: 1,
+    },
+    'c-station-power': {
+      id: 'c-station-power',
+      name: 'Energie Solaire Spatiale',
+      description: 'Panneaux solaires haute efficacité pour stations.',
+      category: 'Colonisation',
+      cost: 180,
+      duration: 70,
+      progress: 0,
+      status: isDebugMode ? 'completed' : 'locked',
+      prerequisites: ['c-station-base'],
+      tier: 1,
+    },
     'c-terraforming': {
       id: 'c-terraforming',
       name: 'Terraformation Alpha',
@@ -627,6 +676,13 @@ export const useResearchStore = defineStore('research', {
 
     tick(deltaTime: number) {
       if (!this.activeResearchId) return
+
+      const baseStore = useBaseStore()
+      const hasConnectedLab = baseStore.placedBuildings.some(
+        (b) => b.buildingId === 'lab' && baseStore.isBuildingConnected(b),
+      )
+
+      if (!hasConnectedLab) return
 
       const research = this.researches[this.activeResearchId]
       if (!research) return

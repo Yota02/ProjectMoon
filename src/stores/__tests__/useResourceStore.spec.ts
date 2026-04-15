@@ -5,16 +5,16 @@ import { useResourceStore } from '../useResourceStore'
 describe('Resource Store', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    const store = useResourceStore()
+    store.argent = 1000
+    store.science = 0
+    store.carburant = 0
   })
 
   it('initializes with default values', () => {
     const store = useResourceStore()
-    // Based on useResourceStore.ts content:
-    // argent: 1000000000 (unless debug mode)
-    // science: 1000000
-    // carburant: 0
-    expect(store.argent).toBeGreaterThan(0)
-    expect(store.science).toBeGreaterThan(0)
+    expect(store.argent).toBe(1000)
+    expect(store.science).toBe(0)
     expect(store.carburant).toBe(0)
   })
 

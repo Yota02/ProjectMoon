@@ -122,5 +122,56 @@ const iconPaths: Record<string, any> = {
       h('path', { d: 'M6 12v5c0 2 2 3 6 3s6-1 6-3v-5' }),
     ],
   }),
+  wrench: defineComponent({
+    render: () => [
+      h('path', {
+        d: 'M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z',
+      }),
+    ],
+  }),
+  heart: defineComponent({
+    render: () => [
+      h('path', {
+        d: 'M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z',
+      }),
+    ],
+  }),
+  shield: defineComponent({
+    render: () => [
+      h('path', { d: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10' }),
+    ],
+  }),
+  user: defineComponent({
+    render: () => [
+      h('path', { d: 'M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2' }),
+      h('circle', { cx: '12', cy: '7', r: '4' }),
+    ],
+  }),
+  utensils: defineComponent({
+    render: () => [
+      h('path', { d: 'M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2' }),
+      h('path', { d: 'M7 2v20' }),
+      h('path', { d: 'M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7' }),
+    ],
+  }),
+  droplet: defineComponent({
+    render: () => [
+      h('path', { d: 'M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z' }),
+    ],
+  }),
+  wind: defineComponent({
+    render: () => [
+      h('path', { d: 'M17.7 7.7a2.5 2.5 0 1 1 1.8 4.3H2' }),
+      h('path', { d: 'M9.6 4.6A2 2 0 1 1 11 8H2' }),
+      h('path', { d: 'M12.6 19.4A2 2 0 1 0 14 16H2' }),
+    ],
+  }),
+  box: defineComponent({
+    render: () => [
+      h('path', { d: 'M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z' }),
+      h('path', { d: 'm3.3 7 8.7 5 8.7-5' }),
+      h('path', { d: 'M12 22V12' }),
+    ],
+  }),
 }
 </script>

@@ -22,7 +22,9 @@
       <!-- Planet Legend -->
       <div class="bg-slate-900/80 border border-slate-800 p-4 rounded-xl backdrop-blur-md">
         <div class="space-y-2">
-          <div v-for="planet in planets" :key="planet.id" class="flex items-center gap-3">
+          <div v-for="planet in planets" :key="planet.id" 
+               @click="openPlanetModal(planet.id)"
+               class="flex items-center gap-3 cursor-pointer hover:bg-white/5 p-1 rounded transition-colors">
             <div class="w-3 h-3 rounded-full" :style="{ backgroundColor: planet.color }"></div>
             <span class="text-xs text-slate-300">{{ planet.name }}</span>
           </div>
@@ -31,9 +33,9 @@
     </div>
 
     <!-- SVG Solar System -->
-    <svg class="w-full h-full pointer-events-none" :viewBox="viewBox">
+    <svg class="w-full h-full" :viewBox="viewBox">
       <!-- Background Stars -->
-      <g v-for="star in stars" :key="'star-'+star.id">
+      <g v-for="star in stars" :key="'star-'+star.id" class="pointer-events-none">
         <circle :cx="star.x" 
                 :cy="star.y" 
                 :r="star.r" 
@@ -42,7 +44,7 @@
       </g>
 
       <!-- Orbits -->
-      <g v-for="planet in planets" :key="'orbit-' + planet.id">
+      <g v-for="planet in planets" :key="'orbit-' + planet.id" class="pointer-events-none">
         <circle v-if="planet.distance > 0"
                 cx="0" cy="0" :r="planet.distance"
                 fill="none" 
@@ -51,7 +53,7 @@
       </g>
 
       <!-- Travel Paths -->
-      <g v-for="travel in travelPositions" :key="'path-' + travel.id">
+      <g v-for="travel in travelPositions" :key="'path-' + travel.id" class="pointer-events-none">
         <line :x1="getBodyPositionAt(travel.originId, travel.departureDay).x"
               :y1="getBodyPositionAt(travel.originId, travel.departureDay).y"
               :x2="getBodyPositionAt(travel.destinationId, travel.departureDay + travel.duration).x"
@@ -63,19 +65,22 @@
 
       <!-- Celestial Bodies -->
       <g v-for="planet in planetPositions" :key="planet.id" 
-         :transform="`translate(${planet.x}, ${planet.y})`">
+         :transform="`translate(${planet.x}, ${planet.y})`"
+         class="cursor-pointer group"
+         @mousedown.stop
+         @click.stop="openPlanetModal(planet.id)">
         <!-- Glow effect for Sun -->
         <circle v-if="planet.id === 'sun'"
                 r="35"
                 fill="url(#sunGlow)"
-                class="animate-pulse" />
+                class="animate-pulse pointer-events-none" />
         
         <circle :r="planet.radius / (scale < 0.5 ? Math.sqrt(scale*2) : 1)" 
                 :fill="planet.color"
-                class="transition-all duration-300" />
+                class="transition-all duration-300 group-hover:brightness-125 group-hover:stroke-white/30 group-hover:stroke-2" />
         
         <text y="20" text-anchor="middle" 
-              class="text-[10px] fill-slate-400 font-medium pointer-events-none"
+              class="text-[10px] fill-slate-400 font-medium pointer-events-none group-hover:fill-white transition-colors"
               :style="{ fontSize: `${12 / scale}px` }">
           {{ planet.name }}
         </text>
@@ -83,7 +88,8 @@
 
       <!-- Active Travels -->
       <g v-for="travel in travelPositions" :key="travel.id"
-         :transform="`translate(${travel.x}, ${travel.y})`">
+         :transform="`translate(${travel.x}, ${travel.y})`"
+         class="pointer-events-none">
         <circle r="3" fill="#60a5fa" class="animate-pulse" />
         <text y="-10" text-anchor="middle"
               class="text-[8px] fill-blue-400 font-bold"
@@ -100,17 +106,169 @@
         </radialGradient>
       </defs>
     </svg>
+
+    <!-- Planet Details Modal -->
+    <BaseModal
+      :show="showModal"
+      :title="selectedPlanet?.name || ''"
+      icon="globe"
+      @close="showModal = false"
+    >
+      <div v-if="selectedPlanet" class="space-y-8">
+        <!-- Info Section -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="bg-slate-950/50 p-4 rounded-xl border border-slate-800 flex items-center gap-4">
+            <div class="w-12 h-12 rounded-full flex-shrink-0" :style="{ backgroundColor: selectedPlanet.color }"></div>
+            <div>
+              <p class="text-[10px] text-slate-500 uppercase font-black">Type</p>
+              <p class="text-white font-bold">{{ selectedPlanet.id === 'sun' ? 'Étoile' : selectedPlanet.id === 'moon' ? 'Satellite Naturel' : 'Planète' }}</p>
+            </div>
+          </div>
+          <div class="bg-slate-950/50 p-4 rounded-xl border border-slate-800">
+            <p class="text-[10px] text-slate-500 uppercase font-black">Période Orbitale</p>
+            <p class="text-white font-bold">{{ selectedPlanet.period }} jours terrestres</p>
+          </div>
+        </div>
+
+        <!-- Zones Section -->
+        <div v-if="selectedPlanet.zones && selectedPlanet.zones.length > 0" class="space-y-4">
+          <h4 class="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+            <BaseIcon name="plus" :size="14" class="text-amber-500" />
+            Zones au sol ({{ selectedPlanet.zones.length }})
+          </h4>
+          
+          <div class="grid grid-cols-1 gap-3">
+            <div v-for="zone in selectedPlanet.zones" :key="zone.id" 
+                 class="bg-slate-900 border border-slate-800 p-4 rounded-xl group transition-all"
+                 :class="zone.unlocked ? 'hover:border-amber-500/50' : 'opacity-60 grayscale'">
+              <div class="flex justify-between items-start">
+                <div>
+                  <h5 class="text-white font-bold flex items-center gap-2">
+                    {{ zone.name }}
+                    <span v-if="!zone.unlocked" class="text-[9px] bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded uppercase">Verrouillé</span>
+                  </h5>
+                  <p class="text-xs text-slate-400 mt-1">{{ zone.description }}</p>
+                </div>
+                <div v-if="zone.unlocked">
+                  <router-link :to="{ name: 'base', query: { zoneId: zone.id } }" 
+                               class="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-lg transition-colors">
+                    {{ zone.baseId ? 'Gérer la base' : 'Établir une base' }}
+                  </router-link>
+                </div>
+                <div v-else class="text-right">
+                  <p class="text-[9px] text-slate-500 font-bold uppercase">Recherche requise</p>
+                </div>
+              </div>
+              
+              <!-- Zone Resources -->
+              <div class="mt-4 grid grid-cols-4 gap-2">
+                <div class="bg-slate-950/50 p-2 rounded-lg border border-slate-800/50 text-center">
+                  <p class="text-[8px] text-slate-500 uppercase">Minéraux</p>
+                  <p class="text-xs font-bold" :class="zone.resources.minerals > 0.7 ? 'text-emerald-400' : 'text-slate-300'">
+                    {{ (zone.resources.minerals * 100).toFixed(0) }}%
+                  </p>
+                </div>
+                <div class="bg-slate-950/50 p-2 rounded-lg border border-slate-800/50 text-center">
+                  <p class="text-[8px] text-slate-500 uppercase">Eau</p>
+                  <p class="text-xs font-bold" :class="zone.resources.water > 0.7 ? 'text-blue-400' : 'text-slate-300'">
+                    {{ (zone.resources.water * 100).toFixed(0) }}%
+                  </p>
+                </div>
+                <div class="bg-slate-950/50 p-2 rounded-lg border border-slate-800/50 text-center">
+                  <p class="text-[8px] text-slate-500 uppercase">Énergie</p>
+                  <p class="text-xs font-bold" :class="zone.resources.energy > 0.7 ? 'text-yellow-400' : 'text-slate-300'">
+                    {{ (zone.resources.energy * 100).toFixed(0) }}%
+                  </p>
+                </div>
+                <div class="bg-slate-950/50 p-2 rounded-lg border border-slate-800/50 text-center">
+                  <p class="text-[8px] text-slate-500 uppercase">Science</p>
+                  <p class="text-xs font-bold" :class="zone.resources.science > 0.7 ? 'text-purple-400' : 'text-slate-300'">
+                    {{ (zone.resources.science * 100).toFixed(0) }}%
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Orbital Stations Section -->
+        <div class="space-y-4">
+          <h4 class="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
+            <BaseIcon name="globe" :size="14" class="text-emerald-500" />
+            Stations en orbite ({{ orbitalStations.length }})
+          </h4>
+          
+          <div v-if="orbitalStations.length === 0" class="py-12 text-center bg-slate-950/30 rounded-2xl border border-dashed border-slate-800">
+            <p class="text-slate-500 text-sm">Aucune station en orbite autour de cet astre.</p>
+            <router-link v-if="stationStore.isStationConstructionUnlocked" to="/stations" class="mt-4 inline-block text-blue-400 text-xs font-bold hover:underline">
+              Construire une station →
+            </router-link>
+          </div>
+
+          <div v-else class="space-y-3">
+            <div v-for="station in orbitalStations" :key="station.id" 
+                 class="bg-slate-900 border border-slate-800 p-4 rounded-xl flex justify-between items-center group hover:border-slate-600 transition-colors">
+              <div>
+                <h5 class="text-white font-bold">{{ station.name }}</h5>
+                <p class="text-[10px] text-slate-500 mt-1">
+                  {{ station.moduleIds.length }} modules • {{ station.astronautIds.length }} astronautes
+                </p>
+              </div>
+              <div class="flex items-center gap-4">
+                <div v-if="gameStore.elapsedDays < station.constructionFinishedDay" class="text-right">
+                  <p class="text-[9px] text-orange-400 font-bold uppercase">En construction</p>
+                  <p class="text-[10px] text-slate-500">{{ station.constructionFinishedDay - gameStore.elapsedDays }}j restants</p>
+                </div>
+                <div v-else class="text-right">
+                  <p class="text-[9px] text-emerald-400 font-bold uppercase">Opérationnelle</p>
+                </div>
+                <router-link to="/stations" class="p-2 bg-slate-800 rounded-lg text-slate-400 group-hover:text-white transition-colors">
+                  <BaseIcon name="plus" :size="16" />
+                </router-link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </BaseModal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useSolarSystemStore } from '../stores/useSolarSystemStore'
+import { useStationStore } from '../stores/useStationStore'
+import { useBaseStore } from '../stores/useBaseStore'
+import { useGameStore } from '../stores/useGameStore'
 import { storeToRefs } from 'pinia'
+import BaseModal from '../components/ui/BaseModal.vue'
+import BaseIcon from '../components/ui/BaseIcon.vue'
 
 const solarStore = useSolarSystemStore()
+const stationStore = useStationStore()
+const baseStore = useBaseStore()
+const gameStore = useGameStore()
+
 const { planets, planetPositions, travelPositions } = storeToRefs(solarStore)
 const { getBodyPositionAt } = solarStore
+
+// State for Modal
+const showModal = ref(false)
+const selectedPlanetId = ref<string | null>(null)
+
+const selectedPlanet = computed(() => {
+  return planets.value.find(p => p.id === selectedPlanetId.value)
+})
+
+const orbitalStations = computed(() => {
+  if (!selectedPlanetId.value) return []
+  return stationStore.stations.filter(s => s.orbitBodyId === selectedPlanetId.value)
+})
+
+const openPlanetModal = (id: string) => {
+  selectedPlanetId.value = id
+  showModal.value = true
+}
 
 // State for Pan and Zoom
 const scale = ref(1.5)

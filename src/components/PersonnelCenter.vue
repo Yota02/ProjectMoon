@@ -1,90 +1,124 @@
 <template>
-  <div class="personnel-container">
-    <div class="header">
-      <div class="title-group">
-        <h2 class="title">UNITÉ RH & INFRASTRUCTURE</h2>
-        <p class="subtitle">Gestion stratégique du personnel et expansion de la base</p>
-      </div>
-      <div class="stats">
-        <div class="stat-pill">
-          <span class="l">TOTAL PERSONNEL</span>
-          <span class="v">{{ totalStaff }}</span>
-        </div>
-      </div>
-    </div>
-
-    <div class="staff-grid">
-      <div 
-        class="staff-card" 
-        v-for="role in staffRoles" 
-        :key="role"
-        :class="role"
-      >
-        <div class="card-glow"></div>
-        <div class="card-content">
-          <div class="card-header">
-            <h3>{{ personnelStore.staff[role].label.toUpperCase() }}</h3>
-            <span class="count">{{ personnelStore.staff[role].count }}</span>
+  <div class="space-y-12">
+    <!-- Unité de Recrutement -->
+    <section class="space-y-6">
+      <div class="flex items-center justify-between border-b border-slate-700/50 pb-4">
+        <h3 class="text-xl font-bold text-white flex items-center gap-3">
+          <div class="p-2 bg-slate-800 rounded-lg border border-slate-700">
+            <BaseIcon name="user" class="text-emerald-400" />
           </div>
-          <p class="desc">{{ personnelStore.staff[role].description }}</p>
+          Recrutement Stratégique
+        </h3>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div 
+          v-for="role in staffRoles" 
+          :key="role"
+          class="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-emerald-500/30 transition-all group"
+        >
+          <div class="flex justify-between items-start mb-4">
+            <div class="p-2 rounded-lg" :class="getRoleColor(role)">
+              <BaseIcon :name="getRoleIcon(role)" class="text-white" />
+            </div>
+            <span class="text-3xl font-black text-slate-800 group-hover:text-slate-700 transition-colors">{{ personnelStore.staff[role].count }}</span>
+          </div>
           
-          <div class="cost-info">
-            <span class="c-label">COÛT RECRUTEMENT</span>
-            <span class="c-val">{{ personnelStore.staff[role].hiringCost }} CRÉDITS</span>
+          <h4 class="text-lg font-bold text-white mb-2">{{ personnelStore.staff[role].label }}</h4>
+          <p class="text-xs text-slate-500 mb-6 h-12 leading-relaxed">{{ personnelStore.staff[role].description }}</p>
+          
+          <div class="space-y-4">
+            <div class="flex justify-between text-[10px] font-bold uppercase tracking-widest text-slate-500 bg-slate-950/50 p-2 rounded">
+              <span>Coût Recrutement</span>
+              <span class="text-emerald-400">{{ personnelStore.staff[role].hiringCost.toLocaleString() }} €</span>
+            </div>
+            
+            <button 
+              @click="personnelStore.hire(role)"
+              :disabled="resourceStore.argent < personnelStore.staff[role].hiringCost"
+              class="w-full py-3 rounded-xl font-bold text-xs tracking-widest transition-all uppercase"
+              :class="resourceStore.argent >= personnelStore.staff[role].hiringCost 
+                ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20' 
+                : 'bg-slate-800 text-slate-600 cursor-not-allowed'"
+            >
+              Recruter
+            </button>
           </div>
-
-          <button 
-            @click="personnelStore.hire(role)"
-            :disabled="resourceStore.argent < personnelStore.staff[role].hiringCost"
-            class="hire-btn"
-          >
-            RECRUTER
-          </button>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div class="operations-grid">
-      <div class="op-block scientific">
-        <div class="op-info">
-          <h4>PROTOCOLE SCIENTIFIQUE</h4>
-          <p>Exploitez vos données pour générer de la science pure.</p>
+    <!-- Operations Section -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between">
+        <div class="space-y-4 mb-6">
+          <div class="flex items-center gap-3">
+             <div class="p-2 bg-purple-500/10 rounded-lg">
+                <BaseIcon name="graduation" class="text-purple-400" />
+             </div>
+             <h4 class="font-bold text-white">Analyse de Données Spatiales</h4>
+          </div>
+          <p class="text-sm text-slate-400 leading-relaxed">
+            Exploitez les téraoctets de données collectées lors des missions précédentes pour générer de nouveaux points de Science utilisables en R&D.
+          </p>
         </div>
         <button 
           @click="personnelStore.runResearchProtocol()"
           :disabled="!personnelStore.hasScientifique"
-          class="op-btn"
+          class="w-full py-4 rounded-xl border-2 transition-all font-black text-xs tracking-[0.2em] uppercase"
+          :class="personnelStore.hasScientifique ? 'border-purple-500/50 text-purple-400 hover:bg-purple-500/10' : 'border-slate-800 text-slate-600 cursor-not-allowed'"
         >
-          LANCER L'ANALYSE
+          Lancer le Protocole de Recherche
         </button>
       </div>
 
-      <div class="op-block infra">
-        <div class="op-info">
-          <h4>RAFFINERIE DE PROPERGOL</h4>
-          <p>Extension de la capacité de traitement du carburant.</p>
-          <span class="cost">{{ personnelStore.refineryCost.argent }}A / {{ personnelStore.refineryCost.carburant }}C</span>
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 flex flex-col justify-between">
+        <div class="space-y-4 mb-6">
+          <div class="flex items-center gap-3">
+             <div class="p-2 bg-orange-500/10 rounded-lg">
+                <BaseIcon name="wrench" class="text-orange-400" />
+             </div>
+             <h4 class="font-bold text-white">Raffinerie de Propergol</h4>
+          </div>
+          <p class="text-sm text-slate-400 leading-relaxed">
+            Augmentez vos capacités de stockage et de traitement pour préparer des missions plus lointaines.
+          </p>
+          <div class="flex gap-4 text-[10px] font-mono font-bold">
+            <span class="text-emerald-400">{{ personnelStore.refineryCost.argent.toLocaleString() }} €</span>
+            <span class="text-orange-400">{{ personnelStore.refineryCost.carburant }} Carburant</span>
+          </div>
         </div>
         <button 
           @click="personnelStore.buildRefinery()"
           :disabled="!personnelStore.hasConstructeur || !canBuildRefinery"
-          class="op-btn"
+          class="w-full py-4 rounded-xl border-2 transition-all font-black text-xs tracking-[0.2em] uppercase"
+          :class="(personnelStore.hasConstructeur && canBuildRefinery) ? 'border-orange-500/50 text-orange-400 hover:bg-orange-500/10' : 'border-slate-800 text-slate-600 cursor-not-allowed'"
         >
-          CONSTRUIRE
+          Agrandir l'Infrastructure
         </button>
       </div>
-    </div>
+    </section>
 
-    <div class="logs-container">
-      <div class="logs-header">JOURNAL DES OPÉRATIONS RH</div>
-      <div class="logs-list">
-        <div v-if="personnelStore.logs.length === 0" class="empty">AUCUNE ACTIVITÉ RÉCENTE</div>
-        <div v-for="(log, idx) in personnelStore.logs" :key="idx" class="log-entry">
-          <span class="time">[{{ log.temps }}]</span>
-          <span class="msg">{{ log.message }}</span>
+    <!-- Logs Console -->
+    <section class="space-y-4">
+      <div class="flex items-center gap-2 text-slate-400 px-2">
+        <BaseIcon name="history" :size="16" />
+        <h3 class="text-xs font-black uppercase tracking-[0.3em]">Historique des Opérations RH</h3>
+      </div>
+      <div class="bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+        <div class="p-6 h-48 overflow-y-auto font-mono text-xs space-y-2 custom-scrollbar">
+          <div v-if="personnelStore.logs.length === 0" class="flex flex-col items-center justify-center h-full text-slate-700 opacity-50">
+            <p>AUCUNE ACTIVITÉ RÉCENTE DANS L'UNITÉ</p>
+          </div>
+          <div v-for="(log, idx) in personnelStore.logs" :key="idx" class="flex gap-4 group">
+            <span class="text-slate-600 shrink-0 group-hover:text-emerald-500/50 transition-colors">[{{ log.temps }}]</span>
+            <span class="text-slate-300">
+              <span class="text-emerald-500 mr-2">❯</span>{{ log.message }}
+            </span>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
   </div>
 </template>
 
@@ -92,15 +126,12 @@
 import { computed } from 'vue'
 import { usePersonnelStore, type StaffRole } from '../stores/usePersonnelStore'
 import { useResourceStore } from '../stores/useResourceStore'
+import BaseIcon from './ui/BaseIcon.vue'
 
 const personnelStore = usePersonnelStore()
 const resourceStore = useResourceStore()
 
 const staffRoles: StaffRole[] = ['ingenieur', 'scientifique', 'constructeur']
-
-const totalStaff = computed(() => {
-  return Object.values(personnelStore.staff).reduce((acc, curr) => acc + curr.count, 0)
-})
 
 const canBuildRefinery = computed(() => {
   return (
@@ -108,215 +139,38 @@ const canBuildRefinery = computed(() => {
     resourceStore.carburant >= personnelStore.refineryCost.carburant
   )
 })
+
+const getRoleIcon = (role: StaffRole) => {
+  switch (role) {
+    case 'ingenieur': return 'wrench'
+    case 'scientifique': return 'graduation'
+    case 'constructeur': return 'home'
+    default: return 'user'
+  }
+}
+
+const getRoleColor = (role: StaffRole) => {
+  switch (role) {
+    case 'ingenieur': return 'bg-emerald-500/20 text-emerald-400'
+    case 'scientifique': return 'bg-purple-500/20 text-purple-400'
+    case 'constructeur': return 'bg-orange-500/20 text-orange-400'
+    default: return 'bg-slate-500/20 text-slate-400'
+  }
+}
 </script>
 
 <style scoped>
-.personnel-container {
-  display: flex;
-  flex-direction: column;
-  gap: 2.5rem;
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
 }
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.5);
 }
-
-.title {
-  font-family: 'Orbitron', sans-serif;
-  font-weight: 800;
-  font-size: 1.5rem;
-  margin: 0;
-  color: #fff;
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 10px;
 }
-
-.subtitle {
-  font-size: 0.9rem;
-  color: var(--text-dim);
-  margin: 0.25rem 0 0 0;
-}
-
-.stat-pill {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-
-.stat-pill .l { font-size: 0.6rem; opacity: 0.5; font-family: 'JetBrains Mono', monospace; }
-.stat-pill .v { font-size: 1.2rem; font-weight: 800; color: var(--primary); font-family: 'Orbitron', sans-serif; }
-
-.staff-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2rem;
-}
-
-.staff-card {
-  position: relative;
-  background: var(--glass-bg);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  overflow: hidden;
-  transition: all 0.3s;
-}
-
-.staff-card:hover {
-  transform: translateY(-5px);
-  border-color: var(--primary);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-}
-
-.card-glow {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 4px;
-}
-
-.ingenieur .card-glow { background: var(--secondary); }
-.scientifique .card-glow { background: var(--primary); }
-.constructeur .card-glow { background: #ffd700; }
-
-.card-content {
-  padding: 2rem;
-  z-index: 1;
-  position: relative;
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.card-header h3 {
-  font-family: 'Orbitron', sans-serif;
-  font-size: 1.1rem;
-  margin: 0;
-}
-
-.count {
-  font-family: 'Orbitron', sans-serif;
-  font-size: 1.5rem;
-  font-weight: 900;
-  opacity: 0.3;
-}
-
-.desc {
-  font-size: 0.9rem;
-  color: var(--text-dim);
-  height: 3rem;
-  margin-bottom: 2rem;
-}
-
-.cost-info {
-  display: flex;
-  flex-direction: column;
-  margin-bottom: 1.5rem;
-}
-
-.c-label { font-size: 0.6rem; opacity: 0.5; font-family: 'JetBrains Mono', monospace; }
-.c-val { font-size: 1rem; font-weight: 700; color: #fff; }
-
-.hire-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
-  width: 100%;
-  padding: 1rem;
-  border-radius: 8px;
-  font-weight: 700;
-  font-family: 'Orbitron', sans-serif;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.hire-btn:hover:not(:disabled) {
-  background: var(--primary);
-  color: #000;
-  border-color: var(--primary);
-  box-shadow: 0 0 15px var(--accent-glow);
-}
-
-.hire-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.operations-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 2rem;
-}
-
-.op-block {
-  background: rgba(15, 52, 96, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  padding: 2rem;
-  border-radius: 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.op-info h4 { font-family: 'Orbitron', sans-serif; margin: 0; font-size: 0.9rem; }
-.op-info p { font-size: 0.8rem; color: var(--text-dim); margin: 0.5rem 0; }
-.op-info .cost { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--primary); }
-
-.op-btn {
-  padding: 0.75rem 1.5rem;
-  background: transparent;
-  border: 1px solid var(--secondary);
-  color: var(--secondary);
-  border-radius: 4px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.op-btn:hover:not(:disabled) {
-  background: var(--secondary);
-  color: #fff;
-  box-shadow: 0 0 15px rgba(233, 69, 96, 0.4);
-}
-
-.op-btn:disabled { opacity: 0.2; cursor: not-allowed; }
-
-.logs-container {
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.03);
-  border-radius: 12px;
-  padding: 1.5rem;
-}
-
-.logs-header {
-  font-size: 0.7rem;
-  color: var(--primary);
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  margin-bottom: 1rem;
-}
-
-.logs-list {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.75rem;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.log-entry { margin-bottom: 0.5rem; }
-.log-entry .time { opacity: 0.3; margin-right: 1rem; }
-.log-entry .msg { color: var(--text-dim); }
-
-@media (max-width: 900px) {
-  .operations-grid { grid-template-columns: 1fr; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #334155;
 }
 </style>

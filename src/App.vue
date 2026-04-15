@@ -16,7 +16,7 @@
 
         <nav class="space-y-2">
           <router-link
-            v-for="item in navItems"
+            v-for="item in availableNavItems"
             :key="item.id"
             :to="item.to"
             custom
@@ -74,26 +74,29 @@
           </h2>
           <p class="text-slate-400 text-sm">Bienvenue Directeur. Les systèmes sont nominaux.</p>
         </div>
-        <div class="flex items-center gap-6">
-          <div class="hidden lg:flex items-center gap-4">
-            <div class="text-right">
-              <p class="text-xs text-slate-500 uppercase tracking-wider font-bold">Crédits</p>
-              <p class="font-mono text-emerald-400 font-bold">
-                {{ resourceStore.argent.toLocaleString() }} €
-              </p>
+        <div class="flex flex-col items-end gap-2">
+          <GlobalResourceBar class="hidden xl:flex" />
+          <div class="flex items-center gap-6">
+            <div class="hidden lg:flex items-center gap-4">
+              <div class="text-right">
+                <p class="text-xs text-slate-500 uppercase tracking-wider font-bold">Crédits</p>
+                <p class="font-mono text-emerald-400 font-bold">
+                  {{ resourceStore.argent.toLocaleString() }} €
+                </p>
+              </div>
+              <div class="text-right border-l border-slate-800 pl-4">
+                <p class="text-xs text-slate-500 uppercase tracking-wider font-bold">Science</p>
+                <p class="font-mono text-blue-400 font-bold">
+                  {{ resourceStore.science.toLocaleString() }}🧪
+                </p>
+              </div>
             </div>
-            <div class="text-right border-l border-slate-800 pl-4">
-              <p class="text-xs text-slate-500 uppercase tracking-wider font-bold">Science</p>
-              <p class="font-mono text-blue-400 font-bold">
-                {{ resourceStore.science.toLocaleString() }}🧪
+            <div class="text-right hidden sm:block border-l border-slate-800 pl-4">
+              <p class="text-xs text-slate-500 uppercase tracking-wider font-bold">
+                Prochaine fenêtre de tir
               </p>
+              <p class="font-mono text-blue-400 font-bold">14j 08h 22m</p>
             </div>
-          </div>
-          <div class="text-right hidden sm:block border-l border-slate-800 pl-4">
-            <p class="text-xs text-slate-500 uppercase tracking-wider font-bold">
-              Prochaine fenêtre de tir
-            </p>
-            <p class="font-mono text-blue-400 font-bold">14j 08h 22m</p>
           </div>
         </div>
       </header>
@@ -111,31 +114,71 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { gameLoop } from './engine/GameLoop'
 import { useResourceStore } from './stores/useResourceStore'
 import { useResearchStore } from './stores/useResearchStore'
 import { useGameStore } from './stores/useGameStore'
 import { useFleetStore } from './stores/useFleetStore'
+import { useBaseStore } from './stores/useBaseStore'
 import BaseIcon from './components/ui/BaseIcon.vue'
+import GlobalResourceBar from './components/GlobalResourceBar.vue'
 
 const route = useRoute()
 const resourceStore = useResourceStore()
 const researchStore = useResearchStore()
 const gameStore = useGameStore()
 const fleetStore = useFleetStore()
+const baseStore = useBaseStore()
 
-const navItems = [
-  { id: 'dashboard', label: "Vue d'ensemble", icon: 'dashboard', to: '/' },
-  { id: 'solar', label: 'Système Solaire', icon: 'globe', to: '/solar' },
-  { id: 'base', label: 'Base', icon: 'home', to: '/base' },
-  { id: 'training', label: 'Entraînement', icon: 'graduation', to: '/training' },
-  { id: 'missions', label: 'Missions', icon: 'globe', to: '/missions' },
-  { id: 'fleet', label: 'Flotte & Lanceurs', icon: 'rocket', to: '/fleet' },
-  { id: 'rd', label: 'Recherche (R&D)', icon: 'flask', to: '/rd' },
-  { id: 'finance', label: 'Finances', icon: 'coins', to: '/finance' },
-]
+const hasBuilding = (buildingId: string) => {
+  return baseStore.placedBuildings.some(
+    (b) => b.buildingId === buildingId && baseStore.isBuildingConnected(b),
+  )
+}
+
+const availableNavItems = computed(() => {
+  const items = [
+    {
+      id: 'dashboard',
+      label: "Vue d'ensemble",
+      icon: 'dashboard',
+      to: '/',
+      requiredBuilding: null,
+    },
+    { id: 'solar', label: 'Système Solaire', icon: 'globe', to: '/solar', requiredBuilding: null },
+    {
+      id: 'stations',
+      label: 'Stations Spatiales',
+      icon: 'globe',
+      to: '/stations',
+      requiredBuilding: 'hq',
+    },
+    { id: 'base', label: 'Base', icon: 'home', to: '/base', requiredBuilding: null },
+    {
+      id: 'training',
+      label: 'Entraînement',
+      icon: 'graduation',
+      to: '/training',
+      requiredBuilding: 'training_center',
+    },
+    { id: 'missions', label: 'Missions', icon: 'globe', to: '/missions', requiredBuilding: 'hq' },
+    {
+      id: 'fleet',
+      label: 'Flotte & Lanceurs',
+      icon: 'rocket',
+      to: '/fleet',
+      requiredBuilding: 'launch_pad',
+    },
+    { id: 'rd', label: 'Recherche (R&D)', icon: 'flask', to: '/rd', requiredBuilding: 'lab' },
+    { id: 'finance', label: 'Finances', icon: 'coins', to: '/finance', requiredBuilding: null },
+  ]
+  return items.filter((item) => {
+    if (!item.requiredBuilding) return true
+    return hasBuilding(item.requiredBuilding)
+  })
+})
 
 onMounted(() => {
   gameLoop.addTickHandler((deltaTime: number) => {

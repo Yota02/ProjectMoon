@@ -3,10 +3,22 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useResearchStore } from '../useResearchStore'
 import { useResourceStore } from '../useResourceStore'
 import { useGameStore } from '../useGameStore'
+import { useBaseStore } from '../useBaseStore'
 
 describe('Research Store', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    const baseStore = useBaseStore()
+    baseStore.placedBuildings = []
+    baseStore.placedRoutes = []
+    
+    // Reset researches status if needed (though Pinia store should be fresh)
+    const store = useResearchStore()
+    Object.values(store.researches).forEach(r => {
+      r.status = r.id === 'l-micro' ? 'available' : 'locked'
+      r.progress = 0
+    })
+    store.activeResearchId = null
   })
 
   it('initializes with some researches available', () => {
@@ -45,9 +57,18 @@ describe('Research Store', () => {
 
   it('advances research progress on tick', () => {
     const store = useResearchStore()
+    const baseStore = useBaseStore()
+    const resourceStore = useResourceStore()
     const research = store.researches['l-micro']
     research.status = 'researching'
     store.activeResearchId = 'l-micro'
+    
+    resourceStore.argent = 10000
+    resourceStore.science = 10000
+    
+    // Place a connected lab
+    baseStore.buildAndPlaceBuilding('lab', 0, 0)
+    baseStore.buildAndPlaceRoute('route_small', 0, 1, 'horizontal')
     
     // duration for l-micro is 10s
     // tick(1000) = 1s = 10% progress

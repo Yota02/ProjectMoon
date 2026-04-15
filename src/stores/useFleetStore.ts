@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { useResourceStore } from './useResourceStore'
 import { useResearchStore } from './useResearchStore'
+import { useBaseStore } from './useBaseStore'
 
 export type FleetItemStatus = 'Prêt' | 'En maintenance' | 'En construction'
 export type OrbitType = 'LEO' | 'MEO' | 'GEO' | 'HEO' | 'LUNAR' | 'MARTIAN'
@@ -181,8 +182,15 @@ export const useFleetStore = defineStore('fleet', {
     tick(deltaTime: number) {
       // 500ms = 1 jour
       const daysPassed = deltaTime / 500
-      
-      this.items.forEach(item => {
+
+      const baseStore = useBaseStore()
+      const hasConnectedPad = baseStore.placedBuildings.some(
+        (b) => b.buildingId === 'launch_pad' && baseStore.isBuildingConnected(b),
+      )
+
+      if (!hasConnectedPad) return
+
+      this.items.forEach((item) => {
         const design = this.designs.find(d => d.id === item.designId)
         if (!design) return
 

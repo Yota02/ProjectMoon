@@ -1,146 +1,160 @@
 <template>
   <div class="training-container">
+    <!-- Hero Section -->
     <section class="hero-panel">
-      <div class="hero-copy">
-        <span class="eyebrow">ASTRO ACADEMY</span>
-        <h2 class="title">Centre d'Entrainement Orbital</h2>
-        <p class="subtitle">
-          Préparez vos équipages pour les opérations critiques: pilotage, survie, médecine et
-          maintenance de mission.
-        </p>
-      </div>
-      <div class="hero-stats">
-        <article class="stat-card">
-          <span class="label">Total Astronautes</span>
-          <strong class="value">{{ totalTrainees }}</strong>
-        </article>
-        <article class="stat-card">
-          <span class="label">Programmes Actifs</span>
-          <strong class="value">{{ trainingStore.activeSessions }}</strong>
-        </article>
+      <div class="hero-content">
+        <div class="hero-text">
+          <span class="eyebrow">Astro Academy • Station Orbitale Alpha</span>
+          <h2 class="title">Centre d'Entraînement</h2>
+          <p class="subtitle">
+            Recrutez et gérez vos équipages pour les missions d'exploration lointaine.
+          </p>
+        </div>
+        <div class="hero-stats">
+          <div class="stat-item">
+            <span class="stat-label">Effectif Total</span>
+            <span class="stat-value">{{ totalTrainees }}</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="stat-item">
+            <span class="stat-label">Sessions Actives</span>
+            <span class="stat-value">{{ trainingStore.activeSessions }}</span>
+          </div>
+        </div>
       </div>
     </section>
 
-    <section class="market-container">
-      <div class="market-header">
-        <div>
-          <h4>Marche des Astronautes</h4>
-          <p>Recrutez des profils avec nationalite, experience et cout variable.</p>
-        </div>
-        <button
-          @click="trainingStore.refreshMarket()"
-          :disabled="!canRefreshMarket"
-          class="refresh-btn"
-        >
-          Rafraichir ({{ MARKET_REFRESH_COST }} Credits)
-        </button>
-      </div>
+    <!-- Tabs Navigation -->
+    <nav class="tabs-nav">
+      <button
+        v-for="tab in tabs"
+        :key="tab.id"
+        class="tab-btn"
+        :class="{ active: activeTab === tab.id }"
+        @click="activeTab = tab.id"
+      >
+        <BaseIcon :name="tab.icon" :size="18" />
+        <span>{{ tab.label }}</span>
+        <span v-if="tab.count !== undefined" class="tab-count">{{ tab.count }}</span>
+      </button>
+    </nav>
 
-      <div class="trainee-grid">
-        <article
-          class="trainee-card"
-          v-for="astronaut in trainingStore.market"
-          :key="astronaut.id"
-          :class="astronaut.type"
-        >
-          <div class="card-top">
-            <span class="icon-chip">{{ astronaut.flag }}</span>
-            <span class="role-tag">{{ trainingStore.trainees[astronaut.type].label }}</span>
+    <!-- Main Content Area -->
+    <div class="main-content">
+      <!-- Market Tab -->
+      <transition name="fade-slide" mode="out-in">
+        <section v-if="activeTab === 'market'" class="tab-section" key="market">
+          <div class="section-header">
+            <div class="header-info">
+              <h3>Marché des Astronautes</h3>
+              <p>Nouveaux profils disponibles toutes les 24h standards.</p>
+            </div>
+            <button
+              @click="trainingStore.refreshMarket()"
+              :disabled="!canRefreshMarket"
+              class="refresh-btn"
+            >
+              <BaseIcon name="history" :size="16" />
+              <span>Rafraîchir ({{ MARKET_REFRESH_COST }} Cr.)</span>
+            </button>
           </div>
 
-          <div class="card-header">
-            <h3>{{ astronaut.name }}</h3>
-            <span class="count">{{ astronaut.experience }}</span>
+          <div class="trainee-grid">
+            <AstronautCard
+              v-for="candidate in trainingStore.market"
+              :key="candidate.id"
+              v-bind="candidate"
+              is-market
+              :disabled="resourceStore.argent < candidate.cost"
+              @recruit="trainingStore.recruitFromMarket(candidate.id)"
+            />
           </div>
+        </section>
 
-          <p class="desc">
-            {{ astronaut.flag }} {{ astronaut.nationality }} -
-            {{ trainingStore.trainees[astronaut.type].description }}
-          </p>
-
-          <div class="candidate-box">
-            <span class="candidate-title">Specialite</span>
-            <strong class="candidate-name">{{
-              trainingStore.trainees[astronaut.type].label
-            }}</strong>
-            <div class="candidate-meta">
-              <span>{{ astronaut.nationality }}</span>
-              <span>{{ astronaut.experience }}</span>
+        <!-- Roster Tab -->
+        <section v-else-if="activeTab === 'roster'" class="tab-section" key="roster">
+          <div class="section-header">
+            <div class="header-info">
+              <h3>Équipage Opérationnel</h3>
+              <p>Liste des membres qualifiés et prêts au déploiement.</p>
             </div>
           </div>
 
-          <div class="cost-row">
-            <span class="cost-label">Cout Recrutement</span>
-            <span class="cost-value">{{ astronaut.cost }} Credits</span>
+          <div v-if="trainingStore.astronauts.length === 0" class="empty-state">
+            <div class="empty-icon">
+              <BaseIcon name="user" :size="48" />
+            </div>
+            <h4>Aucun membre d'équipage</h4>
+            <p>Visitez le marché pour recruter vos premiers astronautes.</p>
+            <button @click="activeTab = 'market'" class="empty-btn">Aller au marché</button>
+          </div>
+          <div v-else class="trainee-grid">
+            <AstronautCard
+              v-for="astronaut in trainingStore.astronauts"
+              :key="astronaut.id"
+              v-bind="astronaut"
+            />
+          </div>
+        </section>
+
+        <!-- Programs Tab -->
+        <section v-else-if="activeTab === 'programs'" class="tab-section" key="programs">
+          <div class="section-header">
+            <div class="header-info">
+              <h3>Programmes Spéciaux</h3>
+              <p>Améliorez les capacités de votre base par l'entraînement.</p>
+            </div>
           </div>
 
-          <button
-            @click="trainingStore.recruitFromMarket(astronaut.id)"
-            :disabled="resourceStore.argent < astronaut.cost"
-            class="train-btn"
-          >
-            Recruter
-          </button>
-        </article>
-      </div>
-    </section>
-
-    <section class="roster-container">
-      <div class="roster-header">
-        <h4>Equipage Forme</h4>
-        <span>{{ trainingStore.astronauts.length }} astronautes</span>
-      </div>
-      <div v-if="trainingStore.astronauts.length === 0" class="empty">Aucun astronaute formé</div>
-      <div v-else class="roster-grid">
-        <article
-          class="astronaut-card"
-          v-for="astronaut in trainingStore.astronauts"
-          :key="astronaut.id"
-        >
-          <div class="astronaut-head">
-            <strong>{{ astronaut.flag }} {{ astronaut.name }}</strong>
-            <span>{{ trainingStore.trainees[astronaut.type].label }}</span>
+          <div class="program-card">
+            <div class="program-visual">
+              <BaseIcon name="graduation" :size="40" />
+            </div>
+            <div class="program-details">
+              <span class="tag">Certification EVA</span>
+              <h4>Simulation de Survie Intensive</h4>
+              <p>
+                Un cycle complet de 48h simulant des pannes critiques et des sorties
+                extravéhiculaires.
+              </p>
+              <div class="program-footer">
+                <div class="costs">
+                  <div class="cost">
+                    <BaseIcon name="coins" :size="14" />
+                    <span>100 Cr.</span>
+                  </div>
+                  <div class="cost">
+                    <BaseIcon name="rocket" :size="14" />
+                    <span>20 Carb.</span>
+                  </div>
+                </div>
+                <button
+                  @click="trainingStore.startTrainingProgram()"
+                  :disabled="!canRunProgram"
+                  class="launch-btn"
+                >
+                  Lancer le cycle
+                </button>
+              </div>
+            </div>
           </div>
-          <div class="astronaut-meta">
-            <span>{{ astronaut.nationality }}</span>
-            <span>{{ astronaut.experience }}</span>
-            <span>{{ astronaut.cost }} Credits</span>
-          </div>
-        </article>
-      </div>
-    </section>
+        </section>
+      </transition>
+    </div>
 
-    <section class="program-block">
-      <div class="program-copy">
-        <span class="program-kicker">Simulation Intensif</span>
-        <h4>Programme de Cohorte</h4>
-        <p>Cycle complet de simulation extravehiculaire, incidents et retour d'urgence.</p>
-      </div>
-      <div class="program-action">
-        <div class="program-cost">
-          <span>{{ trainingCostIntensive.argent }} Credits</span>
-          <span>{{ trainingCostIntensive.carburant }} Carburant</span>
-        </div>
-        <button
-          @click="trainingStore.startTrainingProgram()"
-          :disabled="!canRunProgram"
-          class="prog-btn"
-        >
-          Lancer le programme
-        </button>
-      </div>
-    </section>
-
-    <section class="logs-container">
+    <!-- Mini Log Sidebar/Footer -->
+    <section class="logs-panel">
       <div class="logs-header">
-        <h4>Journal des Formations</h4>
-        <span>{{ trainingStore.logs.length }} entrées</span>
+        <BaseIcon name="history" :size="16" />
+        <h4>Dernières activités</h4>
       </div>
-      <div class="logs-list">
-        <div v-if="trainingStore.logs.length === 0" class="empty">Aucune activité récente</div>
-        <div v-for="(log, idx) in trainingStore.logs" :key="idx" class="log-entry">
-          <span class="time">{{ log.temps }}</span>
-          <span class="msg">{{ log.message }}</span>
+      <div class="logs-content">
+        <div v-if="trainingStore.logs.length === 0" class="empty-logs">
+          En attente d'opérations...
+        </div>
+        <div v-for="(log, idx) in trainingStore.logs" :key="idx" class="log-item">
+          <span class="log-time">{{ log.temps }}</span>
+          <span class="log-msg">{{ log.message }}</span>
         </div>
       </div>
     </section>
@@ -148,587 +162,454 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { MARKET_REFRESH_COST, useTrainingStore } from '../stores/useTrainingStore'
 import { useResourceStore } from '../stores/useResourceStore'
+import BaseIcon from './ui/BaseIcon.vue'
+import AstronautCard from './ui/AstronautCard.vue'
 
 const trainingStore = useTrainingStore()
 const resourceStore = useResourceStore()
 
-const trainingCostIntensive = { argent: 100, carburant: 20 }
+const activeTab = ref('market')
+const tabs = computed(() => [
+  { id: 'market', label: 'Marché', icon: 'briefcase' },
+  { id: 'roster', label: 'Équipage', icon: 'user', count: trainingStore.astronauts.length },
+  { id: 'programs', label: 'Programmes', icon: 'graduation' },
+])
 
 const totalTrainees = computed(() => trainingStore.totalTrainees)
-
 const canRefreshMarket = computed(() => resourceStore.argent >= MARKET_REFRESH_COST)
-
 const canRunProgram = computed(() => {
-  return (
-    resourceStore.argent >= trainingCostIntensive.argent &&
-    resourceStore.carburant >= trainingCostIntensive.carburant
-  )
+  return resourceStore.argent >= 100 && resourceStore.carburant >= 20
 })
 </script>
 
 <style scoped>
 .training-container {
-  --panel-bg: linear-gradient(145deg, rgba(10, 20, 40, 0.9), rgba(8, 12, 26, 0.82));
-  --panel-border: rgba(255, 255, 255, 0.12);
-  --text-muted: rgba(194, 206, 232, 0.75);
-  --cyan: #37d7ff;
-  --orange: #ff9b3f;
-  --green: #4be0a2;
-  --rose: #ff6e7f;
   display: flex;
   flex-direction: column;
-  gap: 2.5rem;
+  gap: 1.5rem;
+  animation: fadeIn 0.5s ease-out;
 }
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Hero Panel */
 .hero-panel {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.8) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 24px;
+  padding: 2rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 300px;
+  height: 100%;
+  background: radial-gradient(circle at 100% 0%, rgba(55, 215, 255, 0.1) 0%, transparent 70%);
+}
+
+.hero-content {
   display: flex;
   justify-content: space-between;
-  align-items: stretch;
-  gap: 1.2rem;
-  padding: 1.4rem;
-  border-radius: 18px;
-  border: 1px solid var(--panel-border);
-  background: var(--panel-bg);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.03),
-    0 20px 35px rgba(0, 0, 0, 0.25);
-}
-
-.hero-copy {
-  max-width: 720px;
+  align-items: center;
+  gap: 2rem;
+  position: relative;
+  z-index: 1;
 }
 
 .eyebrow {
-  display: inline-block;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.68rem;
-  letter-spacing: 0.2em;
-  color: var(--cyan);
-  margin-bottom: 0.6rem;
+  font-size: 0.75rem;
+  color: #37d7ff;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 0.5rem;
+  display: block;
 }
 
 .title {
   font-family: 'Orbitron', sans-serif;
-  font-size: 1.9rem;
-  line-height: 1.2;
-  margin: 0 0 0.4rem;
-  color: #fff;
+  font-size: 2.25rem;
+  margin: 0;
+  background: linear-gradient(to bottom, #fff, #94a3b8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .subtitle {
-  font-size: 0.95rem;
-  line-height: 1.55;
-  color: var(--text-muted);
-  margin: 0;
+  color: #94a3b8;
+  margin: 0.5rem 0 0 0;
+  max-width: 500px;
 }
 
 .hero-stats {
-  min-width: 270px;
-  display: grid;
-  gap: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 1rem 2rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.stat-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 0.95rem 1rem;
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-.stat-card .label {
-  display: block;
-  font-size: 0.68rem;
+.stat-label {
+  font-size: 0.7rem;
+  color: #64748b;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: rgba(190, 203, 229, 0.7);
-  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 1px;
 }
 
-.stat-card .value {
-  display: block;
-  margin-top: 0.2rem;
-  font-size: 1.7rem;
-  color: #f7fbff;
-  text-shadow: 0 0 12px rgba(55, 215, 255, 0.4);
+.stat-value {
   font-family: 'Orbitron', sans-serif;
+  font-size: 1.75rem;
+  color: #fff;
+}
+
+.stat-divider {
+  width: 1px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Tabs Navigation */
+.tabs-nav {
+  display: flex;
+  gap: 0.5rem;
+  background: rgba(15, 23, 42, 0.5);
+  padding: 0.4rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  width: fit-content;
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.tab-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tab-btn.active {
+  background: #37d7ff;
+  color: #0f172a;
+}
+
+.tab-count {
+  font-size: 0.7rem;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.1rem 0.5rem;
+  border-radius: 6px;
+  margin-left: 0.25rem;
+}
+
+/* Tab Sections */
+.tab-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.section-header h3 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.25rem;
+  margin: 0;
+  color: #fff;
+}
+
+.section-header p {
+  color: #64748b;
+  margin: 0.25rem 0 0 0;
+  font-size: 0.9rem;
+}
+
+.refresh-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: rgba(55, 215, 255, 0.1);
+  border: 1px solid rgba(55, 215, 255, 0.2);
+  color: #37d7ff;
+  padding: 0.6rem 1rem;
+  border-radius: 10px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.refresh-btn:hover:not(:disabled) {
+  background: rgba(55, 215, 255, 0.2);
+  transform: translateY(-1px);
 }
 
 .trainee-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
 }
 
-.market-container {
-  background: rgba(4, 8, 20, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  padding: 1rem;
-}
-
-.market-header {
+/* Empty State */
+.empty-state {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 0.8rem;
+  justify-content: center;
+  padding: 4rem 2rem;
+  background: rgba(15, 23, 42, 0.4);
+  border: 2px dashed rgba(255, 255, 255, 0.05);
+  border-radius: 24px;
+  text-align: center;
 }
 
-.market-header h4 {
-  margin: 0;
-  font-size: 0.95rem;
+.empty-icon {
+  color: rgba(255, 255, 255, 0.1);
+  margin-bottom: 1.5rem;
+}
+
+.empty-state h4 {
   font-family: 'Orbitron', sans-serif;
+  font-size: 1.25rem;
+  margin: 0 0 0.5rem 0;
+  color: #fff;
 }
 
-.market-header p {
-  margin: 0.2rem 0 0;
-  color: var(--text-muted);
-  font-size: 0.78rem;
+.empty-state p {
+  color: #64748b;
+  margin: 0 0 1.5rem 0;
 }
 
-.refresh-btn {
-  padding: 0.6rem 0.8rem;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.07);
-  color: #f8fbff;
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-family: 'JetBrains Mono', monospace;
-  cursor: pointer;
-}
-
-.refresh-btn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.trainee-card {
-  position: relative;
-  background: linear-gradient(160deg, rgba(9, 17, 33, 0.9), rgba(10, 15, 28, 0.9));
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 16px;
-  padding: 1.2rem;
-  transition:
-    transform 180ms ease,
-    border-color 180ms ease,
-    box-shadow 180ms ease;
-}
-
-.trainee-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 18px 30px rgba(0, 0, 0, 0.28);
-}
-
-.card-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.85rem;
-}
-
-.icon-chip {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  display: grid;
-  place-items: center;
-  font-size: 1.1rem;
-  font-weight: 800;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.role-tag {
-  font-size: 0.63rem;
-  letter-spacing: 0.16em;
-  font-family: 'JetBrains Mono', monospace;
-  color: rgba(194, 206, 232, 0.8);
-}
-
-.pilote {
-  border-color: rgba(55, 215, 255, 0.3);
-}
-.pilote .icon-chip {
-  background: var(--cyan);
-}
-
-.ingenieur_vol {
-  border-color: rgba(255, 155, 63, 0.3);
-}
-.ingenieur_vol .icon-chip {
-  background: var(--orange);
-}
-
-.medic {
-  border-color: rgba(75, 224, 162, 0.3);
-}
-.medic .icon-chip {
-  background: var(--green);
-}
-
-.specialiste {
-  border-color: rgba(255, 110, 127, 0.3);
-}
-.specialiste .icon-chip {
-  background: var(--rose);
-}
-
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.65rem;
-}
-
-.card-header h3 {
-  font-family: 'Orbitron', sans-serif;
-  font-size: 1rem;
-  letter-spacing: 0.02em;
-  margin: 0;
-}
-
-.count {
-  font-family: 'Orbitron', sans-serif;
-  font-size: 0.9rem;
-  color: #f3fbff;
-  text-shadow: 0 0 10px rgba(255, 255, 255, 0.16);
-}
-
-.desc {
-  font-size: 0.85rem;
-  line-height: 1.45;
-  color: var(--text-muted);
-  min-height: 2.8rem;
-  margin: 0 0 1rem;
-}
-
-.cost-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.9rem;
-  padding-top: 0.7rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
-}
-
-.cost-label {
-  font-size: 0.64rem;
-  opacity: 0.75;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  font-family: 'JetBrains Mono', monospace;
-}
-.cost-value {
-  font-size: 0.86rem;
-  font-weight: 700;
-  color: #fcfdff;
-}
-
-.candidate-box {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 10px;
-  padding: 0.65rem;
-  margin-bottom: 0.9rem;
-}
-
-.candidate-title {
-  display: block;
-  font-size: 0.6rem;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: rgba(190, 203, 229, 0.7);
-  font-family: 'JetBrains Mono', monospace;
-}
-
-.candidate-name {
-  display: block;
-  margin-top: 0.2rem;
-  font-size: 0.9rem;
-  color: #f6fbff;
-}
-
-.candidate-meta {
-  margin-top: 0.25rem;
-  display: flex;
-  justify-content: space-between;
-  gap: 0.4rem;
-  font-size: 0.68rem;
-  color: rgba(194, 206, 232, 0.8);
-  font-family: 'JetBrains Mono', monospace;
-}
-
-.roster-container {
-  background: rgba(4, 8, 20, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  padding: 1rem;
-}
-
-.roster-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.7rem;
-}
-
-.roster-header h4 {
-  margin: 0;
-  font-size: 0.9rem;
-  color: #f4f9ff;
-  font-family: 'Orbitron', sans-serif;
-}
-
-.roster-header span {
-  font-size: 0.67rem;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: rgba(190, 203, 229, 0.7);
-}
-
-.roster-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 0.6rem;
-}
-
-.astronaut-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  border-radius: 10px;
-  padding: 0.7rem;
-}
-
-.astronaut-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 0.6rem;
-}
-
-.astronaut-head strong {
-  font-size: 0.85rem;
-  color: #f6fbff;
-}
-
-.astronaut-head span {
-  font-size: 0.65rem;
-  color: rgba(194, 206, 232, 0.8);
-  font-family: 'JetBrains Mono', monospace;
-}
-
-.astronaut-meta {
-  margin-top: 0.3rem;
-  display: flex;
-  justify-content: space-between;
-  gap: 0.4rem;
-  font-size: 0.66rem;
-  color: rgba(194, 206, 232, 0.84);
-  font-family: 'JetBrains Mono', monospace;
-}
-
-.train-btn {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: #f8fbff;
-  width: 100%;
-  padding: 0.75rem;
-  border-radius: 8px;
-  font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.72rem;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition:
-    background 150ms ease,
-    border-color 150ms ease,
-    transform 150ms ease;
-}
-
-.train-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.35);
-  transform: translateY(-1px);
-}
-
-.train-btn:disabled {
-  opacity: 0.35;
-  cursor: not-allowed;
-}
-
-.program-block {
-  background: linear-gradient(140deg, rgba(13, 26, 53, 0.9), rgba(33, 17, 18, 0.82));
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 1.25rem;
-  border-radius: 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-}
-
-.program-kicker {
-  display: inline-block;
-  font-size: 0.63rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--orange);
-  font-family: 'JetBrains Mono', monospace;
-  margin-bottom: 0.4rem;
-}
-
-.program-copy h4 {
-  font-family: 'Orbitron', sans-serif;
-  margin: 0 0 0.35rem;
-  font-size: 1.2rem;
-}
-
-.program-copy p {
-  margin: 0;
-  color: var(--text-muted);
-  font-size: 0.88rem;
-}
-
-.program-action {
-  min-width: 270px;
-  display: grid;
-  gap: 0.7rem;
-}
-
-.program-cost {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.8rem;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.72rem;
-  color: #d9ecff;
-  padding: 0.55rem 0.7rem;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.11);
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.prog-btn {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  background: linear-gradient(90deg, #ff9b3f, #ff6e7f);
+.empty-btn {
+  background: #fff;
+  color: #000;
   border: none;
-  color: #1a1114;
-  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  border-radius: 10px;
   font-weight: 700;
-  text-transform: uppercase;
-  font-size: 0.72rem;
-  letter-spacing: 0.09em;
-  font-family: 'JetBrains Mono', monospace;
   cursor: pointer;
-  transition:
-    transform 150ms ease,
-    filter 150ms ease,
-    opacity 150ms ease;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.85rem;
 }
 
-.prog-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  filter: brightness(1.04);
+/* Program Card */
+.program-card {
+  display: flex;
+  gap: 2rem;
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.6) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 2rem;
+  border-radius: 24px;
+  align-items: center;
 }
 
-.prog-btn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+.program-visual {
+  width: 100px;
+  height: 100px;
+  border-radius: 24px;
+  background: rgba(55, 215, 255, 0.1);
+  color: #37d7ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(55, 215, 255, 0.2);
+  flex-shrink: 0;
 }
 
-.logs-container {
-  background: rgba(4, 8, 20, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.program-details {
+  flex: 1;
+}
+
+.program-details .tag {
+  color: #ff9b3f;
+  font-size: 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.program-details h4 {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.5rem;
+  margin: 0.25rem 0 0.5rem 0;
+  color: #fff;
+}
+
+.program-details p {
+  color: #94a3b8;
+  margin: 0 0 1.5rem 0;
+  max-width: 600px;
+}
+
+.program-footer {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.costs {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.cost {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #fff;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.9rem;
+}
+
+.launch-btn {
+  background: linear-gradient(90deg, #37d7ff, #00d4ff);
+  color: #000;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.launch-btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 212, 255, 0.3);
+}
+
+/* Logs Panel */
+.logs-panel {
+  margin-top: 1rem;
+  background: rgba(0, 0, 0, 0.2);
   border-radius: 16px;
-  padding: 1rem;
+  padding: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .logs-header {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.7rem;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  color: #64748b;
 }
 
 .logs-header h4 {
   margin: 0;
-  font-size: 0.9rem;
-  color: #f4f9ff;
-  font-family: 'Orbitron', sans-serif;
-}
-
-.logs-header span {
-  font-size: 0.67rem;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: rgba(190, 203, 229, 0.7);
+  font-size: 0.75rem;
+  letter-spacing: 1px;
 }
 
-.logs-list {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 0.72rem;
-  max-height: 220px;
+.logs-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 120px;
   overflow-y: auto;
-  padding-right: 0.3rem;
 }
 
-.log-entry {
-  display: grid;
-  grid-template-columns: 90px 1fr;
-  gap: 0.8rem;
-  margin-bottom: 0.35rem;
-  padding: 0.45rem 0.5rem;
-  border-radius: 8px;
+.log-item {
+  display: flex;
+  gap: 1.5rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  padding: 0.4rem 0.75rem;
   background: rgba(255, 255, 255, 0.02);
+  border-radius: 6px;
 }
 
-.log-entry .time {
-  opacity: 0.6;
+.log-time {
+  color: #475569;
 }
 
-.log-entry .msg {
-  color: var(--text-muted);
+.log-msg {
+  color: #94a3b8;
 }
 
-.empty {
-  color: rgba(190, 203, 229, 0.65);
-  text-align: center;
-  padding: 0.8rem 0;
+/* Transitions */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.3s ease;
+}
+
+.fade-slide-enter-from {
+  opacity: 0;
+  transform: translateX(10px);
+}
+
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateX(-10px);
 }
 
 @media (max-width: 900px) {
-  .hero-panel {
-    flex-direction: column;
-  }
-
-  .market-header {
+  .hero-content {
     flex-direction: column;
     align-items: flex-start;
   }
 
-  .hero-stats,
-  .program-action {
-    min-width: 0;
+  .hero-stats {
+    width: 100%;
+    justify-content: center;
   }
 
-  .title {
-    font-size: 1.5rem;
-  }
-
-  .program-block {
+  .program-card {
     flex-direction: column;
-    align-items: stretch;
+    text-align: center;
   }
 
-  .log-entry {
-    grid-template-columns: 1fr;
-    gap: 0.2rem;
+  .program-footer {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .tabs-nav {
+    width: 100%;
+    overflow-x: auto;
   }
 }
 </style>

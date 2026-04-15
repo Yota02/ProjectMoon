@@ -3,6 +3,7 @@ import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import BaseMinimap from '../BaseMinimap.vue'
 import { useBaseStore } from '../../stores/useBaseStore'
+import { useResourceStore } from '../../stores/useResourceStore'
 
 describe('BaseMinimap.vue', () => {
   beforeEach(() => {
@@ -11,8 +12,7 @@ describe('BaseMinimap.vue', () => {
 
   it('renders the map container with correct dimensions', () => {
     const baseStore = useBaseStore()
-    baseStore.mapWidth = 100
-    baseStore.mapHeight = 100
+    // Default is 10x10
     const scale = 5
     
     const wrapper = mount(BaseMinimap, {
@@ -20,30 +20,31 @@ describe('BaseMinimap.vue', () => {
     })
     
     const mapContainer = wrapper.find('.relative')
-    expect(mapContainer.attributes('style')).toContain('width: 500px')
-    expect(mapContainer.attributes('style')).toContain('height: 500px')
+    expect(mapContainer.attributes('style')).toContain('width: 50px')
+    expect(mapContainer.attributes('style')).toContain('height: 50px')
   })
 
   it('renders buildings placed in the store', () => {
     const baseStore = useBaseStore()
+    const resourceStore = useResourceStore()
     // Add a mock building
     baseStore.buildings = [{
       id: 'b1',
       name: 'Test Building',
+      symbol: 'TB',
       width: 2,
       height: 2,
       colorClass: 'bg-red-500',
-      description: 'Test',
-      cost: 100,
-      power: 10
+      cost: { argent: 0, science: 0 },
+      entranceOffset: { x: 0, y: 0 }
     }]
     
-    baseStore.placedBuildings.push({
-      buildingId: 'b1',
-      x: 10,
-      y: 10,
-      rotation: 'horizontal'
-    })
+    baseStore.setActiveBase('test-zone')
+    baseStore.unlockedBuildings.add('b1')
+    // No need to set resources if cost is 0, but good practice
+    resourceStore.argent = 1000
+    const success = baseStore.buildAndPlaceBuilding('b1', 0, 0)
+    expect(success).toBe(true)
     
     const scale = 6
     const wrapper = mount(BaseMinimap, {
@@ -53,8 +54,8 @@ describe('BaseMinimap.vue', () => {
     const buildings = wrapper.findAll('.border-white\\/5')
     expect(buildings.length).toBe(1)
     expect(buildings[0].attributes('class')).toContain('bg-red-500')
-    expect(buildings[0].attributes('style')).toContain('left: 60px') // 10 * 6
-    expect(buildings[0].attributes('style')).toContain('top: 60px')
+    expect(buildings[0].attributes('style')).toContain('left: 0px')
+    expect(buildings[0].attributes('style')).toContain('top: 0px')
     expect(buildings[0].attributes('style')).toContain('width: 12px') // 2 * 6
   })
 
@@ -62,11 +63,17 @@ describe('BaseMinimap.vue', () => {
     const baseStore = useBaseStore()
     baseStore.parcels = [{
       id: 'p1',
+      name: 'Test Parcel',
+      direction: 'top',
       parcelX: 1,
       parcelY: 1,
-      owned: true,
-      cost: 50
+      owned: false,
+      cost: { argent: 50, science: 0 }
     }]
+    
+    baseStore.setActiveBase('test-zone')
+    // Buy/Add p1 to ownedParcels
+    baseStore.ownedParcels.add('p1')
     
     const wrapper = mount(BaseMinimap, {
       props: { scale: 10 }
