@@ -1,9 +1,11 @@
 import { defineStore } from 'pinia'
 
+const isDebugMode = import.meta.env.VITE_DEBUG_MODE === 'test'
+
 export const useResourceStore = defineStore('resource', {
   state: () => ({
-    argent: 1000000000,
-    science: 1000000,
+    argent: isDebugMode ? Infinity : 1000000000,
+    science: isDebugMode ? Infinity : 1000000,
     carburant: 0,
     production: {
       argent: 2,
