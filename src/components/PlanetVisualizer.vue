@@ -1,6 +1,6 @@
 <template>
   <div class="relative w-full aspect-square bg-slate-950 rounded-2xl border border-slate-800 overflow-hidden flex items-center justify-center">
-    <!-- Starry Background -->
+    <!-- Starry Background Overlay -->
     <div class="absolute inset-0 pointer-events-none opacity-40">
       <div v-for="star in stars" :key="star.id" 
            class="absolute rounded-full bg-white"
@@ -20,29 +20,28 @@
            width: orbit.distance * 2 + 'px',
            height: orbit.distance * 2 + 'px'
          }">
-      <span class="absolute -top-3 left-1/2 -translate-x-1/2 text-[8px] text-slate-600 font-black uppercase">{{ orbit.type }}</span>
+      <span class="absolute -top-3 left-1/2 -translate-x-1/2 text-[8px] text-slate-600 font-black uppercase tracking-widest">{{ orbit.type }}</span>
     </div>
 
     <!-- The Planet -->
     <div 
-      class="relative z-10 rounded-full transition-all duration-500"
+      class="relative z-10 rounded-full transition-all duration-500 overflow-hidden group shadow-2xl"
       :style="{
         width: planetSize + 'px',
         height: planetSize + 'px',
-        backgroundColor: planet.color,
-        boxShadow: planet.id === 'sun' 
-          ? `0 0 100px ${planet.color}, inset -10px -10px 30px rgba(0,0,0,0.3)`
-          : `inset -20px -20px 50px rgba(0,0,0,0.5), 0 0 30px ${planet.color}44`
       }"
     >
-      <!-- Atmosphere/Glow effect -->
-      <div class="absolute inset-0 rounded-full opacity-30 animate-pulse"
-           :style="{ boxShadow: `0 0 40px ${planet.id === 'sun' ? '20px' : '10px'} ${planet.color}` }"></div>
+      <!-- Planet Image -->
+      <img :src="`/ProjectMoon/assets/images/planets/${planet.id}.png`" 
+           class="w-full h-full object-cover animate-[spin_20s_linear_infinite]"
+           style="clip-path: circle(50%); mix-blend-mode: screen;" />
       
-      <!-- Sun Rays -->
-      <div v-if="planet.id === 'sun'" class="absolute inset-0 scale-150 opacity-20 pointer-events-none">
-        <div class="absolute inset-0 bg-[conic-gradient(from_0deg,transparent,white,transparent)] animate-[spin_10s_linear_infinite]"></div>
-      </div>
+      <!-- Planet Shadow Overlay -->
+      <div class="absolute inset-0 bg-gradient-to-tr from-black/80 via-transparent to-white/10 pointer-events-none"></div>
+
+      <!-- Atmosphere/Glow effect -->
+      <div class="absolute inset-0 rounded-full opacity-30 animate-pulse pointer-events-none"
+           :style="{ boxShadow: `inset 0 0 30px 10px ${planet.color}, 0 0 50px ${planet.color}` }"></div>
     </div>
 
     <!-- Orbiting Objects -->
@@ -50,38 +49,39 @@
          class="absolute z-20"
          :style="getOrbitStyle(obj, index)">
       
-      <!-- Object Tooltip/Label -->
-      <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap bg-slate-900/90 border border-slate-700 px-2 py-1 rounded text-[10px] text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-30">
-        {{ obj.name }} ({{ obj.orbitType || 'Orbit' }})
-      </div>
-
       <div class="group relative cursor-pointer">
+        <!-- Object Tooltip -->
+        <div class="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 whitespace-nowrap bg-slate-900/90 border border-slate-700 px-3 py-1.5 rounded-xl text-[10px] text-white opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-30 shadow-2xl backdrop-blur-md">
+          <p class="font-black text-blue-400 uppercase text-[8px]">{{ obj.type }}</p>
+          <p class="font-bold">{{ obj.name }}</p>
+          <p class="text-slate-400 text-[7px] font-black uppercase tracking-tighter">{{ obj.orbitType || 'Orbit' }}</p>
+        </div>
+
         <!-- Station Visual -->
-        <div v-if="obj.type === 'station'" class="flex items-center justify-center">
-          <div class="w-6 h-6 bg-blue-600 rounded border border-blue-400 shadow-lg flex items-center justify-center">
-             <span class="text-[8px] font-black text-white">S</span>
-          </div>
-          <!-- Solar panels -->
-          <div class="absolute -left-4 w-4 h-2 bg-slate-700 border border-slate-500 rounded-sm"></div>
-          <div class="absolute -right-4 w-4 h-2 bg-slate-700 border border-slate-500 rounded-sm"></div>
+        <div v-if="obj.type === 'station'" class="w-10 h-10 flex items-center justify-center group-hover:scale-125 transition-transform">
+           <img src="/ProjectMoon/assets/images/ui/station.png" 
+                class="w-full h-full object-contain filter drop-shadow-[0_0_5px_rgba(59,130,246,0.5)]"
+                style="mix-blend-mode: screen;" />
         </div>
 
         <!-- Satellite Visual -->
-        <div v-else class="w-3 h-3 bg-emerald-500 rounded-full border border-emerald-300 shadow-[0_0_10px_#10b981] flex items-center justify-center">
-           <div class="w-1 h-1 bg-white rounded-full animate-ping"></div>
+        <div v-else class="w-6 h-6 flex items-center justify-center group-hover:scale-125 transition-transform">
+           <img src="/ProjectMoon/assets/images/ui/satellite.png" 
+                class="w-full h-full object-contain filter drop-shadow-[0_0_5px_rgba(16,185,129,0.5)]"
+                style="mix-blend-mode: screen;" />
         </div>
       </div>
     </div>
 
     <!-- Legend -->
-    <div class="absolute bottom-4 left-4 flex flex-col gap-1 z-30">
+    <div class="absolute bottom-6 left-6 flex flex-col gap-2 z-30 bg-slate-900/40 p-3 rounded-xl backdrop-blur-md border border-white/5">
       <div class="flex items-center gap-2">
-        <div class="w-2 h-2 bg-blue-600 rounded"></div>
-        <span class="text-[10px] text-slate-400 font-bold uppercase">Stations</span>
+         <img src="/ProjectMoon/assets/images/ui/station.png" class="w-3 h-3 object-contain" />
+         <span class="text-[9px] text-slate-400 font-black uppercase tracking-widest">Stations</span>
       </div>
       <div class="flex items-center gap-2">
-        <div class="w-2 h-2 bg-emerald-500 rounded-full"></div>
-        <span class="text-[10px] text-slate-400 font-bold uppercase">Satellites</span>
+         <img src="/ProjectMoon/assets/images/ui/satellite.png" class="w-3 h-3 object-contain" />
+         <span class="text-[9px] text-slate-400 font-black uppercase tracking-widest">Satellites</span>
       </div>
     </div>
   </div>

@@ -1,7 +1,7 @@
 <template>
-  <div class="flex h-screen bg-slate-950 text-slate-200 font-sans overflow-hidden">
+  <div class="flex h-screen bg-slate-950 text-slate-200 font-sans overflow-hidden relative">
     <!-- Sidebar de Navigation -->
-    <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col hidden md:flex">
+    <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col hidden md:flex backdrop-blur-xl relative z-10">
       <div class="p-6 overflow-y-auto flex-1">
         <div class="flex items-center gap-2 mb-8">
           <div

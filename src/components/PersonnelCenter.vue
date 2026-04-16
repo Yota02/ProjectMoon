@@ -15,34 +15,47 @@
         <div 
           v-for="role in staffRoles" 
           :key="role"
-          class="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-emerald-500/30 transition-all group"
+          class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-emerald-500/30 transition-all group relative flex flex-col"
         >
-          <div class="flex justify-between items-start mb-4">
-            <div class="p-2 rounded-lg" :class="getRoleColor(role)">
-              <BaseIcon :name="getRoleIcon(role)" class="text-white" />
-            </div>
-            <span class="text-3xl font-black text-slate-800 group-hover:text-slate-700 transition-colors">{{ personnelStore.staff[role].count }}</span>
+          <!-- Role Portrait -->
+          <div class="h-48 relative overflow-hidden">
+             <img :src="`/ProjectMoon/assets/images/personnel/${role}.png`" 
+                  class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+             <!-- Gradient Overlay -->
+             <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent"></div>
+             
+             <!-- Role Icon Badge -->
+             <div class="absolute top-4 left-4 p-2 rounded-xl backdrop-blur-md border border-white/10" :class="getRoleColor(role).replace('bg-', 'bg-opacity-20 bg-')">
+                <BaseIcon :name="getRoleIcon(role)" class="text-white" />
+             </div>
+             
+             <!-- Staff Count Badge -->
+             <div class="absolute top-4 right-4 bg-slate-900/80 border border-white/5 px-2 py-1 rounded-lg backdrop-blur-md">
+                <span class="text-xs font-black text-white">{{ personnelStore.staff[role].count }}</span>
+             </div>
           </div>
-          
-          <h4 class="text-lg font-bold text-white mb-2">{{ personnelStore.staff[role].label }}</h4>
-          <p class="text-xs text-slate-500 mb-6 h-12 leading-relaxed">{{ personnelStore.staff[role].description }}</p>
-          
-          <div class="space-y-4">
-            <div class="flex justify-between text-[10px] font-bold uppercase tracking-widest text-slate-500 bg-slate-950/50 p-2 rounded">
-              <span>Coût Recrutement</span>
-              <span class="text-emerald-400">{{ personnelStore.staff[role].hiringCost.toLocaleString() }} €</span>
-            </div>
+
+          <div class="p-6 pt-0 relative z-10">
+            <h4 class="text-lg font-black text-white mb-2 uppercase tracking-tighter">{{ personnelStore.staff[role].label }}</h4>
+            <p class="text-[11px] text-slate-400 mb-6 h-12 leading-relaxed font-medium">{{ personnelStore.staff[role].description }}</p>
             
-            <button 
-              @click="personnelStore.hire(role)"
-              :disabled="resourceStore.argent < personnelStore.staff[role].hiringCost"
-              class="w-full py-3 rounded-xl font-bold text-xs tracking-widest transition-all uppercase"
-              :class="resourceStore.argent >= personnelStore.staff[role].hiringCost 
-                ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-900/20' 
-                : 'bg-slate-800 text-slate-600 cursor-not-allowed'"
-            >
-              Recruter
-            </button>
+            <div class="space-y-4">
+              <div class="flex justify-between text-[10px] font-black uppercase tracking-widest text-slate-500 bg-slate-950/80 p-3 rounded-xl border border-white/5">
+                <span>Coût</span>
+                <span class="text-emerald-400">{{ personnelStore.staff[role].hiringCost.toLocaleString() }} €</span>
+              </div>
+              
+              <button 
+                @click="personnelStore.hire(role)"
+                :disabled="resourceStore.argent < personnelStore.staff[role].hiringCost"
+                class="w-full py-3.5 rounded-xl font-black text-[10px] tracking-[0.2em] transition-all uppercase"
+                :class="resourceStore.argent >= personnelStore.staff[role].hiringCost 
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_10px_20px_-10px_rgba(16,185,129,0.5)]' 
+                  : 'bg-slate-800 text-slate-600 cursor-not-allowed'"
+              >
+                Engager
+              </button>
+            </div>
           </div>
         </div>
       </div>

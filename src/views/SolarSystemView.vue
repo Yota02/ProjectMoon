@@ -6,50 +6,57 @@
        @mouseup="stopPan"
        @mouseleave="stopPan">
     
+    
+    <!-- Stars Overlay (Dynamic) -->
+    <div class="absolute inset-0 pointer-events-none opacity-40">
+       <div v-for="star in stars" :key="'bg-star-'+star.id"
+            class="absolute bg-white rounded-full"
+            :style="{
+              left: star.x + 'px',
+              top: star.y + 'px',
+              width: (star.r * 1) + 'px',
+              height: (star.r * 1) + 'px',
+              opacity: star.opacity
+            }"></div>
+    </div>
+
     <!-- Controls Overlay -->
     <div class="absolute top-4 left-4 z-20 flex flex-col gap-2">
-      <div class="bg-slate-900/80 border border-slate-800 p-4 rounded-xl backdrop-blur-md">
-        <h3 class="text-white font-bold mb-2">Système Solaire</h3>
-        <p class="text-xs text-slate-400">Molette pour zoomer, cliquer-glisser pour déplacer.</p>
+      <div class="bg-slate-900/60 border border-slate-700/50 p-4 rounded-2xl backdrop-blur-xl shadow-2xl">
+        <h3 class="text-white font-black tracking-tighter text-lg mb-1">PROJET MOON</h3>
+        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Contrôle de Mission</p>
         <div class="mt-4 flex items-center gap-4">
-          <button @click="resetView" class="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs rounded-lg transition-colors">
-            Réinitialiser la vue
+          <button @click="resetView" class="px-3 py-1 bg-blue-600/20 hover:bg-blue-600/40 border border-blue-500/30 text-blue-400 text-[10px] font-black uppercase rounded-lg transition-all">
+            Réinitialiser
           </button>
-          <span class="text-xs font-mono text-slate-400">Zoom: {{ (scale * 100).toFixed(0) }}%</span>
+          <span class="text-[10px] font-black text-slate-500 uppercase">Zoom: {{ (scale * 100).toFixed(0) }}%</span>
         </div>
       </div>
       
       <!-- Planet Legend -->
-      <div class="bg-slate-900/80 border border-slate-800 p-4 rounded-xl backdrop-blur-md">
+      <div class="bg-slate-900/60 border border-slate-700/50 p-4 rounded-2xl backdrop-blur-xl shadow-2xl">
         <div class="space-y-2">
           <div v-for="planet in planets" :key="planet.id" 
                @click="openPlanetModal(planet.id)"
-               class="flex items-center gap-3 cursor-pointer hover:bg-white/5 p-1 rounded transition-colors">
-            <div class="w-3 h-3 rounded-full" :style="{ backgroundColor: planet.color }"></div>
-            <span class="text-xs text-slate-300">{{ planet.name }}</span>
+               class="flex items-center gap-3 cursor-pointer hover:bg-white/10 p-1.5 rounded-xl transition-all group">
+            <div class="w-4 h-4 rounded-full overflow-hidden border border-white/20 group-hover:scale-125 transition-transform">
+               <img :src="`/ProjectMoon/assets/images/planets/${planet.id}.png`" class="w-full h-full object-cover" />
+            </div>
+            <span class="text-[10px] font-bold text-slate-400 group-hover:text-white uppercase tracking-wider transition-colors">{{ planet.name }}</span>
           </div>
         </div>
       </div>
     </div>
 
     <!-- SVG Solar System -->
-    <svg class="w-full h-full" :viewBox="viewBox">
-      <!-- Background Stars -->
-      <g v-for="star in stars" :key="'star-'+star.id" class="pointer-events-none">
-        <circle :cx="star.x" 
-                :cy="star.y" 
-                :r="star.r" 
-                fill="white" 
-                :opacity="star.opacity" />
-      </g>
-
+    <svg class="w-full h-full relative z-10" :viewBox="viewBox">
       <!-- Orbits -->
       <g v-for="planet in planets" :key="'orbit-' + planet.id" class="pointer-events-none">
         <circle v-if="planet.distance > 0"
                 cx="0" cy="0" :r="planet.distance"
                 fill="none" 
-                stroke="rgba(255,255,255,0.05)" 
-                stroke-width="1" />
+                stroke="rgba(255,255,255,0.08)" 
+                stroke-width="0.5" />
       </g>
 
       <!-- Travel Paths -->
@@ -58,9 +65,9 @@
               :y1="getBodyPositionAt(travel.originId, travel.departureDay).y"
               :x2="getBodyPositionAt(travel.destinationId, travel.departureDay + travel.duration).x"
               :y2="getBodyPositionAt(travel.destinationId, travel.departureDay + travel.duration).y"
-              stroke="rgba(59, 130, 246, 0.2)"
-              stroke-width="1"
-              stroke-dasharray="4" />
+              stroke="rgba(59, 130, 246, 0.4)"
+              stroke-width="0.5"
+              stroke-dasharray="2" />
       </g>
 
       <!-- Celestial Bodies -->
@@ -69,18 +76,24 @@
          class="cursor-pointer group"
          @mousedown.stop
          @click.stop="openPlanetModal(planet.id)">
-        <!-- Glow effect for Sun -->
-        <circle v-if="planet.id === 'sun'"
-                r="35"
-                fill="url(#sunGlow)"
-                class="animate-pulse pointer-events-none" />
         
-        <circle :r="planet.radius / (scale < 0.5 ? Math.sqrt(scale*2) : 1)" 
-                :fill="planet.color"
-                class="transition-all duration-300 group-hover:brightness-125 group-hover:stroke-white/30 group-hover:stroke-2" />
+        <!-- Atmosphere Glow -->
+        <circle :r="planet.radius * 2" 
+                :fill="planet.id === 'sun' ? 'url(#sunGlow)' : 'radial-gradient(circle, ' + planet.color + '44 0%, transparent 70%)'"
+                class="pointer-events-none opacity-60 group-hover:opacity-100 transition-opacity" />
         
-        <text y="20" text-anchor="middle" 
-              class="text-[10px] fill-slate-400 font-medium pointer-events-none group-hover:fill-white transition-colors"
+        <!-- Planet Image -->
+        <image :href="`/ProjectMoon/assets/images/planets/${planet.id}.png`"
+               :x="-planet.radius" 
+               :y="-planet.radius" 
+               :width="planet.radius * 2" 
+               :height="planet.radius * 2"
+               style="clip-path: circle(50%); mix-blend-mode: screen;"
+               class="transition-all duration-500 group-hover:scale-110" />
+        
+        <!-- Label -->
+        <text :y="planet.radius + 15" text-anchor="middle" 
+              class="text-[10px] fill-slate-500 font-bold uppercase tracking-widest pointer-events-none group-hover:fill-white transition-colors"
               :style="{ fontSize: `${12 / scale}px` }">
           {{ planet.name }}
         </text>
@@ -90,9 +103,12 @@
       <g v-for="travel in travelPositions" :key="travel.id"
          :transform="`translate(${travel.x}, ${travel.y})`"
          class="pointer-events-none">
-        <circle r="3" fill="#60a5fa" class="animate-pulse" />
-        <text y="-10" text-anchor="middle"
-              class="text-[8px] fill-blue-400 font-bold"
+        <image href="/ProjectMoon/assets/images/ui/satellite.png"
+               :x="-4 / scale" :y="-4 / scale" 
+               :width="8 / scale" :height="8 / scale" 
+               class="animate-pulse" />
+        <text :y="-10 / scale" text-anchor="middle"
+              class="text-[8px] fill-blue-400 font-black uppercase"
               :style="{ fontSize: `${10 / scale}px` }">
           {{ travel.name }}
         </text>
@@ -104,21 +120,23 @@
          class="cursor-pointer group"
          @click.stop="openPlanetModal(obj.orbitBodyId || obj.bodyId)">
         
-        <!-- Satellite dot -->
-        <circle v-if="obj.type === 'satellite'"
-                r="1.5"
-                :fill="obj.health > 20 ? '#10b981' : '#f59e0b'"
-                class="filter drop-shadow-[0_0_2px_rgba(16,185,129,0.5)]" />
+        <!-- Satellite icon -->
+        <image v-if="obj.type === 'satellite'"
+               href="/ProjectMoon/assets/images/ui/satellite.png"
+               :x="-1.5 / scale" :y="-1.5 / scale"
+               :width="3 / scale" :height="3 / scale"
+               class="filter drop-shadow-[0_0_2px_rgba(16,185,129,0.5)]" />
         
-        <!-- Station icon simplified -->
-        <g v-else-if="obj.type === 'station'">
-          <rect x="-2" y="-2" width="4" height="4" fill="#3b82f6" rx="1" />
-          <rect x="-4" y="-0.5" width="8" height="1" fill="#60a5fa" />
-        </g>
+        <!-- Station icon -->
+        <image v-else-if="obj.type === 'station'"
+               href="/ProjectMoon/assets/images/ui/station.png"
+               :x="-2.5 / scale" :y="-2.5 / scale"
+               :width="5 / scale" :height="5 / scale"
+               class="filter drop-shadow-[0_0_3px_rgba(59,130,246,0.5)]" />
 
         <!-- Label on hover -->
-        <text y="-8" text-anchor="middle"
-              class="text-[6px] fill-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none font-bold"
+        <text :y="-8 / scale" text-anchor="middle"
+              class="text-[6px] fill-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none font-black uppercase"
               :style="{ fontSize: `${8 / scale}px` }">
           {{ obj.name }}
         </text>
@@ -127,7 +145,8 @@
       <!-- Definitions for effects -->
       <defs>
         <radialGradient id="sunGlow">
-          <stop offset="0%" stop-color="rgba(250, 204, 21, 0.4)" />
+          <stop offset="0%" stop-color="rgba(250, 204, 21, 0.6)" />
+          <stop offset="50%" stop-color="rgba(250, 204, 21, 0.2)" />
           <stop offset="100%" stop-color="rgba(250, 204, 21, 0)" />
         </radialGradient>
       </defs>
