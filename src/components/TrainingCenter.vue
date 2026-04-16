@@ -47,7 +47,7 @@
           <div class="section-header">
             <div class="header-info">
               <h3>Marché des Astronautes</h3>
-              <p>Nouveaux profils disponibles toutes les 24h standards.</p>
+              <p>Utilisez le bouton Rafraîchir pour obtenir de nouveaux profils.</p>
             </div>
             <button
               @click="trainingStore.refreshMarket()"
@@ -113,11 +113,7 @@
                 <label>1. Choisir un Astronaute</label>
                 <select v-model="selectedAstronautId" class="sidebar-select">
                   <option :value="null">Sélectionner...</option>
-                  <option 
-                    v-for="a in availableForTraining" 
-                    :key="a.id" 
-                    :value="a.id"
-                  >
+                  <option v-for="a in availableForTraining" :key="a.id" :value="a.id">
                     {{ a.flag }} {{ a.name }} (Niv. {{ a.level }})
                   </option>
                 </select>
@@ -126,13 +122,13 @@
               <div class="sidebar-group">
                 <label>2. Choisir un Programme</label>
                 <div class="programs-list">
-                  <div 
-                    v-for="program in TRAINING_PROGRAMS" 
+                  <div
+                    v-for="program in TRAINING_PROGRAMS"
                     :key="program.id"
                     class="program-selection-card"
-                    :class="{ 
+                    :class="{
                       selected: selectedProgramId === program.id,
-                      locked: isProgramLocked(program)
+                      locked: isProgramLocked(program),
                     }"
                     @click="selectedProgramId = program.id"
                   >
@@ -144,12 +140,14 @@
                       <div class="prog-xp">+{{ program.xpReward }} XP</div>
                       <div v-if="program.targetSkill" class="prog-skill">
                         <BaseIcon :name="getSkillIcon(program.targetSkill)" :size="10" />
-                        <span>+{{ program.skillReward }} {{ getSkillLabel(program.targetSkill) }}</span>
+                        <span
+                          >+{{ program.skillReward }} {{ getSkillLabel(program.targetSkill) }}</span
+                        >
                       </div>
                     </div>
                     <div v-if="isProgramLocked(program)" class="prog-lock">
-                       <BaseIcon name="lock" :size="12" />
-                       Niv. {{ program.minLevel }} requis
+                      <BaseIcon name="lock" :size="12" />
+                      Niv. {{ program.minLevel }} requis
                     </div>
                   </div>
                 </div>
@@ -158,24 +156,20 @@
               <div v-if="selectedProgram" class="program-summary">
                 <p class="prog-desc">{{ selectedProgram.description }}</p>
                 <div class="prog-costs">
-                   <div class="cost">
-                      <BaseIcon name="coins" :size="14" />
-                      <span>{{ selectedProgram.cost.argent }} Cr.</span>
-                   </div>
-                   <div v-if="selectedProgram.cost.carburant" class="cost">
-                      <BaseIcon name="rocket" :size="14" />
-                      <span>{{ selectedProgram.cost.carburant }} Carb.</span>
-                   </div>
-                   <div v-if="selectedProgram.cost.science" class="cost">
-                      <BaseIcon name="graduation" :size="14" />
-                      <span>{{ selectedProgram.cost.science }} Sci.</span>
-                   </div>
+                  <div class="cost">
+                    <BaseIcon name="coins" :size="14" />
+                    <span>{{ selectedProgram.cost.argent }} Cr.</span>
+                  </div>
+                  <div v-if="selectedProgram.cost.carburant" class="cost">
+                    <BaseIcon name="rocket" :size="14" />
+                    <span>{{ selectedProgram.cost.carburant }} Carb.</span>
+                  </div>
+                  <div v-if="selectedProgram.cost.science" class="cost">
+                    <BaseIcon name="graduation" :size="14" />
+                    <span>{{ selectedProgram.cost.science }} Sci.</span>
+                  </div>
                 </div>
-                <button 
-                  class="enroll-btn"
-                  :disabled="!canEnroll"
-                  @click="handleEnroll"
-                >
+                <button class="enroll-btn" :disabled="!canEnroll" @click="handleEnroll">
                   Démarrer la Formation
                 </button>
               </div>
@@ -188,7 +182,11 @@
                 Aucune formation active.
               </div>
               <div v-else class="sessions-grid">
-                <div v-for="session in trainingStore.activeTrainingSessions" :key="session.id" class="session-card">
+                <div
+                  v-for="session in trainingStore.activeTrainingSessions"
+                  :key="session.id"
+                  class="session-card"
+                >
                   <div class="session-header">
                     <span class="session-astro">{{ getAstronautName(session.astronautId) }}</span>
                     <span class="session-prog">{{ getProgramLabel(session.programId) }}</span>
@@ -196,10 +194,19 @@
                   <div class="session-progress">
                     <div class="progress-info">
                       <span>Progrès</span>
-                      <span>{{ Math.round((1 - session.remainingDays / session.totalDays) * 100) }}%</span>
+                      <span
+                        >{{
+                          Math.round((1 - session.remainingDays / session.totalDays) * 100)
+                        }}%</span
+                      >
                     </div>
                     <div class="progress-track">
-                      <div class="progress-fill" :style="{ width: (1 - session.remainingDays / session.totalDays) * 100 + '%' }"></div>
+                      <div
+                        class="progress-fill"
+                        :style="{
+                          width: (1 - session.remainingDays / session.totalDays) * 100 + '%',
+                        }"
+                      ></div>
                     </div>
                     <div class="progress-time">
                       <BaseIcon name="history" :size="12" />
@@ -235,7 +242,11 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { MARKET_REFRESH_COST, useTrainingStore, TRAINING_PROGRAMS } from '../stores/useTrainingStore'
+import {
+  MARKET_REFRESH_COST,
+  useTrainingStore,
+  TRAINING_PROGRAMS,
+} from '../stores/useTrainingStore'
 import { useResourceStore } from '../stores/useResourceStore'
 import BaseIcon from './ui/BaseIcon.vue'
 import AstronautCard from './ui/AstronautCard.vue'
@@ -257,16 +268,16 @@ const canRefreshMarket = computed(() => resourceStore.argent >= MARKET_REFRESH_C
 const selectedAstronautId = ref<number | null>(null)
 const selectedProgramId = ref<string | null>(null)
 
-const availableForTraining = computed(() => 
-  trainingStore.astronauts.filter(a => a.status === 'disponible')
+const availableForTraining = computed(() =>
+  trainingStore.astronauts.filter((a) => a.status === 'disponible'),
 )
 
-const selectedProgram = computed(() => 
-  TRAINING_PROGRAMS.find(p => p.id === selectedProgramId.value)
+const selectedProgram = computed(() =>
+  TRAINING_PROGRAMS.find((p) => p.id === selectedProgramId.value),
 )
 
-const selectedAstronaut = computed(() => 
-  trainingStore.astronauts.find(a => a.id === selectedAstronautId.value)
+const selectedAstronaut = computed(() =>
+  trainingStore.astronauts.find((a) => a.id === selectedAstronautId.value),
 )
 
 const isProgramLocked = (program: any) => {
@@ -275,22 +286,31 @@ const isProgramLocked = (program: any) => {
 }
 
 const canEnroll = computed(() => {
-  if (!selectedAstronautId.value || !selectedProgramId.value || !selectedProgram.value || !selectedAstronaut.value) return false
-  
+  if (
+    !selectedAstronautId.value ||
+    !selectedProgramId.value ||
+    !selectedProgram.value ||
+    !selectedAstronaut.value
+  )
+    return false
+
   if (selectedAstronaut.value.status !== 'disponible') return false
   if (selectedAstronaut.value.level < selectedProgram.value.minLevel) return false
-  
+
   const prog = selectedProgram.value
   const hasMoney = resourceStore.argent >= prog.cost.argent
   const hasFuel = resourceStore.carburant >= prog.cost.carburant
   const hasScience = !prog.cost.science || resourceStore.science >= prog.cost.science
-  
+
   return hasMoney && hasFuel && hasScience
 })
 
 const handleEnroll = () => {
   if (selectedAstronautId.value && selectedProgramId.value) {
-    const success = trainingStore.enrollInTraining(selectedAstronautId.value, selectedProgramId.value)
+    const success = trainingStore.enrollInTraining(
+      selectedAstronautId.value,
+      selectedProgramId.value,
+    )
     if (success) {
       selectedAstronautId.value = null
       selectedProgramId.value = null
@@ -303,7 +323,7 @@ const getSkillIcon = (skill: string) => {
     pilotage: 'rocket',
     ingenierie: 'wrench',
     medecine: 'heart',
-    science: 'graduation'
+    science: 'graduation',
   }
   return icons[skill]
 }
@@ -313,17 +333,17 @@ const getSkillLabel = (skill: string) => {
     pilotage: 'Pilotage',
     ingenierie: 'Ingénierie',
     medecine: 'Médecine',
-    science: 'Science'
+    science: 'Science',
   }
   return labels[skill]
 }
 
 const getAstronautName = (id: number) => {
-  return trainingStore.astronauts.find(a => a.id === id)?.name || 'Inconnu'
+  return trainingStore.astronauts.find((a) => a.id === id)?.name || 'Inconnu'
 }
 
 const getProgramLabel = (id: string) => {
-  return TRAINING_PROGRAMS.find(p => p.id === id)?.label || 'Inconnu'
+  return TRAINING_PROGRAMS.find((p) => p.id === id)?.label || 'Inconnu'
 }
 </script>
 

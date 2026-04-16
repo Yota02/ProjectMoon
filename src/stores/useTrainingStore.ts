@@ -514,15 +514,8 @@ export const useTrainingStore = defineStore('training', {
       this.log(`[NIVEAU] ${astronaut.name} passe au niveau ${astronaut.level} !`)
     },
 
-    checkMarketRefresh(currentDay: number) {
-      // Refresh every 7 days
-      if (currentDay >= this.lastMarketRefreshDay + 7) {
-        const refreshed = createMarket(this.nextAstronautId, 8)
-        this.market = refreshed.market
-        this.nextAstronautId = refreshed.nextId
-        this.lastMarketRefreshDay = currentDay
-        this.log('[MARCHE] Le marche des astronautes a ete renouvele automatiquement.')
-      }
+    checkMarketRefresh(_currentDay: number) {
+      // Automatic refresh disabled - only manual refresh available
     },
 
     startTrainingProgram() {

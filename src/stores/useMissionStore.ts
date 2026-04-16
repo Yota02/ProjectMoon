@@ -56,6 +56,7 @@ export interface Mission {
   successChance: number
   reward: {
     science: number
+    argent?: number
     nourriture?: number
     eau?: number
     o2?: number
@@ -92,7 +93,7 @@ export const useMissionStore = defineStore('mission', {
         name: "Mise en orbite d'un satellite",
         cost: { argent: 1000000, carburant: 20 },
         successChance: 0.72,
-        reward: { science: 80 },
+        reward: { science: 80, argent: 2000000 },
         status: 'Disponible',
         requiredOrbit: 'LEO',
         category: 'principale',
@@ -105,7 +106,7 @@ export const useMissionStore = defineStore('mission', {
         name: 'Constellation orbitale',
         cost: { argent: 4500000, carburant: 80 },
         successChance: 0.64,
-        reward: { science: 220 },
+        reward: { science: 220, argent: 8000000 },
         status: 'En attente',
         requiredOrbit: 'LEO',
         category: 'principale',
@@ -119,7 +120,7 @@ export const useMissionStore = defineStore('mission', {
         name: 'Noyau de station orbitale',
         cost: { argent: 8500000, carburant: 140 },
         successChance: 0.55,
-        reward: { science: 460 },
+        reward: { science: 460, argent: 15000000 },
         status: 'En attente',
         requiredOrbit: 'LEO',
         category: 'principale',
@@ -132,7 +133,7 @@ export const useMissionStore = defineStore('mission', {
         name: 'Station spatiale operationnelle',
         cost: { argent: 12000000, carburant: 190 },
         successChance: 0.48,
-        reward: { science: 680 },
+        reward: { science: 680, argent: 25000000 },
         status: 'En attente',
         requiredOrbit: 'LEO',
         category: 'principale',
@@ -146,7 +147,7 @@ export const useMissionStore = defineStore('mission', {
         name: 'Depot logistique cis-lunaire',
         cost: { argent: 18000000, carburant: 280 },
         successChance: 0.4,
-        reward: { science: 900 },
+        reward: { science: 900, argent: 40000000 },
         status: 'En attente',
         requiredOrbit: 'LUNAR',
         category: 'principale',
@@ -159,7 +160,7 @@ export const useMissionStore = defineStore('mission', {
         name: 'Base lunaire initiale',
         cost: { argent: 26000000, carburant: 380 },
         successChance: 0.34,
-        reward: { science: 1100 },
+        reward: { science: 1100, argent: 60000000 },
         status: 'En attente',
         requiredOrbit: 'LUNAR',
         category: 'principale',
@@ -172,7 +173,7 @@ export const useMissionStore = defineStore('mission', {
         name: 'Base lunaire autonome',
         cost: { argent: 32000000, carburant: 440 },
         successChance: 0.31,
-        reward: { science: 1400 },
+        reward: { science: 1400, argent: 80000000 },
         status: 'En attente',
         requiredOrbit: 'LUNAR',
         category: 'principale',
@@ -185,7 +186,7 @@ export const useMissionStore = defineStore('mission', {
         name: 'Avant-poste martien',
         cost: { argent: 40000000, carburant: 520 },
         successChance: 0.25,
-        reward: { science: 1500 },
+        reward: { science: 1500, argent: 120000000 },
         status: 'En attente',
         requiredOrbit: 'MARTIAN',
         category: 'principale',
@@ -198,7 +199,7 @@ export const useMissionStore = defineStore('mission', {
         name: 'Cite scientifique martienne',
         cost: { argent: 55000000, carburant: 700 },
         successChance: 0.22,
-        reward: { science: 2100 },
+        reward: { science: 2100, argent: 150000000 },
         status: 'En attente',
         requiredOrbit: 'MARTIAN',
         category: 'principale',
@@ -211,7 +212,7 @@ export const useMissionStore = defineStore('mission', {
         name: "Programme d'extraction asteroidale",
         cost: { argent: 70000000, carburant: 900 },
         successChance: 0.2,
-        reward: { science: 3000 },
+        reward: { science: 3000, argent: 250000000 },
         status: 'En attente',
         requiredOrbit: 'MARTIAN',
         category: 'principale',
@@ -225,7 +226,7 @@ export const useMissionStore = defineStore('mission', {
         name: "Capture et mise en orbite d'astéroïde",
         cost: { argent: 90000000, carburant: 1100 },
         successChance: 0.18,
-        reward: { science: 4000 },
+        reward: { science: 4000, argent: 400000000 },
         status: 'En attente',
         requiredOrbit: 'MARTIAN',
         category: 'principale',
@@ -662,6 +663,27 @@ export const useMissionStore = defineStore('mission', {
           mission.status = isRecurringMission ? 'En attente' : 'Succès'
           resourceStore.addScience(mission.reward.science)
 
+          let argentGained = 0
+
+          if (mission.category === 'ravitaillement' && mission.stationId) {
+            const stationStore = useStationStore()
+            const station = stationStore.stations.find((s) => s.id === mission.stationId)
+            
+            if (station && station.owner === 'external') {
+               argentGained = totalCostArgent * 1.2
+            }
+          } else if (mission.category !== 'principale') {
+             argentGained = totalCostArgent * 1.1
+          }
+
+          if (mission.reward.argent) {
+            argentGained += mission.reward.argent
+          }
+
+          if (argentGained > 0) {
+            resourceStore.addArgent(argentGained)
+          }
+
           if (mission.stationId) {
             const stationStore = useStationStore()
             const station = stationStore.stations.find((s) => s.id === mission.stationId)
@@ -712,8 +734,13 @@ export const useMissionStore = defineStore('mission', {
             )
           }
 
+          const logReward = [`+${mission.reward.science} Science`]
+          if (argentGained > 0) {
+            logReward.push(`+${Math.round(argentGained).toLocaleString()} $`)
+          }
+
           this.log(
-            `[SUCCÈS] Mission "${mission.name}" a réussi avec ${launcher.name} ! Récompense: +${mission.reward.science} Science.`,
+            `[SUCCÈS] Mission "${mission.name}" a réussi avec ${launcher.name} ! Récompense : ${logReward.join(', ')}.`,
           )
 
           // Démarrer un voyage visuel dans le système solaire

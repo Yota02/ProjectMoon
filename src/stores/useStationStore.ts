@@ -54,6 +54,7 @@ export interface Station {
   mapOffsetX: number
   mapOffsetY: number
   civilianPopulation: number
+  owner?: 'player' | 'external'
 }
 
 export const STATION_MODULES: StationModule[] = [
@@ -150,6 +151,7 @@ export const useStationStore = defineStore('station', () => {
             mapOffsetX: 0,
             mapOffsetY: 0,
             civilianPopulation: 0,
+            owner: 'external',
           },
           {
             id: 'lunar-station-debug',
@@ -170,6 +172,7 @@ export const useStationStore = defineStore('station', () => {
             mapOffsetX: 0,
             mapOffsetY: 0,
             civilianPopulation: 0,
+            owner: 'external',
           },
         ]
       : [],
@@ -288,6 +291,7 @@ export const useStationStore = defineStore('station', () => {
       mapOffsetX: 0,
       mapOffsetY: 0,
       civilianPopulation: 0,
+      owner: 'player',
     }
 
     stations.value.push(newStation)
