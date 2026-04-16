@@ -56,14 +56,23 @@
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <ActiveMissionCard
-              name="Projet Artemis V"
-              description="Établissement base lunaire"
-              status="En cours"
-              time-left="14 Jours"
-              phase="Préparation de la charge utile"
-              :progress="82"
-              launcher="SuperHeavy-04"
+              v-if="currentMainMission"
+              :name="projectNames[currentMainMission.id]"
+              :description="currentMainMission.name"
+              :status="currentMainMission.status === 'Disponible' ? 'En cours' : 'Programmé'"
+              :time-left="missionTimeLeft"
+              :phase="missionPhase"
+              :progress="missionProgress"
+              :launcher="currentLauncherName"
             />
+            <div
+              v-else
+              class="bg-slate-800/30 border border-slate-700/50 rounded-xl p-5 flex flex-col items-center justify-center text-slate-500"
+            >
+              <BaseIcon name="check" :size="32" class="text-emerald-500 mb-2" />
+              <span class="font-bold text-slate-300">Campagne Terminée</span>
+              <span class="text-xs">Tous les paliers ont été validés.</span>
+            </div>
             <div
               class="bg-slate-800/30 border border-slate-700/50 border-dashed rounded-xl p-5 flex flex-col items-center justify-center text-slate-500 hover:bg-slate-800/50 hover:text-slate-300 transition-colors cursor-pointer group"
             >
@@ -219,6 +228,7 @@
 <script setup lang="ts">
 import { useResourceStore } from '../stores/useResourceStore'
 import { useMissionStore } from '../stores/useMissionStore'
+import { usePersonnelStore } from '../stores/usePersonnelStore'
 import { useResearchStore } from '../stores/useResearchStore'
 import { useContractStore } from '../stores/useContractStore'
 import { useFleetStore } from '../stores/useFleetStore'
@@ -229,12 +239,95 @@ import FleetItem from '../components/ui/FleetItem.vue'
 import ProgressBar from '../components/ui/ProgressBar.vue'
 import BaseIcon from '../components/ui/BaseIcon.vue'
 import ResourceDashboard from '../components/ResourceDashboard.vue'
+import { computed } from 'vue'
 
 const resourceStore = useResourceStore()
 const missionStore = useMissionStore()
 const researchStore = useResearchStore()
 const contractStore = useContractStore()
 const fleetStore = useFleetStore()
+const personnelStore = usePersonnelStore()
+
+const projectNames: Record<number, string> = {
+  1: 'Projet Pioneer I',
+  2: 'Projet GlobalLink',
+  3: 'Projet Aurora Core',
+  4: 'Projet Unity Station',
+  5: 'Projet Gateway Depot',
+  6: 'Projet Artemis V',
+  7: 'Projet Selene Base',
+  8: 'Projet Ares I',
+  9: 'Opportunity Martian City',
+  10: 'Projet Midas Belt',
+}
+
+const currentMainMission = computed(() => {
+  return missionStore.missions
+    .filter((m) => m.category === 'principale')
+    .sort((a, b) => a.id - b.id)
+    .find((m) => m.status !== 'Succès')
+})
+
+const missionMiniObjectives = computed(() => {
+  const mission = currentMainMission.value
+  if (!mission) return []
+
+  const hasResources =
+    resourceStore.argent >= mission.cost.argent && resourceStore.carburant >= mission.cost.carburant
+
+  const hasCompatibleLauncher = fleetStore.items.some((launcher) => {
+    if (launcher.status !== 'Prêt') return false
+    const design = fleetStore.designs.find((d) => d.id === launcher.designId)
+    if (!design) return false
+    if (!design.supportedOrbits.includes(mission.requiredOrbit)) return false
+    if (mission.requiredOrbit === 'LUNAR' && !design.canReachMoon) return false
+    return true
+  })
+
+  return [
+    { label: 'Ingénieurs prêts', done: personnelStore.hasIngenieur },
+    { label: 'Lanceur compatible', done: hasCompatibleLauncher },
+    { label: 'Fonds & Carburant', done: hasResources },
+  ]
+})
+
+const missionProgress = computed(() => {
+  const objectives = missionMiniObjectives.value
+  if (objectives.length === 0) return 100
+  const completed = objectives.filter((o) => o.done).length
+  return Math.round((completed / objectives.length) * 100)
+})
+
+const missionPhase = computed(() => {
+  const objectives = missionMiniObjectives.value
+  if (objectives.length === 0) return 'Objectifs terminés'
+  const next = objectives.find((o) => !o.done)
+  return next ? next.label : 'Prêt pour le lancement'
+})
+
+const missionTimeLeft = computed(() => {
+  const progress = missionProgress.value
+  if (progress === 100) return 'T-0'
+  if (progress >= 66) return '3 Jours'
+  if (progress >= 33) return '7 Jours'
+  return '14 Jours'
+})
+
+const currentLauncherName = computed(() => {
+  const mission = currentMainMission.value
+  if (!mission) return 'N/A'
+
+  const compatibleLauncher = fleetStore.items.find((launcher) => {
+    if (launcher.status !== 'Prêt') return false
+    const design = fleetStore.designs.find((d) => d.id === launcher.designId)
+    if (!design) return false
+    if (!design.supportedOrbits.includes(mission.requiredOrbit)) return false
+    if (mission.requiredOrbit === 'LUNAR' && !design.canReachMoon) return false
+    return true
+  })
+
+  return compatibleLauncher ? compatibleLauncher.name : (mission.launcherRequirement || 'Requis')
+})
 
 const formatCurrency = (val: number) => {
   if (val >= 1000) return (val / 1000).toFixed(2) + ' Md €'

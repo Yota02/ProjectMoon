@@ -90,90 +90,99 @@
         <div
           v-for="station in stationStore.stations"
           :key="station.id"
-          class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden"
+          class="bg-slate-900/40 backdrop-blur-xl border border-slate-700/50 rounded-[2rem] overflow-hidden shadow-2xl relative group/card"
         >
+          <!-- Ambient Glow -->
+          <div class="absolute -top-24 -right-24 w-48 h-48 bg-blue-500/5 blur-[100px] pointer-events-none group-hover/card:bg-blue-500/10 transition-colors duration-700"></div>
+          
           <!-- Station Header -->
           <div
-            class="p-6 border-b border-slate-800 bg-slate-900/50 flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+            class="p-8 border-b border-slate-800/50 bg-slate-900/20 flex flex-col xl:flex-row justify-between items-start xl:items-center gap-6 relative z-10"
           >
-            <div>
-              <div class="flex items-center gap-2 mb-1">
-                <h3 class="text-xl font-bold text-white">{{ station.name }}</h3>
-                <span
-                  class="px-2 py-0.5 bg-blue-500/10 text-blue-400 text-[10px] font-bold uppercase rounded border border-blue-500/20"
-                >
-                  Orbitant {{ getOrbitName(station.orbitBodyId) }}
-                </span>
+            <div class="flex items-center gap-6">
+              <div class="relative">
+                <div :class="['w-14 h-14 rounded-2xl flex items-center justify-center border transition-all duration-500 shadow-lg', getOrbitBg(station.orbitBodyId), 'border-slate-800 group-hover/card:border-blue-500/30']">
+                  <!-- Stylized Orbit SVG -->
+                  <svg viewBox="0 0 100 100" class="w-10 h-10 overflow-visible">
+                    <circle cx="50" cy="50" r="25" fill="currentColor" :class="getOrbitColor(station.orbitBodyId)" class="opacity-20 animate-pulse" />
+                    <circle cx="50" cy="50" r="18" fill="currentColor" :class="getOrbitColor(station.orbitBodyId)" />
+                    <circle cx="50" cy="50" r="35" fill="none" stroke="currentColor" stroke-width="0.5" stroke-dasharray="2 4" class="text-slate-700 animate-[spin_20s_linear_infinite]" />
+                    <circle cx="50" cy="15" r="4" fill="currentColor" class="text-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                  </svg>
+                </div>
+                <div class="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-4 border-slate-900 shadow-lg" v-if="gameStore.elapsedDays >= station.constructionFinishedDay"></div>
+                <div class="absolute -bottom-1 -right-1 w-5 h-5 bg-orange-500 rounded-full border-4 border-slate-900 shadow-lg animate-pulse" v-else></div>
               </div>
-              <p class="text-xs text-slate-500">
-                Statut:
-                <span
-                  v-if="gameStore.elapsedDays < station.constructionFinishedDay"
-                  class="text-orange-400"
-                >
-                  En construction ({{ station.constructionFinishedDay - gameStore.elapsedDays }}
-                  jours restants)
-                </span>
-                <span v-else class="text-emerald-400 font-bold">Opérationnelle</span>
-              </p>
+
+              <div>
+                <div class="flex items-center gap-3 mb-1.5">
+                  <h3 class="text-2xl font-black text-white tracking-tight">{{ station.name }}</h3>
+                  <div class="px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg flex items-center gap-2">
+                    <div class="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]"></div>
+                    <span class="text-[10px] text-slate-400 font-black uppercase tracking-widest">Orbitant {{ getOrbitName(station.orbitBodyId) }}</span>
+                  </div>
+                </div>
+                <p class="text-[11px] text-slate-500 font-bold uppercase tracking-wider flex items-center gap-2">
+                  <span v-if="gameStore.elapsedDays < station.constructionFinishedDay" class="text-orange-400 flex items-center gap-1.5">
+                    <BaseIcon name="clock" :size="12" />
+                    En construction • {{ station.constructionFinishedDay - gameStore.elapsedDays }} jours
+                  </span>
+                  <span v-else class="text-emerald-500 flex items-center gap-1.5">
+                    <div class="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
+                    Opérationnelle • Niveau {{ station.level }}
+                  </span>
+                </p>
+              </div>
             </div>
-            <div class="flex gap-2">
-              <button
-                @click="openModuleModal(station.id)"
-                class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition-colors flex items-center gap-2"
-              >
-                <BaseIcon name="plus" :size="14" />
-                Ajouter Module
-              </button>
+
+            <div class="flex flex-wrap gap-2">
               <button
                 @click="activeVisualizerId = station.id"
-                class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-2"
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black transition-all flex items-center gap-2 shadow-lg shadow-blue-600/20 active:scale-95"
               >
                 <BaseIcon name="chart" :size="14" />
-                Visualiser
+                DÉSIGNER VISUEL
+              </button>
+              
+              <div class="h-8 w-px bg-slate-800 mx-1 hidden xl:block"></div>
+
+              <button
+                @click="openModuleModal(station.id)"
+                class="px-3 py-2 bg-slate-800/50 hover:bg-slate-800 text-slate-300 rounded-xl text-xs font-bold transition-all border border-slate-700/50 flex items-center gap-2 active:scale-95"
+              >
+                <BaseIcon name="plus" :size="14" />
+                Module
               </button>
               <button
                 @click="openAssignModal(station.id)"
-                class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold transition-colors flex items-center gap-2"
+                class="px-3 py-2 bg-slate-800/50 hover:bg-slate-800 text-slate-300 rounded-xl text-xs font-bold transition-all border border-slate-700/50 flex items-center gap-2 active:scale-95"
               >
                 <BaseIcon name="user" :size="14" />
-                Assigner Équipage
+                Équipage
               </button>
+              
               <button
                 @click="openStatsModal(station.id)"
                 :disabled="gameStore.elapsedDays < station.constructionFinishedDay"
-                class="px-3 py-1.5 bg-slate-800 text-slate-300 rounded-lg text-xs font-bold transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                :class="
-                  gameStore.elapsedDays >= station.constructionFinishedDay
-                    ? 'hover:bg-purple-700 hover:text-white'
-                    : ''
-                "
+                class="px-3 py-2 bg-slate-800/50 hover:bg-purple-600 hover:text-white text-slate-300 rounded-xl text-xs font-bold transition-all border border-slate-700/50 flex items-center gap-2 active:scale-95 disabled:opacity-30 disabled:hover:bg-slate-800/50"
               >
                 <BaseIcon name="chart" :size="14" />
                 Stats
               </button>
+              
               <button
                 @click="openResupplyModal(station.id)"
                 :disabled="gameStore.elapsedDays < station.constructionFinishedDay"
-                class="px-3 py-1.5 bg-slate-800 text-slate-300 rounded-lg text-xs font-bold transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                :class="
-                  gameStore.elapsedDays >= station.constructionFinishedDay
-                    ? 'hover:bg-blue-700 hover:text-white'
-                    : ''
-                "
+                class="px-3 py-2 bg-slate-800/50 hover:bg-blue-600 hover:text-white text-slate-300 rounded-xl text-xs font-bold transition-all border border-slate-700/50 flex items-center gap-2 active:scale-95 disabled:opacity-30 disabled:hover:bg-slate-800/50"
               >
                 <BaseIcon name="rocket" :size="14" />
-                {{ getResupplyButtonLabel(station.id) }}
+                Ravitaillement
               </button>
+
               <button
                 @click="openForecastModal(station.id)"
                 :disabled="gameStore.elapsedDays < station.constructionFinishedDay"
-                class="px-3 py-1.5 bg-slate-800 text-slate-300 rounded-lg text-xs font-bold transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                :class="
-                  gameStore.elapsedDays >= station.constructionFinishedDay
-                    ? 'hover:bg-indigo-700 hover:text-white'
-                    : ''
-                "
+                class="px-3 py-2 bg-slate-800/50 hover:bg-indigo-600 hover:text-white text-slate-300 rounded-xl text-xs font-bold transition-all border border-slate-700/50 flex items-center gap-2 active:scale-95 disabled:opacity-30 disabled:hover:bg-slate-800/50"
               >
                 <BaseIcon name="calendar" :size="14" />
                 Prévisions
@@ -229,278 +238,179 @@
             </div>
 
             <!-- Stockage Section -->
-            <div v-if="station.resources">
-              <h4
-                class="text-xs font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2"
-              >
-                <BaseIcon name="box" :size="14" class="text-emerald-500" />
-                Stockage ({{ getTotalStorage(station) }} / {{ getMaxStorage(station) }})
-              </h4>
-              <div class="grid grid-cols-2 gap-3">
-                <div
-                  class="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center gap-3"
+            <div v-if="station.resources" class="bg-slate-950/40 p-6 rounded-3xl border border-slate-800/50 backdrop-blur-sm shadow-inner group/stockage transition-all duration-500 hover:border-blue-500/20">
+              <div class="flex items-center justify-between mb-6">
+                <h4
+                  class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2"
                 >
-                  <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                    <BaseIcon name="utensils" :size="14" class="text-amber-500" />
-                  </div>
-                  <div class="flex-1">
-                    <div class="text-[10px] text-slate-500 uppercase font-bold">Nourriture</div>
-                    <div class="text-sm font-mono text-amber-300">
-                      {{ Math.round(station.resources.nourriture) }}
-                    </div>
+                  <BaseIcon name="box" :size="14" class="text-blue-500" />
+                  Réserve Orbitale
+                </h4>
+                <div class="flex items-center gap-2">
+                  <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{{ getTotalStorage(station) }} / {{ getMaxStorage(station) }}</span>
+                  <div class="w-20 h-1 bg-slate-800 rounded-full overflow-hidden">
+                    <div class="h-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" :style="{ width: ((getTotalStorage(station) / getMaxStorage(station)) * 100) + '%' }"></div>
                   </div>
                 </div>
-                <div
-                  class="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center gap-3"
-                >
-                  <div class="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center">
-                    <BaseIcon name="droplet" :size="14" class="text-cyan-500" />
-                  </div>
-                  <div class="flex-1">
-                    <div class="text-[10px] text-slate-500 uppercase font-bold">Eau</div>
-                    <div class="text-sm font-mono text-cyan-300">
-                      {{ Math.round(station.resources.eau) }}
-                    </div>
-                  </div>
-                </div>
-                <div
-                  class="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center gap-3"
-                >
-                  <div
-                    class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center"
-                  >
-                    <BaseIcon name="wind" :size="14" class="text-emerald-500" />
-                  </div>
-                  <div class="flex-1">
-                    <div class="text-[10px] text-slate-500 uppercase font-bold">O2</div>
-                    <div class="text-sm font-mono text-emerald-300">
-                      {{ Math.round(station.resources.o2) }}
-                    </div>
-                  </div>
-                </div>
-                <div
-                  class="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center gap-3"
-                >
-                  <div class="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                    <BaseIcon name="wrench" :size="14" class="text-orange-500" />
-                  </div>
-                  <div class="flex-1">
-                    <div class="text-[10px] text-slate-500 uppercase font-bold">Pièces</div>
-                    <div class="text-sm font-mono text-orange-300">
-                      {{ Math.round(station.resources.piecesDetachees) }}
-                    </div>
-                  </div>
-                </div>
+              </div>
+              
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-6">
+                <StationResourceBar 
+                  label="Nourriture" 
+                  :value="station.resources.nourriture" 
+                  :max="stationStore.stations.find(s => s.id === station.id)?.level ? 100 : 50" 
+                  icon="utensils" 
+                  colorClass="text-amber-400" 
+                  barColor="amber" 
+                />
+                <StationResourceBar 
+                  label="Eau Potable" 
+                  :value="station.resources.eau" 
+                  :max="100" 
+                  icon="droplet" 
+                  colorClass="text-cyan-400" 
+                  barColor="cyan" 
+                />
+                <StationResourceBar 
+                  label="Oxygène" 
+                  :value="station.resources.o2" 
+                  :max="100" 
+                  icon="wind" 
+                  colorClass="text-emerald-400" 
+                  barColor="emerald" 
+                />
+                <StationResourceBar 
+                  label="Pièces Détachées" 
+                  :value="station.resources.piecesDetachees" 
+                  :max="100" 
+                  icon="wrench" 
+                  colorClass="text-orange-400" 
+                  barColor="orange" 
+                />
               </div>
             </div>
 
             <!-- Personnel & Logistics Section -->
             <div class="space-y-6">
               <!-- Consumption Section -->
-              <div>
+              <div class="bg-slate-950/20 p-5 rounded-2xl border border-slate-800/50">
                 <h4
-                  class="text-xs font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2"
+                  class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2"
                 >
-                  <BaseIcon name="box" :size="14" class="text-orange-500" />
-                  Consommation / jour
+                  <BaseIcon name="chart" :size="12" class="text-indigo-400" />
+                  Consommation Quotidienne
                 </h4>
-                <div class="grid grid-cols-2 gap-3">
-                  <div
-                    class="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center gap-3"
-                  >
-                    <div
-                      class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center"
-                    >
-                      <BaseIcon name="utensils" :size="14" class="text-amber-500" />
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="flex items-center justify-between group/metric">
+                    <div class="flex items-center gap-2">
+                       <BaseIcon name="utensils" :size="12" class="text-amber-500/50" />
+                       <span class="text-[10px] text-slate-500 font-bold uppercase">Nourriture</span>
                     </div>
-                    <div class="flex-1">
-                      <div class="text-[10px] text-slate-500 uppercase font-bold">Nourriture</div>
-                      <div class="text-sm font-mono text-amber-300">
-                        {{ getStationConsumption(station).nourriture }}
-                      </div>
-                    </div>
+                    <span class="text-xs font-mono font-bold text-amber-500/80 group-hover/metric:text-amber-400 transition-colors">-{{ getStationConsumption(station).nourriture }}</span>
                   </div>
-                  <div
-                    class="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center gap-3"
-                  >
-                    <div class="w-8 h-8 rounded-lg bg-cyan-500/10 flex items-center justify-center">
-                      <BaseIcon name="droplet" :size="14" class="text-cyan-500" />
+                  <div class="flex items-center justify-between group/metric">
+                    <div class="flex items-center gap-2">
+                       <BaseIcon name="droplet" :size="12" class="text-cyan-500/50" />
+                       <span class="text-[10px] text-slate-500 font-bold uppercase">Eau</span>
                     </div>
-                    <div class="flex-1">
-                      <div class="text-[10px] text-slate-500 uppercase font-bold">Eau</div>
-                      <div class="text-sm font-mono text-cyan-300">
-                        {{ getStationConsumption(station).eau }}
-                      </div>
-                    </div>
+                    <span class="text-xs font-mono font-bold text-cyan-500/80 group-hover/metric:text-cyan-400 transition-colors">-{{ getStationConsumption(station).eau }}</span>
                   </div>
-                  <div
-                    class="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center gap-3"
-                  >
-                    <div
-                      class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center"
-                    >
-                      <BaseIcon name="wind" :size="14" class="text-emerald-500" />
+                  <div class="flex items-center justify-between group/metric">
+                    <div class="flex items-center gap-2">
+                       <BaseIcon name="wind" :size="12" class="text-emerald-500/50" />
+                       <span class="text-[10px] text-slate-500 font-bold uppercase">Oxygène</span>
                     </div>
-                    <div class="flex-1">
-                      <div class="text-[10px] text-slate-500 uppercase font-bold">O2</div>
-                      <div class="text-sm font-mono text-emerald-300">
-                        {{ getStationConsumption(station).o2 }}
-                      </div>
-                    </div>
+                    <span class="text-xs font-mono font-bold text-emerald-500/80 group-hover/metric:text-emerald-400 transition-colors">-{{ getStationConsumption(station).o2 }}</span>
                   </div>
-                  <div
-                    class="p-3 bg-slate-950 rounded-xl border border-slate-800 flex items-center gap-3"
-                  >
-                    <div
-                      class="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center"
-                    >
-                      <BaseIcon name="wrench" :size="14" class="text-orange-500" />
+                  <div class="flex items-center justify-between group/metric">
+                    <div class="flex items-center gap-2">
+                       <BaseIcon name="wrench" :size="12" class="text-orange-500/50" />
+                       <span class="text-[10px] text-slate-500 font-bold uppercase">Pièces</span>
                     </div>
-                    <div class="flex-1">
-                      <div class="text-[10px] text-slate-500 uppercase font-bold">Pièces</div>
-                      <div class="text-sm font-mono text-orange-300">
-                        {{ getStationConsumption(station).piecesDetachees }}
-                      </div>
-                    </div>
+                    <span class="text-xs font-mono font-bold text-orange-500/80 group-hover/metric:text-orange-400 transition-colors">-{{ getStationConsumption(station).piecesDetachees }}</span>
                   </div>
                 </div>
               </div>
 
               <!-- Resupply Section -->
-              <div>
-                <div class="flex items-center justify-between mb-4">
+              <div class="bg-slate-950/20 p-5 rounded-2xl border border-slate-800/50">
+                <div class="flex items-center justify-between mb-5">
                   <h4
-                    class="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"
+                    class="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"
                   >
-                    <BaseIcon name="rocket" :size="14" class="text-blue-500" />
-                    Ravitaillements
+                    <BaseIcon name="rocket" :size="12" class="text-blue-400" />
+                    Opérations de Ravitaillement
                   </h4>
                   <button
                     @click="openResupplyModal(station.id)"
                     :disabled="gameStore.elapsedDays < station.constructionFinishedDay"
-                    class="text-[10px] font-bold text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1 uppercase tracking-wider"
+                    class="p-1 px-2.5 bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 rounded-lg border border-blue-500/20 text-[9px] font-black uppercase tracking-widest transition-all active:scale-95 disabled:opacity-30"
                   >
-                    <BaseIcon name="plus" :size="12" />
-                    Nouveau
+                    Programme
                   </button>
                 </div>
 
                 <div
                   v-if="getStationResupplyMissions(station.id).length === 0"
-                  class="p-4 bg-slate-950/50 border border-dashed border-slate-800 rounded-xl text-center"
+                  class="py-8 text-center bg-slate-900/10 rounded-xl border border-dashed border-slate-800/50"
                 >
-                  <p class="text-[10px] text-slate-500 italic">Aucune mission de ravitaillement</p>
+                  <p class="text-[10px] text-slate-600 italic">Aucun programme de vol actif</p>
                 </div>
-                <div v-else class="space-y-2">
+                <div v-else class="space-y-3">
                   <div
                     v-for="mission in getStationResupplyMissions(station.id).slice(0, 3)"
                     :key="mission.id"
-                    class="p-2.5 bg-slate-950 rounded-lg border border-slate-800 flex items-center justify-between group"
+                    class="flex items-center justify-between group/mission p-2 rounded-xl hover:bg-slate-800/20 transition-colors"
                   >
                     <div class="flex items-center gap-3">
-                      <div
-                        :class="[
-                          'w-2 h-2 rounded-full',
-                          mission.status === 'Disponible'
-                            ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]'
-                            : mission.status === 'Succès'
-                              ? 'bg-emerald-500'
-                              : mission.status === 'Échec'
-                                ? 'bg-rose-500'
-                                : 'bg-slate-600',
-                        ]"
-                      ></div>
+                      <div class="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center group-hover/mission:border-blue-500/50 transition-colors">
+                        <BaseIcon name="rocket" :size="14" :class="mission.status === 'Disponible' ? 'text-blue-400' : 'text-slate-600'" />
+                      </div>
                       <div>
-                        <button
-                          @click="openResupplyEditModal(station.id, mission.id)"
-                          class="text-[11px] font-bold text-slate-200 hover:text-blue-400 transition-colors"
-                        >
-                          {{ mission.name.split(' - ')[0] }}
-                        </button>
-                        <div class="text-[9px] text-slate-500">
-                          {{ mission.status }}
-                          <span v-if="mission.nextAvailableDay" class="ml-1 text-slate-600">
-                            • J-{{ mission.nextAvailableDay }}
-                          </span>
-                        </div>
-                        <div class="text-[9px] text-slate-600 mt-0.5">
-                          {{ getLauncherName(mission.preferredLauncherId) }} •
-                          {{ formatMoney(mission.cost.argent) }} / {{ mission.cost.carburant }} kg
+                        <div class="text-[11px] font-black text-slate-300 group-hover/mission:text-white transition-colors">{{ mission.name.split(' - ')[0] }}</div>
+                        <div class="flex items-center gap-2">
+                           <div class="w-1.5 h-1.5 rounded-full" :class="mission.status === 'Disponible' ? 'bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.8)]' : 'bg-slate-600'"></div>
+                           <span class="text-[9px] font-bold uppercase tracking-tighter" :class="mission.status === 'Disponible' ? 'text-blue-400' : 'text-slate-500'">{{ mission.status }}</span>
                         </div>
                       </div>
                     </div>
-                    <div class="flex items-center gap-2">
-                      <div class="flex gap-1">
-                        <span class="text-[9px] px-1 bg-slate-900 rounded text-amber-400/80"
-                          >N {{ mission.reward.nourriture ?? 0 }}</span
-                        >
-                        <span class="text-[9px] px-1 bg-slate-900 rounded text-cyan-400/80"
-                          >E {{ mission.reward.eau ?? 0 }}</span
-                        >
-                        <span class="text-[9px] px-1 bg-slate-900 rounded text-emerald-400/80"
-                          >O {{ mission.reward.o2 ?? 0 }}</span
-                        >
-                        <span class="text-[9px] px-1 bg-slate-900 rounded text-orange-400/80"
-                          >P {{ mission.reward.piecesDetachees ?? 0 }}</span
-                        >
-                      </div>
-                      <button
-                        @click="openResupplyEditModal(station.id, mission.id)"
-                        class="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 hover:bg-slate-800 rounded text-slate-400 hover:text-blue-300"
-                      >
-                        <BaseIcon name="wrench" :size="12" />
-                      </button>
-                    </div>
-                  </div>
-                  <div v-if="getStationResupplyMissions(station.id).length > 3" class="text-center">
-                    <router-link
-                      to="/missions"
-                      class="text-[9px] text-slate-600 hover:text-slate-400 transition-colors uppercase font-bold tracking-widest"
+                    <button 
+                      @click="openResupplyEditModal(station.id, mission.id)"
+                      class="p-2 text-slate-600 hover:text-blue-400 transition-colors hover:bg-blue-500/5 rounded-lg opacity-0 group-hover/mission:opacity-100 transition-opacity"
                     >
-                      Voir les {{ getStationResupplyMissions(station.id).length - 3 }} autres
-                      missions
-                    </router-link>
+                      <BaseIcon name="plus" :size="16" />
+                    </button>
                   </div>
                 </div>
               </div>
 
               <!-- Crew Section -->
-              <div>
+              <div class="bg-indigo-500/5 p-5 rounded-2xl border border-indigo-500/10">
                 <h4
-                  class="text-xs font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-2"
+                  class="text-[10px] font-black text-indigo-400/70 uppercase tracking-widest mb-4 flex items-center gap-2"
                 >
-                  <BaseIcon name="user" :size="14" class="text-indigo-400" />
-                  Équipage ({{ station.astronautIds.length }} / {{ getStationCapacity(station) }})
+                  <BaseIcon name="user" :size="12" class="text-indigo-400" />
+                  Effectif Stationné ({{ station.astronautIds.length }} / {{ getStationCapacity(station) }})
                 </h4>
                 <div
                   v-if="station.astronautIds.length === 0"
-                  class="py-8 text-center bg-slate-950/30 rounded-xl border border-dashed border-slate-800"
                 >
-                  <p class="text-xs text-slate-600 italic">Aucun astronaute assigné</p>
+                  <p class="text-[10px] text-slate-600 italic py-2">Quartiers vides - assignation requise</p>
                 </div>
-                <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div v-else class="flex flex-wrap gap-2">
                   <div
                     v-for="astroId in station.astronautIds"
                     :key="astroId"
-                    class="flex items-center gap-3 p-3 bg-slate-950 rounded-xl border border-slate-800 group"
+                    class="flex items-center gap-2 p-1.5 bg-slate-950/50 rounded-lg border border-slate-800/50 group/astro"
                   >
-                    <div
-                      class="w-10 h-10 bg-blue-900/20 rounded-lg flex items-center justify-center text-lg text-white"
+                    <div class="text-xs group-hover/astro:scale-110 transition-transform">{{ getAstroFlag(astroId) }}</div>
+                    <span class="text-[10px] font-bold text-slate-300">{{ getAstroName(astroId).split(' ')[0] }}</span>
+                    <button
+                      @click="stationStore.removeAstronautFromStation(station.id, astroId)"
+                      class="text-slate-700 hover:text-rose-500 p-0.5 transition-colors"
                     >
-                      {{ getAstroFlag(astroId) }}
-                    </div>
-                    <div class="flex-1 min-w-0">
-                      <div class="flex justify-between items-start text-white">
-                        <span class="text-xs font-bold truncate">{{ getAstroName(astroId) }}</span>
-                        <button
-                          @click="stationStore.removeAstronautFromStation(station.id, astroId)"
-                          class="text-slate-600 hover:text-red-400 transition-colors"
-                        >
-                          <BaseIcon name="plus" :size="12" class="rotate-45" />
-                        </button>
-                      </div>
-                      <p class="text-[9px] text-slate-500">{{ getAstroType(astroId) }}</p>
-                    </div>
+                      <BaseIcon name="plus" :size="10" class="rotate-45" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1255,6 +1165,7 @@ import StatCard from '../components/ui/StatCard.vue'
 import BaseIcon from '../components/ui/BaseIcon.vue'
 import BaseModal from '../components/ui/BaseModal.vue'
 import StationVisualizer from '../components/StationVisualizer.vue'
+import StationResourceBar from '../components/StationResourceBar.vue'
 
 const activeVisualizerId = ref<string | null>(null)
 
@@ -1768,6 +1679,30 @@ const getAverageResupplyFrequency = (stationId: string): string => {
 
   const avg = frequencies.reduce((a, b) => a + b, 0) / frequencies.length
   return Math.round(avg).toString()
+}
+
+const getOrbitColor = (bodyId: string) => {
+  const colors: Record<string, string> = {
+    earth: 'text-blue-400',
+    moon: 'text-slate-400',
+    mars: 'text-orange-500',
+    venus: 'text-amber-500',
+    jupiter: 'text-orange-300',
+    saturn: 'text-yellow-200',
+  }
+  return colors[bodyId] || 'text-slate-500'
+}
+
+const getOrbitBg = (bodyId: string) => {
+  const bgs: Record<string, string> = {
+    earth: 'bg-blue-500/10',
+    moon: 'bg-slate-500/10',
+    mars: 'bg-orange-500/10',
+    venus: 'bg-amber-500/10',
+    jupiter: 'bg-orange-300/10',
+    saturn: 'bg-yellow-200/10',
+  }
+  return bgs[bodyId] || 'bg-slate-500/10'
 }
 
 const getDaysUntilStockout = (stationId: string, resource: string): string => {
