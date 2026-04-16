@@ -349,4 +349,5 @@ export const useSatelliteStore = defineStore('satellite', {
         resourceStore.addScience((this.totalScience / 1000) * daysPassed)
     }
   },
+  persist: true,
 })

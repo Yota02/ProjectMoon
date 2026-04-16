@@ -5,6 +5,7 @@ import { useFleetStore, type OrbitType } from './useFleetStore'
 import { useSolarSystemStore } from './useSolarSystemStore'
 import { useStationStore } from './useStationStore'
 import { useGameStore } from './useGameStore'
+import { gameEvents } from '@/engine/EventBus'
 
 const isDebugMode = import.meta.env.VITE_DEBUG_MODE === 'test'
 
@@ -85,7 +86,7 @@ export interface MissionLog {
 
 export const useMissionStore = defineStore('mission', {
   state: () => ({
-    nextMissionId: 11,
+    nextMissionId: 100,
     forecasts: [] as ResupplyForecast[],
     missions: [
       {
@@ -254,6 +255,15 @@ export const useMissionStore = defineStore('mission', {
     },
   },
   actions: {
+    setupListeners() {
+      gameEvents.on('day-elapsed', ({ elapsedDays, currentDate }) => {
+        this.ensureStationResupplyMissions(elapsedDays)
+        this.refreshWeeklyMissions(elapsedDays)
+        this.runResupplyForecasts(currentDate, elapsedDays)
+        this.processAutoLaunchMissions(elapsedDays)
+      })
+    },
+
     normalizeResupplyPayload(payload: ResupplyPayload): ResupplyPayload {
       return {
         nourriture: Math.max(0, Math.trunc(payload.nourriture)),
@@ -668,12 +678,12 @@ export const useMissionStore = defineStore('mission', {
           if (mission.category === 'ravitaillement' && mission.stationId) {
             const stationStore = useStationStore()
             const station = stationStore.stations.find((s) => s.id === mission.stationId)
-            
+
             if (station && station.owner === 'external') {
-               argentGained = totalCostArgent * 1.2
+              argentGained = totalCostArgent * 1.2
             }
           } else if (mission.category !== 'principale') {
-             argentGained = totalCostArgent * 1.1
+            argentGained = totalCostArgent * 1.1
           }
 
           if (mission.reward.argent) {
@@ -766,14 +776,13 @@ export const useMissionStore = defineStore('mission', {
       }
     },
 
-    processAutoLaunchMissions(currentDay: number) {
+    async processAutoLaunchMissions(currentDay: number) {
       const fleetStore = useFleetStore()
       const availableMissions = this.missions.filter(
         (m) => m.status === 'Disponible' && m.autoLaunch,
       )
 
-      availableMissions.forEach((mission) => {
-        // On cherche un lanceur prêt et compatible
+      for (const mission of availableMissions) {
         let launcher: (typeof fleetStore.readyLaunchers)[number] | undefined
         if (mission.autoLaunchPreferredLauncherDesignId) {
           launcher = fleetStore.readyLaunchers.find(
@@ -795,17 +804,16 @@ export const useMissionStore = defineStore('mission', {
         }
 
         if (launcher) {
-          // On vérifie aussi si on a les ressources (launchMission le fait déjà mais on veut être discret dans les logs si on n'a pas les fonds)
           const resourceStore = useResourceStore()
           if (
             resourceStore.argent >= mission.cost.argent &&
             resourceStore.carburant >= mission.cost.carburant
           ) {
             this.log(`[AUTO] Lancement automatique de la mission "${mission.name}"...`)
-            this.launchMission(mission.id, launcher.id, currentDay)
+            await this.launchMission(mission.id, launcher.id, currentDay)
           }
         }
-      })
+      }
     },
 
     log(message: string) {
@@ -814,4 +822,5 @@ export const useMissionStore = defineStore('mission', {
       if (this.logs.length > 10) this.logs.pop()
     },
   },
+  persist: true,
 })

@@ -111,6 +111,9 @@
         </router-view>
       </div>
     </main>
+
+    <!-- Global Modals -->
+    <EventModal />
   </div>
 </template>
 
@@ -128,6 +131,7 @@ import { usePersonnelStore } from './stores/usePersonnelStore'
 import { useSatelliteStore } from './stores/useSatelliteStore'
 import BaseIcon from './components/ui/BaseIcon.vue'
 import GlobalResourceBar from './components/GlobalResourceBar.vue'
+import EventModal from './components/ui/EventModal.vue'
 
 const route = useRoute()
 const resourceStore = useResourceStore()
@@ -196,7 +200,7 @@ const currentTierStepProgressPercent = computed(() => {
   const steps = [
     personnelStore.hasIngenieur,
     hasCompatibleReadyLauncherForMission(mission.requiredOrbit),
-    resourceStore.argent >= mission.cost.argent,
+    mission.cost ? resourceStore.argent >= mission.cost.argent : false,
     mission.status === 'Succès',
   ]
 

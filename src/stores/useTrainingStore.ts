@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { useResourceStore } from './useResourceStore'
+import { gameEvents } from '@/engine/EventBus'
 
 export type TrainingType = 'pilote' | 'ingenieur_vol' | 'medic' | 'specialiste'
 export type AstronautExperience = 'Junior' | 'Confirme' | 'Veteran'
@@ -337,6 +338,13 @@ export const useTrainingStore = defineStore('training', {
     },
   },
   actions: {
+    setupListeners() {
+      gameEvents.on('day-elapsed', ({ daysPassed, elapsedDays }) => {
+        this.updateTrainingSessions(daysPassed)
+        this.checkMarketRefresh(elapsedDays)
+      })
+    },
+
     recruitFromMarket(astronautId: number) {
       const resourceStore = useResourceStore()
       const candidateIndex = this.market.findIndex((candidate) => candidate.id === astronautId)
@@ -519,8 +527,28 @@ export const useTrainingStore = defineStore('training', {
     },
 
     startTrainingProgram() {
-      // Legacy - disable or redirect
-      return this.log("[INFO] Utilisez l'onglet Programmes pour lancer une formation specifique.")
+      const resourceStore = useResourceStore()
+
+      const availableAstronaut = this.astronauts.find((a) => a.status === 'disponible')
+      if (!availableAstronaut) {
+        this.log('[ERREUR] Aucun astronaute disponible pour la formation.')
+        return false
+      }
+
+      const affordableProgram = TRAINING_PROGRAMS.find((p) => {
+        const hasLevel = availableAstronaut.level >= p.minLevel
+        const canAffordArgent = resourceStore.argent >= p.cost.argent
+        const canAffordCarburant = resourceStore.carburant >= p.cost.carburant
+        const canAffordScience = p.cost.science ? resourceStore.science >= p.cost.science : true
+        return hasLevel && canAffordArgent && canAffordCarburant && canAffordScience
+      })
+
+      if (!affordableProgram) {
+        this.log('[ERREUR] Aucun programme de formation abordable.')
+        return false
+      }
+
+      return this.enrollInTraining(availableAstronaut.id, affordableProgram.id)
     },
 
     log(message: string) {
@@ -528,4 +556,5 @@ export const useTrainingStore = defineStore('training', {
       if (this.logs.length > 10) this.logs.pop()
     },
   },
+  persist: true,
 })

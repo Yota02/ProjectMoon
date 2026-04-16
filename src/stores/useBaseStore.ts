@@ -1,6 +1,7 @@
 import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { useResourceStore } from './useResourceStore'
+import { gameEvents } from '@/engine/EventBus'
 
 export interface BuildingDefinition {
   id: string
@@ -520,6 +521,16 @@ export const useBaseStore = defineStore('base', () => {
   
   const bases = ref<Record<string, BaseState>>({})
   const activeBaseId = ref<string>('earth-kourou')
+
+  gameEvents.on('day-elapsed', ({ daysPassed }) => {
+    if (daysPassed <= 0) return
+    const resourceStore = useResourceStore()
+    const { totalArgentPerDay, totalSciencePerDay, totalCarburantPerDay } = allBasesAdjacencyBonuses.value
+
+    if (totalArgentPerDay !== 0) resourceStore.addArgent(totalArgentPerDay * daysPassed)
+    if (totalSciencePerDay !== 0) resourceStore.addScience(totalSciencePerDay * daysPassed)
+    if (totalCarburantPerDay !== 0) resourceStore.addCarburant(totalCarburantPerDay * daysPassed)
+  })
 
   // Initialize Earth Kourou base
   if (!bases.value['earth-kourou']) {
@@ -1299,5 +1310,7 @@ export const useBaseStore = defineStore('base', () => {
     setActiveBase,
     activeBaseId,
   }
+}, {
+  persist: true
 })
 

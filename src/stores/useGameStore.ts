@@ -1,10 +1,5 @@
 import { defineStore } from 'pinia'
-import { useContractStore } from './useContractStore'
-import { useResourceStore } from './useResourceStore'
-import { useBaseStore } from './useBaseStore'
-import { useStationStore } from './useStationStore'
-import { useMissionStore } from './useMissionStore'
-import { useTrainingStore } from './useTrainingStore'
+import { gameEvents } from '@/engine/EventBus'
 
 export const useGameStore = defineStore('game', {
   state: () => ({
@@ -15,6 +10,7 @@ export const useGameStore = defineStore('game', {
     spaceRaceStartYear: 2018,
     isSpaceRaceActive: false,
     lastMonthDay: 0,
+    lastSavedTime: Date.now(),
   }),
   getters: {
     currentDate: (state) => {
@@ -37,105 +33,55 @@ export const useGameStore = defineStore('game', {
     },
   },
   actions: {
+    initOfflineProgress() {
+      const now = Date.now()
+      if (this.lastSavedTime) {
+        const offlineTime = now - this.lastSavedTime
+        // Cap offline progression to 7 days maximum to avoid performance freezes/economy breaking
+        const maxOfflineMs = 7 * 24 * 60 * 60 * 1000 // 7 jours reels max d'AFK
+        const timeToProcess = Math.min(offlineTime, maxOfflineMs)
+
+        if (timeToProcess > 0) {
+          console.log(`[Game] Rétrapage hors-ligne de ${timeToProcess}ms`)
+          this.tick(timeToProcess)
+        }
+      }
+      this.lastSavedTime = Date.now()
+    },
     tick(deltaTime: number) {
       this.dayTimer += deltaTime
+      this.lastSavedTime = Date.now()
+
+      // Emit the raw tick event if something needs per-frame timing
+      gameEvents.emit('tick', { deltaTime })
 
       if (this.dayTimer >= this.msPerDay) {
         const daysToPass = Math.floor(this.dayTimer / this.msPerDay)
         this.elapsedDays += daysToPass
         this.dayTimer %= this.msPerDay
 
-        this.applyBuildingAdjacencyBonuses(daysToPass)
-        this.applyStationBonuses(daysToPass)
-        this.applyStationConsumption(daysToPass)
-
-        const missionStore = useMissionStore()
-        const trainingStore = useTrainingStore()
-
-        missionStore.ensureStationResupplyMissions(this.elapsedDays)
-        missionStore.refreshWeeklyMissions(this.elapsedDays)
-        missionStore.runResupplyForecasts(this.currentDate, this.elapsedDays)
-        missionStore.processAutoLaunchMissions(this.elapsedDays)
-
-        trainingStore.updateTrainingSessions(daysToPass)
-        trainingStore.checkMarketRefresh(this.elapsedDays)
+        // --- DECOUPLED GAME LOOP ---
+        // Instead of calling all other stores manually, we just notify "A day has passed"
+        gameEvents.emit('day-elapsed', {
+          daysPassed: daysToPass,
+          elapsedDays: this.elapsedDays,
+          currentDate: this.currentDate,
+        })
 
         const currentMonth = Math.floor(this.elapsedDays / 30)
         const lastMonth = Math.floor(this.lastMonthDay / 30)
 
         if (currentMonth > lastMonth) {
           this.lastMonthDay = this.elapsedDays
-          this.payMonthlyRevenue()
+
+          gameEvents.emit('month-elapsed', {
+            currentMonth,
+            lastMonthDay: this.lastMonthDay,
+          })
         }
 
         this.checkEvents()
       }
-    },
-    payMonthlyRevenue() {
-      const contractStore = useContractStore()
-      const resourceStore = useResourceStore()
-      const monthlyRevenue = contractStore.totalMonthlyRevenue
-      if (monthlyRevenue > 0) {
-        resourceStore.addArgent(monthlyRevenue * 1000000)
-      }
-    },
-    applyBuildingAdjacencyBonuses(daysPassed: number) {
-      if (daysPassed <= 0) return
-
-      const baseStore = useBaseStore()
-      const resourceStore = useResourceStore()
-      const { totalArgentPerDay, totalSciencePerDay, totalCarburantPerDay } =
-        baseStore.allBasesAdjacencyBonuses
-
-      if (totalArgentPerDay !== 0) {
-        resourceStore.addArgent(totalArgentPerDay * daysPassed)
-      }
-      if (totalSciencePerDay !== 0) {
-        resourceStore.addScience(totalSciencePerDay * daysPassed)
-      }
-      if (totalCarburantPerDay !== 0) {
-        resourceStore.addCarburant(totalCarburantPerDay * daysPassed)
-      }
-    },
-    applyStationBonuses(daysPassed: number) {
-      if (daysPassed <= 0) return
-
-      const stationStore = useStationStore()
-      const resourceStore = useResourceStore()
-      const { argentPerDay, sciencePerDay, carburantPerDay } = stationStore.stationBonuses
-
-      if (argentPerDay !== 0) {
-        resourceStore.addArgent(argentPerDay * daysPassed)
-      }
-      if (sciencePerDay !== 0) {
-        resourceStore.addScience(sciencePerDay * daysPassed)
-      }
-      if (carburantPerDay !== 0) {
-        resourceStore.addCarburant(carburantPerDay * daysPassed)
-      }
-    },
-    applyStationConsumption(daysPassed: number) {
-      if (daysPassed <= 0) return
-
-      const stationStore = useStationStore()
-      const resourceStore = useResourceStore()
-      const { nourriture, eau, o2, piecesDetachees } = stationStore.stationConsumption
-
-      if (nourriture !== 0) {
-        resourceStore.addNourriture(-nourriture * daysPassed)
-      }
-      if (eau !== 0) {
-        resourceStore.addEau(-eau * daysPassed)
-      }
-      if (o2 !== 0) {
-        resourceStore.addO2(-o2 * daysPassed)
-      }
-      if (piecesDetachees !== 0) {
-        resourceStore.addPiecesDetachees(-piecesDetachees * daysPassed)
-      }
-
-      stationStore.consumeStationResources(daysPassed)
-      stationStore.growCivilianPopulation(daysPassed)
     },
     checkEvents() {
       // Check for space race trigger
@@ -144,9 +90,9 @@ export const useGameStore = defineStore('game', {
       }
     },
     triggerSpaceRace() {
-      const contractStore = useContractStore()
       this.isSpaceRaceActive = true
-      contractStore.triggerEvent('spaceRace')
+      gameEvents.emit('space-race-started', {})
     },
   },
+  persist: true,
 })

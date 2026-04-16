@@ -5,8 +5,8 @@ const isDebugMode = import.meta.env.VITE_DEBUG_MODE === 'test'
 
 export const useResourceStore = defineStore('resource', {
   state: () => ({
-    argent: isDebugMode ? Infinity : 1000000000,
-    science: isDebugMode ? Infinity : 1000000,
+    argent: isDebugMode ? 999000000000 : 1000000000,
+    science: isDebugMode ? 999000000 : 1000000,
     carburant: 0,
     nourriture: 100,
     eau: 100,
@@ -68,4 +68,5 @@ export const useResourceStore = defineStore('resource', {
       this.piecesDetachees += this.production.piecesDetachees * daysPassed
     },
   },
+  persist: true,
 })

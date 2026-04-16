@@ -289,4 +289,5 @@ export const useFleetStore = defineStore('fleet', {
       })
     },
   },
+  persist: true,
 })

@@ -203,4 +203,6 @@ export const useSolarSystemStore = defineStore('solarSystem', () => {
     unlockZone,
     establishBase
   }
+}, {
+  persist: true
 })

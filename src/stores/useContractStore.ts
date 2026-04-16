@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { useResourceStore } from './useResourceStore'
+import { gameEvents } from '@/engine/EventBus'
 
 export type Faction = 'USA' | 'Europe' | 'Chine' | 'Asie_Est' | 'Privé' | 'Indépendant'
 
@@ -174,6 +175,20 @@ export const useContractStore = defineStore('contract', {
     },
   },
   actions: {
+    setupListeners() {
+      gameEvents.on('month-elapsed', () => {
+        const resourceStore = useResourceStore()
+        const monthlyRevenue = this.totalMonthlyRevenue
+        if (monthlyRevenue > 0) {
+          resourceStore.addArgent(monthlyRevenue * 1000000)
+        }
+      })
+
+      gameEvents.on('space-race-started', () => {
+        this.triggerEvent('spaceRace')
+      })
+    },
+
     triggerEvent(eventId: string) {
       if (!this.activeEvents.includes(eventId)) {
         this.activeEvents.push(eventId)
@@ -255,4 +270,5 @@ export const useContractStore = defineStore('contract', {
       }
     },
   },
+  persist: true,
 })

@@ -721,4 +721,5 @@ export const useResearchStore = defineStore('research', {
       })
     },
   },
+  persist: true,
 })

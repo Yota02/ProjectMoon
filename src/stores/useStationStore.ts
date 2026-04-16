@@ -3,6 +3,9 @@ import { computed, ref } from 'vue'
 import { useResourceStore } from './useResourceStore'
 import { useGameStore } from './useGameStore'
 import { useResearchStore } from './useResearchStore'
+import { gameEvents } from '@/engine/EventBus'
+import { useEventStore } from './useEventStore'
+import { useTrainingStore } from './useTrainingStore'
 
 export type StationModuleType = 'housing' | 'science' | 'production' | 'storage' | 'command'
 
@@ -55,6 +58,7 @@ export interface Station {
   mapOffsetY: number
   civilianPopulation: number
   owner?: 'player' | 'external'
+  lastCrisisDay?: number
 }
 
 export const STATION_MODULES: StationModule[] = [
@@ -180,6 +184,18 @@ export const useStationStore = defineStore('station', () => {
   const gameStore = useGameStore()
   const resourceStore = useResourceStore()
   const researchStore = useResearchStore()
+
+  gameEvents.on('day-elapsed', ({ daysPassed }) => {
+    if (daysPassed <= 0) return
+    const { argentPerDay, sciencePerDay, carburantPerDay } = stationBonuses.value
+
+    if (argentPerDay !== 0) resourceStore.addArgent(argentPerDay * daysPassed)
+    if (sciencePerDay !== 0) resourceStore.addScience(sciencePerDay * daysPassed)
+    if (carburantPerDay !== 0) resourceStore.addCarburant(carburantPerDay * daysPassed)
+
+    consumeStationResources(daysPassed)
+    growCivilianPopulation(daysPassed)
+  })
 
   const availableModules = ref<StationModule[]>(STATION_MODULES)
 
@@ -442,17 +458,64 @@ export const useStationStore = defineStore('station', () => {
         if (crewCount > 0 && station.resources) {
           station.resources.nourriture = Math.max(
             0,
-            station.resources.nourriture - crewCount * daysPassed,
+            station.resources.nourriture - (crewCount * 0.5) * daysPassed,
           )
-          station.resources.eau = Math.max(0, station.resources.eau - crewCount * daysPassed)
-          station.resources.o2 = Math.max(0, station.resources.o2 - crewCount * daysPassed)
+          station.resources.eau = Math.max(0, station.resources.eau - (crewCount * 0.5) * daysPassed)
+          station.resources.o2 = Math.max(0, station.resources.o2 - (crewCount * 0.5) * daysPassed)
         }
         station.resources.piecesDetachees = Math.max(
           0,
-          station.resources.piecesDetachees - 0.5 * daysPassed,
+          station.resources.piecesDetachees - 0.25 * daysPassed,
         )
+
+        // --- GESTION DES CRISES ---
+        if (station.resources.o2 <= 0) {
+          _handleOxygenCrisis(station, daysPassed)
+        }
       }
     })
+  }
+
+  const _handleOxygenCrisis = (station: Station, daysPassed: number) => {
+    if (station.astronautIds.length === 0 && station.civilianPopulation <= 0) {
+      return
+    }
+
+    const eventStore = useEventStore()
+    const trainingStore = useTrainingStore()
+
+    // 1. Mortalité des civils (10% par jour d'absence d'O2)
+    if (station.civilianPopulation > 0) {
+      const mortalityRate = 0.10
+      const deaths = Math.ceil(station.civilianPopulation * mortalityRate * daysPassed)
+      station.civilianPopulation = Math.max(0, station.civilianPopulation - deaths)
+    }
+
+    // 2. Risque pour les astronautes (chance de perte progressive)
+    if (station.astronautIds.length > 0) {
+      // Pour simuler 1 mort tous les 3 jours d'asphyxie environ
+      if (Math.random() < (0.33 * daysPassed)) {
+        const victimIdIdx = Math.floor(Math.random() * station.astronautIds.length)
+        const victimId = station.astronautIds[victimIdIdx]
+        
+        if (victimId !== undefined) {
+          // Supprimer de la station
+          station.astronautIds.splice(victimIdIdx, 1)
+          // Supprimer du roster global (mort)
+          trainingStore.astronauts = trainingStore.astronauts.filter(a => a.id !== victimId)
+          trainingStore.log(`[CATASTROPHE] Un membre d'équipage de ${station.name} a succombé par manque d'O2.`)
+        }
+      }
+    }
+
+    // 3. Déclencher la modale d'événement (si pas déjà active et cooldown respecté)
+    const currentDay = gameStore.elapsedDays
+    const cooldown = 30 // Ne pas spammer l'événement plus d'une fois par mois (30 jours)
+    
+    if (!station.lastCrisisDay || (currentDay - station.lastCrisisDay) >= cooldown) {
+      eventStore.triggerSpecificEvent('crisis-o2-runout')
+      station.lastCrisisDay = currentDay
+    }
   }
 
   const addStationResources = (stationId: string, resources: Partial<StationResources>) => {
@@ -510,4 +573,6 @@ export const useStationStore = defineStore('station', () => {
     addCivilianPopulation,
     growCivilianPopulation,
   }
+}, {
+  persist: true
 })

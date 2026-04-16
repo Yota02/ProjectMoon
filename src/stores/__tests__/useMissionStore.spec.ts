@@ -70,7 +70,7 @@ describe('Mission Store', () => {
     expect(store.logs[0]!.message).toContain("ne peut pas atteindre l'orbite LUNAR")
   })
 
-  it('successfully launches a mission and consumes non-reusable launcher', () => {
+  it('successfully launches a mission and consumes non-reusable launcher', async () => {
     const store = useMissionStore()
     const fleetStore = useFleetStore()
     const resourceStore = useResourceStore()
@@ -94,7 +94,7 @@ describe('Mission Store', () => {
     // Force success
     vi.spyOn(Math, 'random').mockReturnValue(0.1)
 
-    store.launchMission(1, 'l1')
+    await store.launchMission(1, 'l1')
 
     expect(store.logs[0]!.message).toContain('SUCCÈS')
     expect(resourceStore.science).toBeGreaterThan(0)
@@ -104,7 +104,7 @@ describe('Mission Store', () => {
     vi.restoreAllMocks()
   })
 
-  it('handles mission failure', () => {
+  it('handles mission failure', async () => {
     const store = useMissionStore()
     const fleetStore = useFleetStore()
     const resourceStore = useResourceStore()
@@ -127,14 +127,14 @@ describe('Mission Store', () => {
     // Force failure
     vi.spyOn(Math, 'random').mockReturnValue(0.99)
 
-    store.launchMission(1, 'l1')
+    await store.launchMission(1, 'l1')
 
     expect(store.logs[0]!.message).toContain('ÉCHEC')
 
     vi.restoreAllMocks()
   })
 
-  it('sets reusable launcher to maintenance after mission', () => {
+  it('sets reusable launcher to maintenance after mission', async () => {
     const store = useMissionStore()
     const fleetStore = useFleetStore()
     const resourceStore = useResourceStore()
@@ -155,7 +155,7 @@ describe('Mission Store', () => {
       constructionTime: 480,
     })
 
-    store.launchMission(1, 's1')
+    await store.launchMission(1, 's1')
 
     const launcher = fleetStore.items.find((i) => i.id === 's1')!
     expect(launcher.status).toBe('En maintenance')
@@ -235,7 +235,7 @@ describe('Mission Store', () => {
     expect(missionStore.missions.find((m) => m.id === 999)?.status).toBe('Disponible')
   })
 
-  it('unlocks the next main mission after success', () => {
+  it('unlocks the next main mission after success', async () => {
     const missionStore = useMissionStore()
     const resourceStore = useResourceStore()
     const personnelStore = usePersonnelStore()
@@ -262,7 +262,7 @@ describe('Mission Store', () => {
     expect(mission3?.status).toBe('En attente')
 
     vi.spyOn(Math, 'random').mockReturnValue(0.01)
-    missionStore.launchMission(2, 'main-unlock-launcher')
+    await missionStore.launchMission(2, 'main-unlock-launcher')
 
     expect(missionStore.missions.find((m) => m.id === 2)?.status).toBe('Succès')
     expect(missionStore.missions.find((m) => m.id === 3)?.status).toBe('Disponible')
@@ -310,7 +310,7 @@ describe('Mission Store', () => {
     expect(planned.length).toBe(1)
   })
 
-  it('auto-launches resupply mission from forecast if enabled', () => {
+  it('auto-launches resupply mission from forecast if enabled', async () => {
     const missionStore = useMissionStore()
     const stationStore = useStationStore()
     const fleetStore = useFleetStore()
@@ -356,11 +356,15 @@ describe('Mission Store', () => {
     expect(planned?.autoLaunch).toBe(true)
 
     // Process auto-launch
-    missionStore.processAutoLaunchMissions(200)
+    await missionStore.processAutoLaunchMissions(200)
 
     // Mission should be launched (status En attente if recurring, or Succès/Échec)
     // Here it should be successful because reliability 100
     expect(['Succès', 'En attente', 'Échec']).toContain(planned?.status)
+    // Debug: also check what the actual status is if test fails
+    if (!['Succès', 'En attente', 'Échec'].includes(planned?.status ?? '')) {
+      console.log('Mission status:', planned?.status)
+    }
     expect(missionStore.logs.some((log) => log.message.includes('Lancement automatique'))).toBe(
       true,
     )

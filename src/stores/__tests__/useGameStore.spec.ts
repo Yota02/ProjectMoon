@@ -40,6 +40,8 @@ describe('Game Store', () => {
     const contractStore = useContractStore()
     const resourceStore = useResourceStore()
 
+    contractStore.setupListeners()
+
     // Mock a monthly revenue
     // We need to sign a subsidy or activate a contract
     const subsidy = contractStore.subsidies[0]!
@@ -57,16 +59,19 @@ describe('Game Store', () => {
   })
 
   it('triggers space race event', () => {
-    const store = useGameStore()
+    const gameStore = useGameStore()
+    const contractStore = useContractStore()
+
+    contractStore.setupListeners()
+
     // startDate is 2014. spaceRaceStartYear is 2018.
     // 4 years = 365 * 4 = 1460 days.
     // 1460 * 500ms = 730,000ms
-    store.tick(1500 * 500) // Way more than 4 years
+    gameStore.tick(1500 * 500) // Way more than 4 years
 
-    expect(store.currentYear).toBeGreaterThanOrEqual(2018)
-    expect(store.isSpaceRaceActive).toBe(true)
+    expect(gameStore.currentYear).toBeGreaterThanOrEqual(2018)
+    expect(gameStore.isSpaceRaceActive).toBe(true)
 
-    const contractStore = useContractStore()
     expect(contractStore.activeEvents).toContain('spaceRace')
   })
 

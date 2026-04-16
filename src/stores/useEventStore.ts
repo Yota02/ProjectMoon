@@ -1,0 +1,181 @@
+import { defineStore } from 'pinia'
+import { gameEvents } from '@/engine/EventBus'
+import { useResourceStore } from './useResourceStore'
+import { useContractStore } from './useContractStore'
+
+export interface GameEventChoice {
+  id: string
+  label: string
+  onSelect: () => void
+}
+
+export interface GameEventDef {
+  id: string
+  title: string
+  description: string
+  type: 'info' | 'crisis' | 'opportunity'
+  choices: GameEventChoice[]
+}
+
+const EVENTS_LIBRARY: GameEventDef[] = [
+  {
+    id: 'solar-flare',
+    title: 'Éruption Solaire Massive',
+    description: "Une éjection de masse coronale a sévèrement irradié l'orbite terrestre. Nos systèmes de communication sont en danger critique. Faut-il mettre les satellites en veille (perte de revenus) ou risquer des dommages ?",
+    type: 'crisis',
+    choices: [
+      {
+        id: 'c1',
+        label: 'Activer le bouclier EMP (Coûte 500 000 €)',
+        onSelect: () => {
+          useResourceStore().addArgent(-500000)
+        },
+      },
+      {
+        id: 'c2',
+        label: 'Ignorer (Perte de 150 Science)',
+        onSelect: () => {
+          useResourceStore().addScience(-150)
+        },
+      },
+    ],
+  },
+  {
+    id: 'sci-discovery',
+    title: 'Découverte Exceptionnelle',
+    description: "Vos chercheurs isolés sur la station lunaire ont identifié une anomalie cristalline qui remet en question nos connaissances en supraconductivité.",
+    type: 'opportunity',
+    choices: [
+      {
+        id: 'c1',
+        label: 'Publier ouvertement (+250 Science)',
+        onSelect: () => {
+          useResourceStore().addScience(250)
+        },
+      },
+      {
+        id: 'c2',
+        label: 'Breveter illégalement (+1.5M €)',
+        onSelect: () => {
+          useResourceStore().addArgent(1500000)
+        },
+      },
+    ],
+  },
+  {
+    id: 'strike',
+    title: 'Grève des Ingénieurs',
+    description: "Les conditions de travail et les heures supplémentaires non payées ont généré une fronde dans vos bases terrestres. Le personnel demande des primes immédiates.",
+    type: 'crisis',
+    choices: [
+      {
+        id: 'c1',
+        label: 'Céder aux demandes (-400 000 €)',
+        onSelect: () => {
+          useResourceStore().addArgent(-400000)
+        },
+      },
+      {
+        id: 'c2',
+        label: 'Mater la rébellion (Baisse Réputation globale)',
+        onSelect: () => {
+          const contracts = useContractStore()
+          contracts.factionsReputation.USA = Math.max(0, contracts.factionsReputation.USA - 15)
+          contracts.factionsReputation.Europe = Math.max(0, contracts.factionsReputation.Europe - 15)
+        },
+      },
+    ],
+  },
+  {
+    id: 'crisis-o2-runout',
+    title: 'CRISE : Asphyxie Orbitaire',
+    description: "CATASTROPHE ! Une de vos stations est tombée à cours d'Oxygène. La population a été exposée au vide. Les conséquences médiatiques et diplomatiques sont d'une brutalité inouïe.",
+    type: 'crisis',
+    choices: [
+      {
+        id: 'c1',
+        label: 'Tenter une indemnisation (Coûte 2M €)',
+        onSelect: () => {
+          useResourceStore().addArgent(-2000000)
+        },
+      },
+      {
+        id: 'c2',
+        label: 'Camoufler la tragédie (Perte d\'alliés majeurs)',
+        onSelect: () => {
+          const contracts = useContractStore()
+          contracts.factionsReputation.USA = 0
+          contracts.factionsReputation.Europe = 0
+          contracts.factionsReputation.Chine = 0
+          contracts.factionsReputation.Asie_Est = 0
+        },
+      },
+    ],
+  },
+]
+
+export const useEventStore = defineStore('event', {
+  state: () => ({
+    activeEventId: null as string | null,
+    eventHistory: [] as string[],
+    daysSinceLastEvent: 0,
+  }),
+  getters: {
+    activeEventDef: (state): GameEventDef | undefined => {
+      if (!state.activeEventId) return undefined
+      return EVENTS_LIBRARY.find((e) => e.id === state.activeEventId)
+    },
+  },
+  actions: {
+    setupListeners() {
+      // Pour éviter les fuites ou doubles abonnements, on pourrait stocker la ref, 
+      // mais le plus simple et sûr ici est l'arrow function.
+      gameEvents.on('day-elapsed', (payload) => this._handleDayElapsed(payload))
+    },
+
+    _handleDayElapsed() {
+      this.daysSinceLastEvent += 1
+
+      // Tous les 30 jours min, on a 3% de chance d'avoir un Event narratif
+      if (this.daysSinceLastEvent > 30 && Math.random() < 0.03) {
+        if (!this.activeEventId) {
+          this.triggerRandomEvent()
+          this.daysSinceLastEvent = 0
+        }
+      }
+    },
+
+    triggerSpecificEvent(eventId: string) {
+      if (this.activeEventId !== null) return
+      const ev = EVENTS_LIBRARY.find((e) => e.id === eventId)
+      if (ev) {
+        this.activeEventId = eventId
+      }
+    },
+
+    triggerRandomEvent() {
+      // Exclut les événements "Crise spécifiques" qui doivent être invoqués manuellement
+      const pool = EVENTS_LIBRARY.filter((e) => !e.id.startsWith('crisis-'))
+      if (pool.length === 0) return
+
+      const idx = Math.floor(Math.random() * pool.length)
+      const ev = pool[idx]
+      if (ev) {
+        this.activeEventId = ev.id
+      }
+    },
+
+    resolveEvent(choiceId: string) {
+      const activeDef = this.activeEventDef
+      if (!activeDef) return
+
+      const choice = activeDef.choices.find((c) => c.id === choiceId)
+      if (choice) {
+        choice.onSelect()
+        this.eventHistory.push(activeDef.id)
+        this.activeEventId = null
+      }
+    },
+  },
+  persist: true,
+})
