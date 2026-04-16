@@ -93,9 +93,10 @@
             </div>
             <div class="text-right hidden sm:block border-l border-slate-800 pl-4">
               <p class="text-xs text-slate-500 uppercase tracking-wider font-bold">
-                Prochaine fenêtre de tir
+                Campagne principale
               </p>
-              <p class="font-mono text-blue-400 font-bold">14j 08h 22m</p>
+              <p class="font-mono text-blue-400 font-bold">Palier {{ currentCampaignTierText }}</p>
+              <p class="text-[11px] text-slate-400">Avancement {{ campaignProgressPercent }}%</p>
             </div>
           </div>
         </div>
@@ -120,8 +121,10 @@ import { gameLoop } from './engine/GameLoop'
 import { useResourceStore } from './stores/useResourceStore'
 import { useResearchStore } from './stores/useResearchStore'
 import { useGameStore } from './stores/useGameStore'
-import { useFleetStore } from './stores/useFleetStore'
+import { useFleetStore, type OrbitType } from './stores/useFleetStore'
 import { useBaseStore } from './stores/useBaseStore'
+import { useMissionStore } from './stores/useMissionStore'
+import { usePersonnelStore } from './stores/usePersonnelStore'
 import BaseIcon from './components/ui/BaseIcon.vue'
 import GlobalResourceBar from './components/GlobalResourceBar.vue'
 
@@ -131,6 +134,78 @@ const researchStore = useResearchStore()
 const gameStore = useGameStore()
 const fleetStore = useFleetStore()
 const baseStore = useBaseStore()
+const missionStore = useMissionStore()
+const personnelStore = usePersonnelStore()
+
+const sortedMainMissions = computed(() => {
+  return [...missionStore.missions]
+    .filter((mission) => mission.category === 'principale')
+    .sort((a, b) => a.id - b.id)
+})
+
+const totalMainMissions = computed(() => sortedMainMissions.value.length)
+
+const completedMainMissions = computed(() => {
+  return sortedMainMissions.value.filter((mission) => mission.status === 'Succès').length
+})
+
+const currentCampaignTier = computed(() => {
+  if (totalMainMissions.value === 0) return 0
+  const firstNonSuccessIndex = sortedMainMissions.value.findIndex(
+    (mission) => mission.status !== 'Succès',
+  )
+  if (firstNonSuccessIndex === -1) return totalMainMissions.value
+  return firstNonSuccessIndex + 1
+})
+
+const currentCampaignTierText = computed(() => {
+  if (totalMainMissions.value === 0) return '--/--'
+  return `${currentCampaignTier.value}/${totalMainMissions.value}`
+})
+
+const currentMainMission = computed(() => {
+  if (sortedMainMissions.value.length === 0) return null
+  const firstNonSuccessIndex = sortedMainMissions.value.findIndex(
+    (mission) => mission.status !== 'Succès',
+  )
+  if (firstNonSuccessIndex === -1) {
+    return sortedMainMissions.value[sortedMainMissions.value.length - 1] ?? null
+  }
+  return sortedMainMissions.value[firstNonSuccessIndex] ?? null
+})
+
+const hasCompatibleReadyLauncherForMission = (requiredOrbit: OrbitType) => {
+  return fleetStore.items.some((item) => {
+    if (item.status !== 'Prêt') return false
+    const design = fleetStore.designs.find((d) => d.id === item.designId)
+    if (!design) return false
+    if (!design.supportedOrbits.includes(requiredOrbit)) return false
+    if (requiredOrbit === 'LUNAR' && !design.canReachMoon) return false
+    return true
+  })
+}
+
+const currentTierStepProgressPercent = computed(() => {
+  const mission = currentMainMission.value
+  if (!mission) return 0
+
+  if (mission.status === 'Succès') return 100
+
+  const steps = [
+    personnelStore.hasIngenieur,
+    hasCompatibleReadyLauncherForMission(mission.requiredOrbit),
+    resourceStore.argent >= mission.cost.argent &&
+      resourceStore.carburant >= mission.cost.carburant,
+    mission.status === 'Succès',
+  ]
+
+  const done = steps.filter(Boolean).length
+  return Math.round((done / steps.length) * 100)
+})
+
+const campaignProgressPercent = computed(() => {
+  return currentTierStepProgressPercent.value
+})
 
 const hasBuilding = (buildingId: string) => {
   return baseStore.placedBuildings.some(

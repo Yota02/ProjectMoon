@@ -4,6 +4,7 @@ import { useResourceStore } from './useResourceStore'
 import { useBaseStore } from './useBaseStore'
 import { useStationStore } from './useStationStore'
 import { useMissionStore } from './useMissionStore'
+import { useTrainingStore } from './useTrainingStore'
 
 export const useGameStore = defineStore('game', {
   state: () => ({
@@ -49,9 +50,15 @@ export const useGameStore = defineStore('game', {
         this.applyStationConsumption(daysToPass)
 
         const missionStore = useMissionStore()
+        const trainingStore = useTrainingStore()
+
         missionStore.ensureStationResupplyMissions(this.elapsedDays)
         missionStore.refreshWeeklyMissions(this.elapsedDays)
         missionStore.runResupplyForecasts(this.currentDate, this.elapsedDays)
+        missionStore.processAutoLaunchMissions(this.elapsedDays)
+
+        trainingStore.updateTrainingSessions(daysToPass)
+        trainingStore.checkMarketRefresh(this.elapsedDays)
 
         const currentMonth = Math.floor(this.elapsedDays / 30)
         const lastMonth = Math.floor(this.lastMonthDay / 30)
@@ -126,6 +133,8 @@ export const useGameStore = defineStore('game', {
       if (piecesDetachees !== 0) {
         resourceStore.addPiecesDetachees(-piecesDetachees * daysPassed)
       }
+
+      stationStore.consumeStationResources(daysPassed)
     },
     checkEvents() {
       // Check for space race trigger

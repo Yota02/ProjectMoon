@@ -58,156 +58,285 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div
-          v-for="mission in missionStore.missions"
-          :key="mission.id"
-          class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-blue-500/30 transition-all group"
-        >
-          <div class="p-6 space-y-6">
-            <div class="flex justify-between items-start">
-              <div>
-                <div class="flex items-center gap-2 mb-1">
-                  <span class="text-[10px] font-mono text-slate-500 tracking-widest uppercase"
-                    >ID-{{ mission.id.toString().padStart(3, '0') }}</span
-                  >
+      <div class="space-y-10">
+        <section v-for="group in missionGroups" :key="group.id" class="space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800/70 pb-3">
+            <div>
+              <h4 class="text-sm font-black tracking-[0.2em] text-slate-200 uppercase">
+                {{ group.title }}
+              </h4>
+              <p class="text-[11px] text-slate-500 mt-1">{{ group.subtitle }}</p>
+            </div>
+            <span
+              class="px-2.5 py-1 rounded-lg text-[10px] font-mono border"
+              :class="group.badgeClass"
+            >
+              {{ group.missions.length }} MISSION{{ group.missions.length > 1 ? 'S' : '' }}
+            </span>
+          </div>
+
+          <div
+            v-if="group.id === 'main'"
+            class="rounded-2xl border border-amber-500/20 bg-gradient-to-br from-slate-900 via-slate-900 to-amber-500/5 p-5 md:p-6"
+          >
+            <div class="flex items-center justify-between mb-5">
+              <p class="text-xs uppercase tracking-[0.2em] text-amber-300/80 font-black">
+                Roadmap Campagne
+              </p>
+              <span class="text-[11px] text-slate-400 font-mono">
+                {{ completedMainMissionsCount }}/{{ sortedMainMissions.length }} paliers validés
+              </span>
+            </div>
+
+            <div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden mb-6">
+              <div
+                class="h-full bg-gradient-to-r from-amber-500 to-orange-400 transition-all duration-700"
+                :style="{ width: campaignProgressPercent + '%' }"
+              ></div>
+            </div>
+
+            <ol class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+              <li
+                v-for="step in campaignRoadmapSteps"
+                :key="step.id"
+                class="rounded-xl border p-3 transition-all"
+                :class="getRoadmapStepClass(step.state)"
+              >
+                <div class="flex items-start justify-between gap-3">
+                  <div>
+                    <p class="text-[10px] uppercase tracking-[0.2em] font-black text-slate-500">
+                      Palier {{ step.tier }}
+                    </p>
+                    <p class="text-sm font-bold" :class="getRoadmapTitleClass(step.state)">
+                      {{ step.name }}
+                    </p>
+                  </div>
                   <span
-                    v-if="mission.status !== 'Disponible'"
-                    :class="
-                      mission.status === 'Succès'
-                        ? 'text-emerald-400'
-                        : mission.status === 'En attente'
-                          ? 'text-amber-400'
-                          : 'text-rose-400'
-                    "
-                    class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700"
+                    class="inline-flex items-center justify-center h-6 min-w-6 px-1 rounded-full text-[10px] font-black"
+                    :class="getRoadmapBadgeClass(step.state)"
                   >
-                    {{ mission.status.toUpperCase() }}
+                    {{ getRoadmapStepLabel(step.state) }}
                   </span>
                 </div>
-                <h4
-                  class="text-lg font-bold text-white group-hover:text-blue-400 transition-colors"
-                >
-                  {{ mission.name }}
-                </h4>
-                <p
-                  v-if="mission.status === 'En attente' && mission.nextAvailableDay !== undefined"
-                  class="mt-1 text-[11px] text-amber-400"
-                >
-                  Réactivation dans {{ getMissionCooldownDays(mission) }} jour(s)
-                </p>
-              </div>
-              <div class="flex flex-col items-end">
-                <span class="text-[10px] text-slate-500 uppercase font-black tracking-tighter"
-                  >Orbite Requise</span
-                >
-                <span
-                  class="px-2 py-1 bg-slate-800 rounded text-xs font-mono text-blue-400 border border-slate-700 mt-1"
-                  >{{ mission.requiredOrbit }}</span
-                >
-              </div>
-            </div>
 
-            <!-- Succès Estimé -->
-            <div class="space-y-2">
-              <div
-                class="flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-500"
-              >
-                <span>Fiabilité Mission</span>
-                <span class="text-blue-400">{{ (mission.successChance * 100).toFixed(0) }}%</span>
-              </div>
-              <div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
-                <div
-                  class="h-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] transition-all duration-1000"
-                  :style="{ width: mission.successChance * 100 + '%' }"
-                ></div>
-              </div>
-            </div>
-
-            <!-- Configuration Lanceur -->
-            <div class="space-y-3 bg-slate-950/50 p-4 rounded-xl border border-slate-800">
-              <label class="block text-[10px] uppercase font-black text-slate-500 tracking-widest"
-                >Configuration du Lanceur</label
-              >
-              <select
-                v-model="selectedLaunchers[mission.id]"
-                class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-blue-500/50 outline-none cursor-pointer"
-              >
-                <option value="" disabled selected>Choisir un vecteur disponible...</option>
-                <option
-                  v-for="launcher in readyLaunchers"
-                  :key="launcher.id"
-                  :value="launcher.id"
-                  :disabled="!isLauncherCompatible(launcher, mission)"
-                >
-                  {{ launcher.name }} (Reliab: {{ launcher.reliability }}%)
-                  {{ !isLauncherCompatible(launcher, mission) ? '[INCOMPATIBLE]' : '' }}
-                </option>
-              </select>
-              <p
-                v-if="readyLaunchers.length === 0"
-                class="text-[10px] text-rose-400 font-bold flex items-center gap-1"
-              >
-                <BaseIcon name="shield" :size="10" /> AUCUN LANCEUR DISPONIBLE DANS LE HANGAR
-              </p>
-            </div>
-
-            <!-- Ressources et Récompenses -->
-            <div class="grid grid-cols-2 gap-4">
-              <div class="p-3 bg-slate-950/30 rounded-xl border border-slate-800/50 space-y-1">
-                <span class="text-[9px] uppercase font-bold text-slate-500 block"
-                  >Investissement</span
-                >
-                <div class="flex items-center justify-between">
-                  <span class="text-xs font-mono text-slate-200">{{
-                    formatPrice(mission.cost.argent)
-                  }}</span>
-                  <BaseIcon name="coins" :size="14" class="text-emerald-500/50" />
-                </div>
-                <div class="flex items-center justify-between">
-                  <span class="text-xs font-mono text-slate-200"
-                    >{{ mission.cost.carburant }} kg</span
+                <div class="mt-3 space-y-2">
+                  <div
+                    class="flex items-center justify-between text-[10px] uppercase tracking-wide"
                   >
-                  <BaseIcon name="rocket" :size="14" class="text-orange-500/50" />
+                    <span class="text-slate-500">Avancement du palier</span>
+                    <span class="font-mono text-slate-300"
+                      >{{ step.completedObjectives }}/{{ step.totalObjectives }}</span
+                    >
+                  </div>
+                  <div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                    <div
+                      class="h-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all duration-700"
+                      :style="{ width: step.objectiveProgressPercent + '%' }"
+                    ></div>
+                  </div>
+                  <ul class="space-y-1.5 pt-1">
+                    <li
+                      v-for="objective in step.objectives"
+                      :key="`${step.id}-${objective.label}`"
+                      class="flex items-center gap-2 text-[11px]"
+                    >
+                      <BaseIcon
+                        :name="objective.done ? 'check' : 'shield'"
+                        :size="12"
+                        :class="objective.done ? 'text-emerald-400' : 'text-slate-500'"
+                      />
+                      <span :class="objective.done ? 'text-slate-300' : 'text-slate-500'">
+                        {{ objective.label }}
+                      </span>
+                    </li>
+                  </ul>
                 </div>
-              </div>
-              <div class="p-3 bg-blue-500/5 rounded-xl border border-blue-500/10 space-y-1">
-                <span class="text-[9px] uppercase font-bold text-blue-500/70 block"
-                  >Bénéfice Estimé</span
+              </li>
+            </ol>
+
+            <p v-if="hiddenMainMissionsCount > 0" class="mt-4 text-[11px] text-slate-500">
+              {{ hiddenMainMissionsCount }} palier(s) supplémentaire(s) apparaîtront après
+              progression.
+            </p>
+          </div>
+
+          <div v-if="group.missions.length > 0" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div
+              v-for="mission in group.missions"
+              :key="mission.id"
+              class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden hover:border-blue-500/30 transition-all group"
+            >
+              <div class="p-6 space-y-6">
+                <div class="flex justify-between items-start">
+                  <div>
+                    <div class="flex items-center gap-2 mb-1">
+                      <span class="text-[10px] font-mono text-slate-500 tracking-widest uppercase"
+                        >ID-{{ mission.id.toString().padStart(3, '0') }}</span
+                      >
+                      <span
+                        v-if="mission.category === 'principale'"
+                        class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-500/30 text-amber-400"
+                      >
+                        OBJECTIF PRINCIPAL
+                      </span>
+                      <span
+                        v-if="mission.status !== 'Disponible'"
+                        :class="
+                          mission.status === 'Succès'
+                            ? 'text-emerald-400'
+                            : mission.status === 'En attente'
+                              ? 'text-amber-400'
+                              : 'text-rose-400'
+                        "
+                        class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700"
+                      >
+                        {{ mission.status.toUpperCase() }}
+                      </span>
+                    </div>
+                    <h4
+                      class="text-lg font-bold text-white group-hover:text-blue-400 transition-colors"
+                    >
+                      {{ mission.name }}
+                    </h4>
+                    <p v-if="mission.objective" class="mt-2 text-xs text-slate-400 leading-relaxed">
+                      {{ mission.objective }}
+                    </p>
+                    <p
+                      v-if="mission.launcherRequirement"
+                      class="mt-2 text-[11px] text-blue-300/90 bg-blue-500/5 border border-blue-500/20 rounded-lg px-2.5 py-1.5"
+                    >
+                      Lanceur requis: {{ mission.launcherRequirement }}
+                    </p>
+                    <p
+                      v-if="
+                        mission.status === 'En attente' && mission.nextAvailableDay !== undefined
+                      "
+                      class="mt-1 text-[11px] text-amber-400"
+                    >
+                      Réactivation dans {{ getMissionCooldownDays(mission) }} jour(s)
+                    </p>
+                  </div>
+                  <div class="flex flex-col items-end">
+                    <span class="text-[10px] text-slate-500 uppercase font-black tracking-tighter"
+                      >Orbite Requise</span
+                    >
+                    <span
+                      class="px-2 py-1 bg-slate-800 rounded text-xs font-mono text-blue-400 border border-slate-700 mt-1"
+                      >{{ mission.requiredOrbit }}</span
+                    >
+                  </div>
+                </div>
+
+                <div class="space-y-2">
+                  <div
+                    class="flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-500"
+                  >
+                    <span>Fiabilité Mission</span>
+                    <span class="text-blue-400"
+                      >{{ (mission.successChance * 100).toFixed(0) }}%</span
+                    >
+                  </div>
+                  <div class="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden">
+                    <div
+                      class="h-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)] transition-all duration-1000"
+                      :style="{ width: mission.successChance * 100 + '%' }"
+                    ></div>
+                  </div>
+                </div>
+
+                <div class="space-y-3 bg-slate-950/50 p-4 rounded-xl border border-slate-800">
+                  <label
+                    class="block text-[10px] uppercase font-black text-slate-500 tracking-widest"
+                    >Configuration du Lanceur</label
+                  >
+                  <select
+                    v-model="selectedLaunchers[mission.id]"
+                    class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-300 focus:border-blue-500/50 outline-none cursor-pointer"
+                  >
+                    <option value="" disabled selected>Choisir un vecteur disponible...</option>
+                    <option
+                      v-for="launcher in readyLaunchers"
+                      :key="launcher.id"
+                      :value="launcher.id"
+                      :disabled="!isLauncherCompatible(launcher, mission)"
+                    >
+                      {{ launcher.name }} (Reliab: {{ launcher.reliability }}%)
+                      {{ !isLauncherCompatible(launcher, mission) ? '[INCOMPATIBLE]' : '' }}
+                    </option>
+                  </select>
+                  <p
+                    v-if="readyLaunchers.length === 0"
+                    class="text-[10px] text-rose-400 font-bold flex items-center gap-1"
+                  >
+                    <BaseIcon name="shield" :size="10" /> AUCUN LANCEUR DISPONIBLE DANS LE HANGAR
+                  </p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="p-3 bg-slate-950/30 rounded-xl border border-slate-800/50 space-y-1">
+                    <span class="text-[9px] uppercase font-bold text-slate-500 block"
+                      >Investissement</span
+                    >
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs font-mono text-slate-200">{{
+                        formatPrice(mission.cost.argent)
+                      }}</span>
+                      <BaseIcon name="coins" :size="14" class="text-emerald-500/50" />
+                    </div>
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs font-mono text-slate-200"
+                        >{{ mission.cost.carburant }} kg</span
+                      >
+                      <BaseIcon name="rocket" :size="14" class="text-orange-500/50" />
+                    </div>
+                  </div>
+                  <div class="p-3 bg-blue-500/5 rounded-xl border border-blue-500/10 space-y-1">
+                    <span class="text-[9px] uppercase font-bold text-blue-500/70 block"
+                      >Bénéfice Estimé</span
+                    >
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-bold text-blue-400"
+                        >+{{ mission.reward.science }}</span
+                      >
+                      <BaseIcon name="flask" :size="16" class="text-blue-500/50" />
+                    </div>
+                    <span class="text-[9px] text-blue-500/50 block">Unités de Données</span>
+                  </div>
+                </div>
+
+                <button
+                  @click="
+                    missionStore.launchMission(
+                      mission.id,
+                      selectedLaunchers[mission.id] ?? '',
+                      gameStore.elapsedDays,
+                    )
+                  "
+                  :disabled="!canLaunch(mission)"
+                  class="w-full py-4 rounded-xl font-['Orbitron'] font-black text-sm tracking-[0.2em] transition-all relative overflow-hidden group/btn disabled:opacity-50 disabled:cursor-not-allowed"
+                  :class="
+                    canLaunch(mission)
+                      ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20'
+                      : 'bg-slate-800 text-slate-500'
+                  "
                 >
-                <div class="flex items-center justify-between">
-                  <span class="text-sm font-bold text-blue-400">+{{ mission.reward.science }}</span>
-                  <BaseIcon name="flask" :size="16" class="text-blue-500/50" />
-                </div>
-                <span class="text-[9px] text-blue-500/50 block">Unités de Données</span>
+                  <span class="relative z-10">{{ getLaunchButtonText(mission) }}</span>
+                  <div
+                    v-if="canLaunch(mission)"
+                    class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000"
+                  ></div>
+                </button>
               </div>
             </div>
-
-            <!-- Bouton Lancer -->
-            <button
-              @click="
-                missionStore.launchMission(
-                  mission.id,
-                  selectedLaunchers[mission.id],
-                  gameStore.elapsedDays,
-                )
-              "
-              :disabled="!canLaunch(mission)"
-              class="w-full py-4 rounded-xl font-['Orbitron'] font-black text-sm tracking-[0.2em] transition-all relative overflow-hidden group/btn disabled:opacity-50 disabled:cursor-not-allowed"
-              :class="
-                canLaunch(mission)
-                  ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20'
-                  : 'bg-slate-800 text-slate-500'
-              "
-            >
-              <span class="relative z-10">{{ getLaunchButtonText(mission) }}</span>
-              <div
-                v-if="canLaunch(mission)"
-                class="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000"
-              ></div>
-            </button>
           </div>
-        </div>
+
+          <div
+            v-else
+            class="rounded-xl border border-slate-800 bg-slate-900/50 px-4 py-5 text-xs text-slate-500"
+          >
+            Aucune mission dans cette catégorie pour le moment.
+          </div>
+        </section>
       </div>
     </section>
 
@@ -286,12 +415,106 @@ const gameStore = useGameStore()
 
 const selectedLaunchers = ref<Record<number, string>>({})
 
+type RoadmapStepState = 'completed' | 'current' | 'failed' | 'locked'
+
+interface MiniObjective {
+  label: string
+  done: boolean
+}
+
 const readyLaunchers = computed(() => {
   return fleetStore.items.filter((i) => i.status === 'Prêt')
 })
 
 const activeMissions = computed(() => {
   return solarStore.travelPositions
+})
+
+const mainMissions = computed(() => {
+  return missionStore.missions.filter((mission) => mission.category === 'principale')
+})
+
+const sortedMainMissions = computed(() => {
+  return [...mainMissions.value].sort((a, b) => a.id - b.id)
+})
+
+const firstNonSuccessMainMissionIndex = computed(() => {
+  return sortedMainMissions.value.findIndex((mission) => mission.status !== 'Succès')
+})
+
+const completedMainMissionsCount = computed(() => {
+  return sortedMainMissions.value.filter((mission) => mission.status === 'Succès').length
+})
+
+const visibleCampaignTierIndex = computed(() => {
+  const missions = sortedMainMissions.value
+  if (missions.length === 0) return -1
+
+  const firstNonSuccessIndex = firstNonSuccessMainMissionIndex.value
+  if (firstNonSuccessIndex === -1) return missions.length - 1
+
+  return Math.min(missions.length - 1, firstNonSuccessIndex + 1)
+})
+
+const visibleMainMissions = computed(() => {
+  return sortedMainMissions.value.filter((_, index) => index <= visibleCampaignTierIndex.value)
+})
+
+const hiddenMainMissionsCount = computed(() => {
+  return Math.max(0, sortedMainMissions.value.length - visibleMainMissions.value.length)
+})
+
+const campaignProgressPercent = computed(() => {
+  if (sortedMainMissions.value.length === 0) return 0
+  return Math.round((completedMainMissionsCount.value / sortedMainMissions.value.length) * 100)
+})
+
+const campaignRoadmapSteps = computed(() => {
+  return visibleMainMissions.value.map((mission, index) => {
+    let state: RoadmapStepState = 'locked'
+    if (mission.status === 'Succès') state = 'completed'
+    else if (mission.status === 'Échec') state = 'failed'
+    else if (mission.status === 'Disponible') state = 'current'
+
+    const objectives = getMissionMiniObjectives(mission)
+    const completedObjectives = objectives.filter((objective) => objective.done).length
+    const totalObjectives = objectives.length
+
+    return {
+      id: mission.id,
+      name: mission.name,
+      tier: index + 1,
+      state,
+      objectives,
+      completedObjectives,
+      totalObjectives,
+      objectiveProgressPercent:
+        totalObjectives > 0 ? Math.round((completedObjectives / totalObjectives) * 100) : 0,
+    }
+  })
+})
+
+const standardMissions = computed(() => {
+  return missionStore.missions.filter((mission) => mission.category !== 'principale')
+})
+
+const missionGroups = computed(() => {
+  return [
+    {
+      id: 'main',
+      title: 'Campagne Principale',
+      subtitle: 'Débloquez les paliers majeurs au fur et à mesure de vos succès.',
+      badgeClass: 'bg-amber-500/10 border-amber-500/20 text-amber-400',
+      missions: visibleMainMissions.value,
+    },
+    {
+      id: 'ops',
+      title: 'Operations Annexes',
+      subtitle: 'Missions secondaires, ravitaillement et contrats techniques.',
+      badgeClass: 'bg-slate-800 border-slate-700 text-slate-300',
+      missions: standardMissions.value,
+    },
+  ]
 })
 
 const formatPrice = (val: number) => {
@@ -313,6 +536,40 @@ const getTravelPhase = (travel: any) => {
   if (travel.progress < 0.1) return 'Injection orbitale'
   if (travel.progress < 0.9) return 'Transit interplanétaire'
   return 'Approche finale'
+}
+
+const hasCompatibleReadyLauncherForMission = (mission: Mission) => {
+  return readyLaunchers.value.some((launcher) => {
+    const design = fleetStore.designs.find((d) => d.id === launcher.designId)
+    if (!design) return false
+    if (!design.supportedOrbits.includes(mission.requiredOrbit)) return false
+    if (mission.requiredOrbit === 'LUNAR' && !design.canReachMoon) return false
+    return true
+  })
+}
+
+const getMissionMiniObjectives = (mission: Mission): MiniObjective[] => {
+  if (mission.status === 'Succès') {
+    return [
+      { label: 'Ingenieur operationnel', done: true },
+      { label: 'Lanceur compatible pret', done: true },
+      { label: 'Ressources de lancement', done: true },
+      { label: 'Objectif de mission valide', done: true },
+    ]
+  }
+
+  const hasResources =
+    resourceStore.argent >= mission.cost.argent && resourceStore.carburant >= mission.cost.carburant
+
+  return [
+    { label: 'Ingenieur operationnel', done: personnelStore.hasIngenieur },
+    {
+      label: mission.launcherRequirement ?? 'Lanceur compatible pret',
+      done: hasCompatibleReadyLauncherForMission(mission),
+    },
+    { label: 'Ressources de lancement', done: hasResources },
+    { label: 'Objectif de mission valide', done: mission.status === 'Succès' },
+  ]
 }
 
 const isLauncherCompatible = (launcher: any, mission: Mission) => {
@@ -343,6 +600,35 @@ const canLaunch = (mission: Mission) => {
 const getMissionCooldownDays = (mission: Mission) => {
   if (mission.nextAvailableDay === undefined) return 0
   return Math.max(0, mission.nextAvailableDay - gameStore.elapsedDays)
+}
+
+const getRoadmapStepClass = (state: RoadmapStepState) => {
+  if (state === 'completed') return 'border-emerald-500/30 bg-emerald-500/5'
+  if (state === 'current') return 'border-amber-500/40 bg-amber-500/10'
+  if (state === 'failed') return 'border-rose-500/30 bg-rose-500/10'
+  return 'border-slate-700 bg-slate-900/50'
+}
+
+const getRoadmapTitleClass = (state: RoadmapStepState) => {
+  if (state === 'completed') return 'text-emerald-300'
+  if (state === 'current') return 'text-amber-300'
+  if (state === 'failed') return 'text-rose-300'
+  return 'text-slate-300'
+}
+
+const getRoadmapBadgeClass = (state: RoadmapStepState) => {
+  if (state === 'completed')
+    return 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+  if (state === 'current') return 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+  if (state === 'failed') return 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+  return 'bg-slate-800 text-slate-400 border border-slate-700'
+}
+
+const getRoadmapStepLabel = (state: RoadmapStepState) => {
+  if (state === 'completed') return 'OK'
+  if (state === 'current') return 'ACTIF'
+  if (state === 'failed') return 'HS'
+  return 'LOCK'
 }
 </script>
 

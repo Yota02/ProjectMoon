@@ -137,9 +137,7 @@ const iconPaths: Record<string, any> = {
     ],
   }),
   shield: defineComponent({
-    render: () => [
-      h('path', { d: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10' }),
-    ],
+    render: () => [h('path', { d: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10' })],
   }),
   user: defineComponent({
     render: () => [
@@ -156,7 +154,9 @@ const iconPaths: Record<string, any> = {
   }),
   droplet: defineComponent({
     render: () => [
-      h('path', { d: 'M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z' }),
+      h('path', {
+        d: 'M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z',
+      }),
     ],
   }),
   wind: defineComponent({
@@ -168,10 +168,15 @@ const iconPaths: Record<string, any> = {
   }),
   box: defineComponent({
     render: () => [
-      h('path', { d: 'M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z' }),
+      h('path', {
+        d: 'M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z',
+      }),
       h('path', { d: 'm3.3 7 8.7 5 8.7-5' }),
       h('path', { d: 'M12 22V12' }),
     ],
+  }),
+  chart: defineComponent({
+    render: () => [h('path', { d: 'M3 3v18h18' }), h('path', { d: 'm19 9-5 5-4-4-3 3' })],
   }),
 }
 </script>

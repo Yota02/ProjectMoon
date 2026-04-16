@@ -28,14 +28,38 @@ export interface FleetDesign {
   // Nouvelles stats
   isReusable: boolean
   maxSpeed: number // en km/s
+  cargoCapacity: number // charge utile max pour ravitaillement
   supportedOrbits: OrbitType[]
   canReachMoon: boolean
   isRefuelable: boolean
 }
 
+const isDebugMode = import.meta.env.VITE_DEBUG_MODE === 'test'
+
 export const useFleetStore = defineStore('fleet', {
   state: () => ({
-    items: [] as FleetItem[],
+    items: isDebugMode
+      ? [
+          {
+            id: 'debug-launcher-1',
+            designId: 'd-micro',
+            name: 'Micro-Lanceur #1',
+            status: 'Prêt',
+            reliability: 95,
+            constructionProgress: 100,
+            constructionTime: 30,
+          },
+          {
+            id: 'debug-launcher-2',
+            designId: 'd-heavy',
+            name: 'Lanceur Lourd #1',
+            status: 'Prêt',
+            reliability: 98,
+            constructionProgress: 100,
+            constructionTime: 120,
+          },
+        ]
+      : ([] as FleetItem[]),
     designs: [
       {
         id: 'd-micro',
@@ -48,14 +72,15 @@ export const useFleetStore = defineStore('fleet', {
         type: 'launcher',
         isReusable: false,
         maxSpeed: 7.8,
+        cargoCapacity: 500,
         supportedOrbits: ['LEO'],
         canReachMoon: false,
-        isRefuelable: false
+        isRefuelable: false,
       },
       {
         id: 'd-medium',
         name: 'Lanceur Moyen',
-        description: 'Capacité d\'emport équilibrée.',
+        description: "Capacité d'emport équilibrée.",
         cost: 150000000,
         constructionTime: 60,
         baseReliability: 92,
@@ -63,9 +88,10 @@ export const useFleetStore = defineStore('fleet', {
         type: 'launcher',
         isReusable: false,
         maxSpeed: 9.5,
+        cargoCapacity: 1100,
         supportedOrbits: ['LEO', 'MEO'],
         canReachMoon: false,
-        isRefuelable: false
+        isRefuelable: false,
       },
       {
         id: 'd-heavy',
@@ -78,9 +104,10 @@ export const useFleetStore = defineStore('fleet', {
         type: 'launcher',
         isReusable: false,
         maxSpeed: 11.2,
+        cargoCapacity: 2200,
         supportedOrbits: ['LEO', 'MEO', 'GEO'],
         canReachMoon: true,
-        isRefuelable: false
+        isRefuelable: false,
       },
       {
         id: 'd-super-heavy',
@@ -93,14 +120,15 @@ export const useFleetStore = defineStore('fleet', {
         type: 'launcher',
         isReusable: true,
         maxSpeed: 12.5,
+        cargoCapacity: 3800,
         supportedOrbits: ['LEO', 'MEO', 'GEO', 'HEO', 'LUNAR'],
         canReachMoon: true,
-        isRefuelable: true
+        isRefuelable: true,
       },
       {
         id: 'd-starship',
         name: 'Vaisseau Interplanétaire',
-        description: 'Le futur de l\'exploration spatiale.',
+        description: "Le futur de l'exploration spatiale.",
         cost: 2500000000,
         constructionTime: 480,
         baseReliability: 98,
@@ -108,37 +136,52 @@ export const useFleetStore = defineStore('fleet', {
         type: 'ship',
         isReusable: true,
         maxSpeed: 17.5,
+        cargoCapacity: 6500,
         supportedOrbits: ['LEO', 'MEO', 'GEO', 'HEO', 'LUNAR', 'MARTIAN'],
         canReachMoon: true,
-        isRefuelable: true
-      }
-    ] as FleetDesign[]
+        isRefuelable: true,
+      },
+    ] as FleetDesign[],
   }),
   getters: {
     availableDesigns: (state) => {
       const researchStore = useResearchStore()
-      return state.designs.filter(d => 
-        researchStore.completedResearchIds.includes(d.researchId)
-      )
+      return state.designs.filter((d) => researchStore.completedResearchIds.includes(d.researchId))
     },
     readyLaunchers: (state) => {
-      return state.items.filter(i => i.status === 'Prêt' && state.designs.find(d => d.id === i.designId)?.type === 'launcher')
+      return state.items.filter(
+        (i) =>
+          i.status === 'Prêt' &&
+          state.designs.find((d) => d.id === i.designId)?.type === 'launcher',
+      )
     },
     readyShips: (state) => {
-      return state.items.filter(i => i.status === 'Prêt' && state.designs.find(d => d.id === i.designId)?.type === 'ship')
-    }
+      return state.items.filter(
+        (i) =>
+          i.status === 'Prêt' && state.designs.find((d) => d.id === i.designId)?.type === 'ship',
+      )
+    },
+    launcherCargoCapacity: (state) => {
+      return (launcherId?: string) => {
+        if (!launcherId) return 0
+        const launcher = state.items.find((item) => item.id === launcherId)
+        if (!launcher) return 0
+        return state.designs.find((design) => design.id === launcher.designId)?.cargoCapacity ?? 0
+      }
+    },
   },
   actions: {
     createDesign(name: string, type: 'launcher' | 'ship', baseDesignId: string) {
-      const baseDesign = this.designs.find(d => d.id === baseDesignId)
+      const baseDesign = this.designs.find((d) => d.id === baseDesignId)
       if (!baseDesign) return
 
       const researchStore = useResearchStore()
-      
+
       // Bonus basés sur les recherches
       const reliabilityBonus = researchStore.completedResearchIds.includes('i-guidage') ? 5 : 0
       const speedBonus = researchStore.completedResearchIds.includes('m-chimique') ? 1.1 : 1
-      const isReusable = researchStore.completedResearchIds.includes('l-reusable') || baseDesign.isReusable
+      const isReusable =
+        researchStore.completedResearchIds.includes('l-reusable') || baseDesign.isReusable
 
       const newDesign: FleetDesign = {
         id: `custom-${Math.random().toString(36).substr(2, 5)}`,
@@ -151,32 +194,33 @@ export const useFleetStore = defineStore('fleet', {
         type: type,
         isReusable: isReusable,
         maxSpeed: baseDesign.maxSpeed * speedBonus,
+        cargoCapacity: baseDesign.cargoCapacity,
         supportedOrbits: [...baseDesign.supportedOrbits],
         canReachMoon: baseDesign.canReachMoon,
-        isRefuelable: baseDesign.isRefuelable
+        isRefuelable: baseDesign.isRefuelable,
       }
 
       this.designs.push(newDesign)
     },
     build(designId: string) {
       const resourceStore = useResourceStore()
-      const design = this.designs.find(d => d.id === designId)
-      
+      const design = this.designs.find((d) => d.id === designId)
+
       if (!design) return
       if (resourceStore.argent < design.cost) return
 
       resourceStore.addArgent(-design.cost)
-      
+
       const newItem: FleetItem = {
         id: Math.random().toString(36).substr(2, 9),
         designId: design.id,
-        name: `${design.name} #${this.items.filter(i => i.designId === design.id).length + 1}`,
+        name: `${design.name} #${this.items.filter((i) => i.designId === design.id).length + 1}`,
         status: 'En construction',
         reliability: design.baseReliability,
         constructionProgress: 0,
-        constructionTime: design.constructionTime
+        constructionTime: design.constructionTime,
       }
-      
+
       this.items.push(newItem)
     },
     tick(deltaTime: number) {
@@ -191,7 +235,7 @@ export const useFleetStore = defineStore('fleet', {
       if (!hasConnectedPad) return
 
       this.items.forEach((item) => {
-        const design = this.designs.find(d => d.id === item.designId)
+        const design = this.designs.find((d) => d.id === item.designId)
         if (!design) return
 
         if (item.status === 'En construction') {
@@ -210,6 +254,6 @@ export const useFleetStore = defineStore('fleet', {
           }
         }
       })
-    }
-  }
+    },
+  },
 })

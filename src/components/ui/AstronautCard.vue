@@ -17,7 +17,30 @@
         <div class="role-row">
           <span class="role-tag">{{ roleLabel }}</span>
           <div class="experience-badge" :class="experience.toLowerCase()">
-            {{ experience }}
+            Niv. {{ level }} - {{ experience }}
+          </div>
+        </div>
+
+        <div class="xp-bar-container">
+          <div class="xp-label">
+            <span>XP</span>
+            <span>{{ xp }} / {{ xpToNextLevel }}</span>
+          </div>
+          <div class="xp-track">
+            <div class="xp-thumb" :style="{ width: (xp / xpToNextLevel) * 100 + '%' }"></div>
+          </div>
+        </div>
+
+        <div class="skills-grid">
+          <div v-for="(val, skill) in skills" :key="skill" class="skill-item" :class="{ primary: isPrimarySkill(skill) }">
+            <div class="skill-info">
+              <BaseIcon :name="getSkillIcon(skill)" :size="10" />
+              <span class="skill-name">{{ getSkillLabel(skill) }}</span>
+              <span class="skill-val">{{ val }}</span>
+            </div>
+            <div class="skill-track">
+              <div class="skill-fill" :style="{ width: Math.min(100, (val / 50) * 100) + '%' }"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -39,9 +62,9 @@
         </button>
       </div>
       <div v-else class="card-footer recruited">
-        <div class="status-badge">
-          <BaseIcon name="check" :size="12" />
-          <span>Opérationnel</span>
+        <div class="status-badge" :class="status">
+          <BaseIcon :name="statusIcon" :size="12" />
+          <span>{{ statusLabel }}</span>
         </div>
         <div class="id-tag">#{{ id.toString().padStart(3, '0') }}</div>
       </div>
@@ -62,6 +85,16 @@ const props = defineProps<{
   experience: AstronautExperience
   type: TrainingType
   cost: number
+  level: number
+  xp: number
+  xpToNextLevel: number
+  status?: 'disponible' | 'entrainement' | 'mission'
+  skills: {
+    pilotage: number
+    ingenierie: number
+    medecine: number
+    science: number
+  }
   isMarket?: boolean
   disabled?: boolean
 }>()
@@ -87,6 +120,56 @@ const typeIcon = computed(() => {
   }
   return icons[props.type]
 })
+
+const statusLabel = computed(() => {
+  if (props.isMarket) return 'Candidat'
+  const labels = {
+    disponible: 'Disponible',
+    entrainement: 'En Formation',
+    mission: 'En Mission'
+  }
+  return labels[props.status || 'disponible']
+})
+
+const statusIcon = computed(() => {
+  if (props.isMarket) return 'user'
+  const icons = {
+    disponible: 'check',
+    entrainement: 'history',
+    mission: 'rocket'
+  }
+  return icons[props.status || 'disponible']
+})
+
+const getSkillIcon = (skill: string) => {
+  const icons: Record<string, string> = {
+    pilotage: 'rocket',
+    ingenierie: 'wrench',
+    medecine: 'heart',
+    science: 'graduation'
+  }
+  return icons[skill]
+}
+
+const getSkillLabel = (skill: string) => {
+  const labels: Record<string, string> = {
+    pilotage: 'PIL',
+    ingenierie: 'ING',
+    medecine: 'MED',
+    science: 'SCI'
+  }
+  return labels[skill]
+}
+
+const isPrimarySkill = (skill: string) => {
+  const primary: Record<string, string> = {
+    pilote: 'pilotage',
+    ingenieur_vol: 'ingenierie',
+    medic: 'medecine',
+    specialiste: 'science'
+  }
+  return primary[props.type] === skill
+}
 </script>
 
 <style scoped>
@@ -276,6 +359,101 @@ const typeIcon = computed(() => {
   font-size: 0.7rem;
   color: #4be0a2;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.entrainement {
+  color: #fbbf24;
+}
+
+.status-badge.mission {
+  color: #37d7ff;
+}
+
+.xp-bar-container {
+  margin-top: 1rem;
+}
+
+.xp-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  color: rgba(255, 255, 255, 0.5);
+  margin-bottom: 0.3rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.xp-track {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.xp-thumb {
+  height: 100%;
+  background: linear-gradient(90deg, #4be0a2, #37d7ff);
+  transition: width 0.4s ease-out;
+}
+
+.skills-grid {
+  margin-top: 1.25rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.skill-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.skill-item.primary {
+  opacity: 1;
+}
+
+.skill-info {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+}
+
+.skill-name {
+  color: rgba(255, 255, 255, 0.5);
+  flex: 1;
+}
+
+.skill-item.primary .skill-name {
+  color: var(--accent-color);
+  font-weight: 700;
+}
+
+.skill-val {
+  color: #fff;
+  font-weight: 700;
+}
+
+.skill-track {
+  height: 2px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.skill-fill {
+  height: 100%;
+  background: rgba(255, 255, 255, 0.2);
+  transition: width 0.3s;
+}
+
+.skill-item.primary .skill-fill {
+  background: var(--accent-color);
 }
 
 .id-tag {

@@ -11,6 +11,13 @@ interface TraineeProfile {
   description: string
 }
 
+export interface AstronautSkills {
+  pilotage: number
+  ingenierie: number
+  medecine: number
+  science: number
+}
+
 export interface AstronautProfile {
   id: number
   name: string
@@ -19,6 +26,32 @@ export interface AstronautProfile {
   experience: AstronautExperience
   type: TrainingType
   cost: number
+  level: number
+  xp: number
+  xpToNextLevel: number
+  status: 'disponible' | 'entrainement' | 'mission'
+  skills: AstronautSkills
+}
+
+export interface TrainingSession {
+  id: string
+  astronautId: number
+  programId: string
+  remainingDays: number
+  totalDays: number
+  xpReward: number
+}
+
+export interface TrainingProgram {
+  id: string
+  label: string
+  description: string
+  duration: number
+  cost: { argent: number; carburant: number; science?: number }
+  xpReward: number
+  minLevel: number
+  targetSkill?: keyof AstronautSkills
+  skillReward?: number
 }
 
 export interface TrainingLog {
@@ -122,6 +155,22 @@ function createAstronautCandidate(type: TrainingType, id: number): AstronautProf
   const cost = Math.round(baseCost * experienceMultiplier[experience] * randomVariance)
   const nationality = pickRandom(nationalities)
 
+  const minSkill = experience === 'Junior' ? 2 : experience === 'Confirme' ? 8 : 15
+  const maxSkill = experience === 'Junior' ? 5 : experience === 'Confirme' ? 12 : 25
+
+  const generateSkill = (isPrimary: boolean) => {
+    const min = isPrimary ? minSkill + 10 : minSkill
+    const max = isPrimary ? maxSkill + 15 : maxSkill
+    return Math.floor(Math.random() * (max - min + 1) + min)
+  }
+
+  const skills: AstronautSkills = {
+    pilotage: generateSkill(type === 'pilote'),
+    ingenierie: generateSkill(type === 'ingenieur_vol'),
+    medecine: generateSkill(type === 'medic'),
+    science: generateSkill(type === 'specialiste'),
+  }
+
   return {
     id,
     type,
@@ -130,8 +179,100 @@ function createAstronautCandidate(type: TrainingType, id: number): AstronautProf
     flag: nationality.flag,
     experience,
     cost,
+    level: experience === 'Junior' ? 1 : experience === 'Confirme' ? 5 : 10,
+    xp: 0,
+    xpToNextLevel: (experience === 'Junior' ? 1 : experience === 'Confirme' ? 5 : 10) * 100,
+    status: 'disponible',
+    skills,
   }
 }
+
+export const TRAINING_PROGRAMS: TrainingProgram[] = [
+  {
+    id: 'basic_survival',
+    label: 'Survie de Base',
+    description: 'Entraînement intensif aux protocoles de sécurité standard.',
+    duration: 2,
+    cost: { argent: 80, carburant: 0 },
+    xpReward: 50,
+    minLevel: 1,
+  },
+  {
+    id: 'flight_sim',
+    label: 'Simulateur de Vol',
+    description: 'Entraînement aux manœuvres orbitales et amarrages.',
+    duration: 3,
+    cost: { argent: 120, carburant: 10 },
+    xpReward: 80,
+    minLevel: 1,
+    targetSkill: 'pilotage',
+    skillReward: 2,
+  },
+  {
+    id: 'engineering_cert',
+    label: 'Maintenance Systèmes',
+    description: 'Apprentissage des systèmes de survie et propulsion.',
+    duration: 3,
+    cost: { argent: 130, carburant: 5 },
+    xpReward: 80,
+    minLevel: 1,
+    targetSkill: 'ingenierie',
+    skillReward: 2,
+  },
+  {
+    id: 'medical_crash_course',
+    label: 'Premiers Soins Spatiaux',
+    description: 'Protocoles médicaux en environnement de microgravité.',
+    duration: 3,
+    cost: { argent: 100, carburant: 0 },
+    xpReward: 80,
+    minLevel: 1,
+    targetSkill: 'medecine',
+    skillReward: 2,
+  },
+  {
+    id: 'science_lab_training',
+    label: 'Analyse en Laboratoire',
+    description: "Protocoles d'expérimentation scientifique en orbite.",
+    duration: 3,
+    cost: { argent: 110, carburant: 0, science: 20 },
+    xpReward: 80,
+    minLevel: 1,
+    targetSkill: 'science',
+    skillReward: 2,
+  },
+  {
+    id: 'advanced_eva',
+    label: 'Sortie EVA Avancée',
+    description: 'Perfectionnement des manœuvres en apesanteur.',
+    duration: 4,
+    cost: { argent: 150, carburant: 15 },
+    xpReward: 120,
+    minLevel: 3,
+    targetSkill: 'pilotage',
+    skillReward: 3,
+  },
+  {
+    id: 'master_engineering',
+    label: 'Ingénierie de Haute Précision',
+    description: 'Réparation de composants nano-tech et structures de base.',
+    duration: 5,
+    cost: { argent: 250, carburant: 10, science: 30 },
+    xpReward: 200,
+    minLevel: 5,
+    targetSkill: 'ingenierie',
+    skillReward: 5,
+  },
+  {
+    id: 'command_training',
+    label: 'Commandement Orbital',
+    description: "Gestion d'équipage et psychologie de mission long-terme.",
+    duration: 7,
+    cost: { argent: 300, carburant: 20, science: 50 },
+    xpReward: 300,
+    minLevel: 7,
+  },
+]
 
 function createMarket(startId: number, count: number) {
   const market: AstronautProfile[] = []
@@ -165,13 +306,19 @@ export const useTrainingStore = defineStore('training', {
         ...profileByType.specialiste,
       },
     } as Record<TrainingType, TraineeProfile>,
-    astronauts: isDebugMode ? [
-      createAstronautCandidate('pilote', 999),
-      createAstronautCandidate('ingenieur_vol', 1000)
-    ] : [] as AstronautProfile[],
+    astronauts: isDebugMode
+      ? [
+          createAstronautCandidate('pilote', 999),
+          createAstronautCandidate('ingenieur_vol', 1000),
+          createAstronautCandidate('medic', 1001),
+          createAstronautCandidate('specialiste', 1002),
+        ]
+      : ([] as AstronautProfile[]),
     market: initialMarket.market,
     nextAstronautId: initialMarket.nextId,
-    activeSessions: 0,
+    activeSessions: 0, // Keep for backward compatibility if needed, but we use activeTrainingSessions now
+    activeTrainingSessions: [] as TrainingSession[],
+    lastMarketRefreshDay: 0,
     logs: [] as TrainingLog[],
   }),
   getters: {
@@ -245,21 +392,142 @@ export const useTrainingStore = defineStore('training', {
       return this.recruitFromMarket(candidate.id)
     },
 
-    startTrainingProgram() {
+    enrollInTraining(astronautId: number, programId: string) {
       const resourceStore = useResourceStore()
+      const astronaut = this.astronauts.find((a) => a.id === astronautId)
+      const program = TRAINING_PROGRAMS.find((p) => p.id === programId)
 
-      const cost = { argent: 100, carburant: 20 }
-      if (resourceStore.argent < cost.argent || resourceStore.carburant < cost.carburant) {
-        this.log('[ERREUR] Ressources insuffisantes pour le programme de formation.')
+      if (!astronaut || !program) {
+        this.log('[ERREUR] Astronaute ou programme introuvable.')
         return false
       }
 
-      resourceStore.addArgent(-cost.argent)
-      resourceStore.addCarburant(-cost.carburant)
-      this.activeSessions += 1
+      if (astronaut.status !== 'disponible') {
+        this.log(`[ERREUR] ${astronaut.name} n'est pas disponible pour l'entrainement.`)
+        return false
+      }
 
-      this.log(`[FORMATION] Programme d'entrainement lance.`)
+      if (astronaut.level < program.minLevel) {
+        this.log(
+          `[ERREUR] Niveau insuffisant (${astronaut.level}/${program.minLevel}) pour ${program.label}.`,
+        )
+        return false
+      }
+
+      // Check costs
+      if (
+        resourceStore.argent < program.cost.argent ||
+        resourceStore.carburant < program.cost.carburant
+      ) {
+        this.log('[ERREUR] Ressources insuffisantes pour la formation.')
+        return false
+      }
+      if (program.cost.science && resourceStore.science < program.cost.science) {
+        this.log('[ERREUR] Science insuffisante pour la formation.')
+        return false
+      }
+
+      // Pay
+      resourceStore.addArgent(-program.cost.argent)
+      resourceStore.addCarburant(-program.cost.carburant)
+      if (program.cost.science) resourceStore.addScience(-program.cost.science)
+
+      // Start session
+      astronaut.status = 'entrainement'
+      this.activeTrainingSessions.push({
+        id: Math.random().toString(36).substr(2, 9),
+        astronautId,
+        programId: program.id,
+        remainingDays: program.duration,
+        totalDays: program.duration,
+        xpReward: program.xpReward,
+      })
+
+      this.log(`[FORMATION] ${astronaut.name} commence le programme : ${program.label}.`)
       return true
+    },
+
+    updateTrainingSessions(daysPassed: number) {
+      if (daysPassed <= 0) return
+
+      const completedSessionIds: string[] = []
+
+      this.activeTrainingSessions.forEach((session) => {
+        session.remainingDays -= daysPassed
+        if (session.remainingDays <= 0) {
+          completedSessionIds.push(session.id)
+          this.completeTraining(session)
+        }
+      })
+
+      this.activeTrainingSessions = this.activeTrainingSessions.filter(
+        (s) => !completedSessionIds.includes(s.id),
+      )
+    },
+
+    completeTraining(session: TrainingSession) {
+      const astronaut = this.astronauts.find((a) => a.id === session.astronautId)
+      const program = TRAINING_PROGRAMS.find((p) => p.id === session.programId)
+
+      if (astronaut && program) {
+        astronaut.status = 'disponible'
+        this.addXP(astronaut, session.xpReward)
+
+        let skillMsg = ''
+        if (program.targetSkill && program.skillReward) {
+          astronaut.skills[program.targetSkill] += program.skillReward
+          skillMsg = ` (+${program.skillReward} en ${this.getSkillLabel(program.targetSkill)})`
+        }
+
+        this.log(
+          `[FORMATION] ${astronaut.name} a termine avec succes : ${program.label} ! (+${session.xpReward} XP)${skillMsg}`,
+        )
+      }
+    },
+
+    getSkillLabel(skill: keyof AstronautSkills) {
+      const labels: Record<keyof AstronautSkills, string> = {
+        pilotage: 'Pilotage',
+        ingenierie: 'Ingénierie',
+        medecine: 'Médecine',
+        science: 'Science',
+      }
+      return labels[skill]
+    },
+
+    addXP(astronaut: AstronautProfile, amount: number) {
+      astronaut.xp += amount
+      while (astronaut.xp >= astronaut.xpToNextLevel) {
+        astronaut.xp -= astronaut.xpToNextLevel
+        this.levelUp(astronaut)
+      }
+    },
+
+    levelUp(astronaut: AstronautProfile) {
+      astronaut.level += 1
+      astronaut.xpToNextLevel = astronaut.level * 100
+
+      // Update experience label
+      if (astronaut.level >= 10) astronaut.experience = 'Veteran'
+      else if (astronaut.level >= 5) astronaut.experience = 'Confirme'
+
+      this.log(`[NIVEAU] ${astronaut.name} passe au niveau ${astronaut.level} !`)
+    },
+
+    checkMarketRefresh(currentDay: number) {
+      // Refresh every 7 days
+      if (currentDay >= this.lastMarketRefreshDay + 7) {
+        const refreshed = createMarket(this.nextAstronautId, 8)
+        this.market = refreshed.market
+        this.nextAstronautId = refreshed.nextId
+        this.lastMarketRefreshDay = currentDay
+        this.log('[MARCHE] Le marche des astronautes a ete renouvele automatiquement.')
+      }
+    },
+
+    startTrainingProgram() {
+      // Legacy - disable or redirect
+      return this.log("[INFO] Utilisez l'onglet Programmes pour lancer une formation specifique.")
     },
 
     log(message: string) {

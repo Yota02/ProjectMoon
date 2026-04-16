@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { useResourceStore } from './useResourceStore'
 
+const isDebugMode = import.meta.env.VITE_DEBUG_MODE === 'test'
+
 export type StaffRole = 'ingenieur' | 'scientifique' | 'constructeur'
 
 interface StaffProfile {
@@ -20,19 +22,19 @@ export const usePersonnelStore = defineStore('personnel', {
     staff: {
       ingenieur: {
         label: 'Ingenieur',
-        count: 0,
+        count: isDebugMode ? 1 : 0,
         hiringCost: 120,
         description: 'Permet de lancer des missions et augmente les chances de succes.',
       },
       scientifique: {
         label: 'Scientifique',
-        count: 0,
+        count: isDebugMode ? 1 : 0,
         hiringCost: 160,
         description: 'Ajoute +1/s de production de science a chaque embauche.',
       },
       constructeur: {
         label: 'Constructeur',
-        count: 0,
+        count: isDebugMode ? 1 : 0,
         hiringCost: 140,
         description: 'Debloque la construction des raffineries de carburant.',
       },

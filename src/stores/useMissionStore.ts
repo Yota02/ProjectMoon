@@ -6,9 +6,11 @@ import { useSolarSystemStore } from './useSolarSystemStore'
 import { useStationStore } from './useStationStore'
 import { useGameStore } from './useGameStore'
 
+const isDebugMode = import.meta.env.VITE_DEBUG_MODE === 'test'
+
 type MissionStatus = 'Disponible' | 'Succès' | 'Échec' | 'En attente'
 
-type MissionCategory = 'exploration' | 'ravitaillement'
+type MissionCategory = 'exploration' | 'ravitaillement' | 'principale'
 
 export interface ResupplyForecast {
   id: string
@@ -21,6 +23,8 @@ export interface ResupplyForecast {
     piecesDetachees: number
   }
   lastTriggeredMonthKey?: string
+  autoLaunch?: boolean
+  preferredLauncherDesignId?: string
 }
 
 interface CreateResupplyMissionOptions {
@@ -34,6 +38,15 @@ interface CreateResupplyMissionOptions {
   recurrenceDays?: number
   titlePrefix?: string
   preferredLauncherId?: string
+  autoLaunch?: boolean
+  autoLaunchPreferredLauncherDesignId?: string
+}
+
+interface ResupplyPayload {
+  nourriture: number
+  eau: number
+  o2: number
+  piecesDetachees: number
 }
 
 export interface Mission {
@@ -51,10 +64,15 @@ export interface Mission {
   status: MissionStatus
   requiredOrbit: OrbitType
   category?: MissionCategory
+  objective?: string
+  launcherRequirement?: string
+  unlockAfterMissionId?: number
   stationId?: string
   recurrenceDays?: number
   nextAvailableDay?: number
   preferredLauncherId?: string
+  autoLaunch?: boolean
+  autoLaunchPreferredLauncherDesignId?: string
 }
 
 export interface MissionLog {
@@ -64,28 +82,141 @@ export interface MissionLog {
 
 export const useMissionStore = defineStore('mission', {
   state: () => ({
-    nextMissionId: 3,
+    nextMissionId: 11,
     forecasts: [] as ResupplyForecast[],
     missions: [
       {
         id: 1,
-        name: 'Lancer un satellite météo',
+        name: "Mise en orbite d'un satellite",
         cost: { argent: 1000000, carburant: 20 },
-        successChance: 0.7, // 70% de chance de succès
-        reward: { science: 50 },
+        successChance: 0.72,
+        reward: { science: 80 },
         status: 'Disponible',
         requiredOrbit: 'LEO',
-        category: 'exploration',
+        category: 'principale',
+        objective:
+          'Valider votre premiere etape du programme spatial avec un satellite operationnel.',
+        launcherRequirement: 'Micro-Lanceur minimum (LEO)',
       },
       {
         id: 2,
-        name: 'Sonde vers la Lune',
-        cost: { argent: 5000000, carburant: 150 },
-        successChance: 0.4, // 40% de chance de succès
-        reward: { science: 300 },
-        status: 'Disponible',
+        name: 'Constellation orbitale',
+        cost: { argent: 4500000, carburant: 80 },
+        successChance: 0.64,
+        reward: { science: 220 },
+        status: 'En attente',
+        requiredOrbit: 'LEO',
+        category: 'principale',
+        objective:
+          'Deployer un reseau de satellites de communication et de navigation en orbite basse.',
+        launcherRequirement: 'Micro-Lanceur ou Lanceur Moyen',
+        unlockAfterMissionId: 1,
+      },
+      {
+        id: 3,
+        name: 'Noyau de station orbitale',
+        cost: { argent: 8500000, carburant: 140 },
+        successChance: 0.55,
+        reward: { science: 460 },
+        status: 'En attente',
+        requiredOrbit: 'LEO',
+        category: 'principale',
+        objective: 'Assembler le module central d une station habitee en orbite terrestre.',
+        launcherRequirement: 'Lanceur Moyen recommande',
+        unlockAfterMissionId: 2,
+      },
+      {
+        id: 4,
+        name: 'Station spatiale operationnelle',
+        cost: { argent: 12000000, carburant: 190 },
+        successChance: 0.48,
+        reward: { science: 680 },
+        status: 'En attente',
+        requiredOrbit: 'LEO',
+        category: 'principale',
+        objective:
+          'Finaliser la station avec support vie, equipage permanent et maintenance orbitale.',
+        launcherRequirement: 'Lanceur Lourd prefere pour les modules',
+        unlockAfterMissionId: 3,
+      },
+      {
+        id: 5,
+        name: 'Depot logistique cis-lunaire',
+        cost: { argent: 18000000, carburant: 280 },
+        successChance: 0.4,
+        reward: { science: 900 },
+        status: 'En attente',
         requiredOrbit: 'LUNAR',
-        category: 'exploration',
+        category: 'principale',
+        objective: 'Placer un depot de carburant et de fret sur trajectoire lunaire.',
+        launcherRequirement: 'Lanceur Super-Lourd pour le fret lunaire',
+        unlockAfterMissionId: 4,
+      },
+      {
+        id: 6,
+        name: 'Base lunaire initiale',
+        cost: { argent: 26000000, carburant: 380 },
+        successChance: 0.34,
+        reward: { science: 1100 },
+        status: 'En attente',
+        requiredOrbit: 'LUNAR',
+        category: 'principale',
+        objective: 'Deployer les premiers modules habitables pour etablir une base sur la Lune.',
+        launcherRequirement: 'Lanceur Super-Lourd ou Vaisseau Interplanetaire',
+        unlockAfterMissionId: 5,
+      },
+      {
+        id: 7,
+        name: 'Base lunaire autonome',
+        cost: { argent: 32000000, carburant: 440 },
+        successChance: 0.31,
+        reward: { science: 1400 },
+        status: 'En attente',
+        requiredOrbit: 'LUNAR',
+        category: 'principale',
+        objective: 'Rendre la base lunaire autosuffisante en energie, oxygene et maintenance.',
+        launcherRequirement: 'Vaisseau Interplanetaire prefere (missions lourdes)',
+        unlockAfterMissionId: 6,
+      },
+      {
+        id: 8,
+        name: 'Avant-poste martien',
+        cost: { argent: 40000000, carburant: 520 },
+        successChance: 0.25,
+        reward: { science: 1500 },
+        status: 'En attente',
+        requiredOrbit: 'MARTIAN',
+        category: 'principale',
+        objective: 'Lancer la premiere architecture de base martienne et valider son implantation.',
+        launcherRequirement: 'Vaisseau Interplanetaire obligatoire',
+        unlockAfterMissionId: 7,
+      },
+      {
+        id: 9,
+        name: 'Cite scientifique martienne',
+        cost: { argent: 55000000, carburant: 700 },
+        successChance: 0.22,
+        reward: { science: 2100 },
+        status: 'En attente',
+        requiredOrbit: 'MARTIAN',
+        category: 'principale',
+        objective: 'Etendre l avant-poste en colonie scientifique avec laboratoires specialises.',
+        launcherRequirement: 'Vaisseau Interplanetaire + rotation logistique reguliere',
+        unlockAfterMissionId: 8,
+      },
+      {
+        id: 10,
+        name: 'Programme d extraction asteroidale',
+        cost: { argent: 70000000, carburant: 900 },
+        successChance: 0.2,
+        reward: { science: 3000 },
+        status: 'En attente',
+        requiredOrbit: 'MARTIAN',
+        category: 'principale',
+        objective:
+          'Ouvrir une route industrielle vers les asteroides pour soutenir l expansion interplanetaire.',
+        launcherRequirement: 'Vaisseau Interplanetaire de classe lourde requis',
+        unlockAfterMissionId: 9,
       },
     ] as Mission[],
     logs: [] as MissionLog[], // Historique des missions
@@ -104,6 +235,45 @@ export const useMissionStore = defineStore('mission', {
     },
   },
   actions: {
+    normalizeResupplyPayload(payload: ResupplyPayload): ResupplyPayload {
+      return {
+        nourriture: Math.max(0, Math.trunc(payload.nourriture)),
+        eau: Math.max(0, Math.trunc(payload.eau)),
+        o2: Math.max(0, Math.trunc(payload.o2)),
+        piecesDetachees: Math.max(0, Math.trunc(payload.piecesDetachees)),
+      }
+    },
+
+    getResupplyPayloadTotal(payload: ResupplyPayload) {
+      return payload.nourriture + payload.eau + payload.o2 + payload.piecesDetachees
+    },
+
+    validateResupplyPayloadCapacity(payload: ResupplyPayload, launcherId?: string) {
+      if (!launcherId) {
+        return { success: true as const }
+      }
+
+      const fleetStore = useFleetStore()
+      const launcher = fleetStore.items.find((item) => item.id === launcherId)
+      const launcherDesign = launcher
+        ? fleetStore.designs.find((design) => design.id === launcher.designId)
+        : undefined
+
+      if (!launcher || !launcherDesign || launcherDesign.type !== 'launcher') {
+        return { success: false as const, message: 'Lanceur de ravitaillement introuvable' }
+      }
+
+      const payloadTotal = this.getResupplyPayloadTotal(payload)
+      if (payloadTotal > launcherDesign.cargoCapacity) {
+        return {
+          success: false as const,
+          message: `Charge totale (${payloadTotal}) superieure a la capacite du lanceur (${launcherDesign.cargoCapacity}).`,
+        }
+      }
+
+      return { success: true as const }
+    },
+
     createStationResupplyMission(
       stationId: string,
       currentDay: number,
@@ -138,6 +308,22 @@ export const useMissionStore = defineStore('mission', {
         MARTIAN: 0.5,
       }
 
+      const requestedPayload = this.normalizeResupplyPayload({
+        nourriture: options?.rewardOverride?.nourriture ?? 20 + stationCrewCount * 2,
+        eau: options?.rewardOverride?.eau ?? 20 + stationCrewCount * 2,
+        o2: options?.rewardOverride?.o2 ?? 20 + stationCrewCount * 2,
+        piecesDetachees: options?.rewardOverride?.piecesDetachees ?? 10,
+      })
+
+      const capacityCheck = this.validateResupplyPayloadCapacity(
+        requestedPayload,
+        options?.preferredLauncherId,
+      )
+      if (!capacityCheck.success) {
+        this.log(`[ERREUR] ${capacityCheck.message}`)
+        return { success: false, message: capacityCheck.message }
+      }
+
       const mission: Mission = {
         id: this.nextMissionId++,
         name: `${options?.titlePrefix ?? `Ravitaillement #${missionIndex}`} - ${station.name}`,
@@ -148,10 +334,10 @@ export const useMissionStore = defineStore('mission', {
         successChance: baseSuccessByOrbit[requiredOrbit],
         reward: {
           science: options?.rewardOverride?.science ?? 10,
-          nourriture: options?.rewardOverride?.nourriture ?? 20 + stationCrewCount * 2,
-          eau: options?.rewardOverride?.eau ?? 20 + stationCrewCount * 2,
-          o2: options?.rewardOverride?.o2 ?? 20 + stationCrewCount * 2,
-          piecesDetachees: options?.rewardOverride?.piecesDetachees ?? 10,
+          nourriture: requestedPayload.nourriture,
+          eau: requestedPayload.eau,
+          o2: requestedPayload.o2,
+          piecesDetachees: requestedPayload.piecesDetachees,
         },
         status: 'Disponible',
         requiredOrbit,
@@ -160,6 +346,8 @@ export const useMissionStore = defineStore('mission', {
         recurrenceDays: options?.recurrenceDays,
         nextAvailableDay: options?.recurrenceDays ? currentDay : undefined,
         preferredLauncherId: options?.preferredLauncherId,
+        autoLaunch: options?.autoLaunch,
+        autoLaunchPreferredLauncherDesignId: options?.autoLaunchPreferredLauncherDesignId,
       }
 
       this.missions.push(mission)
@@ -181,11 +369,22 @@ export const useMissionStore = defineStore('mission', {
         return { success: false, message: 'Mission de ravitaillement introuvable' }
       }
 
-      mission.reward.nourriture = Math.max(0, Math.trunc(payload.nourriture))
-      mission.reward.eau = Math.max(0, Math.trunc(payload.eau))
-      mission.reward.o2 = Math.max(0, Math.trunc(payload.o2))
-      mission.reward.piecesDetachees = Math.max(0, Math.trunc(payload.piecesDetachees))
-      mission.preferredLauncherId = preferredLauncherId
+      const normalizedPayload = this.normalizeResupplyPayload(payload)
+      const nextPreferredLauncherId = preferredLauncherId ?? mission.preferredLauncherId
+      const capacityCheck = this.validateResupplyPayloadCapacity(
+        normalizedPayload,
+        nextPreferredLauncherId,
+      )
+      if (!capacityCheck.success) {
+        this.log(`[ERREUR] ${capacityCheck.message}`)
+        return { success: false, message: capacityCheck.message }
+      }
+
+      mission.reward.nourriture = normalizedPayload.nourriture
+      mission.reward.eau = normalizedPayload.eau
+      mission.reward.o2 = normalizedPayload.o2
+      mission.reward.piecesDetachees = normalizedPayload.piecesDetachees
+      mission.preferredLauncherId = nextPreferredLauncherId
 
       this.log(`[INFO] Mission de ravitaillement modifiee: ${mission.name}.`)
       return { success: true, mission }
@@ -195,6 +394,7 @@ export const useMissionStore = defineStore('mission', {
       stationId: string,
       dayOfMonth: number,
       payload: { nourriture: number; eau: number; o2: number; piecesDetachees: number },
+      options?: { autoLaunch?: boolean; preferredLauncherDesignId?: string },
     ) {
       const stationStore = useStationStore()
       const stationExists = stationStore.stations.some((s) => s.id === stationId)
@@ -216,11 +416,13 @@ export const useMissionStore = defineStore('mission', {
           o2: Math.max(0, Math.trunc(payload.o2)),
           piecesDetachees: Math.max(0, Math.trunc(payload.piecesDetachees)),
         },
+        autoLaunch: options?.autoLaunch,
+        preferredLauncherDesignId: options?.preferredLauncherDesignId,
       }
 
       this.forecasts.push(forecast)
       this.log(
-        `[INFO] Prevision creee: ravitaillement station (${stationId}) tous les ${forecast.dayOfMonth}.`,
+        `[INFO] Prevision creee: ravitaillement station (${stationId}) tous les ${forecast.dayOfMonth}${forecast.autoLaunch ? ' (Auto-launch ON)' : ''}.`,
       )
       return { success: true, forecast }
     },
@@ -246,6 +448,8 @@ export const useMissionStore = defineStore('mission', {
             piecesDetachees: forecast.payload.piecesDetachees,
           },
           titlePrefix: `Prevision ${forecast.dayOfMonth}`,
+          autoLaunch: forecast.autoLaunch,
+          autoLaunchPreferredLauncherDesignId: forecast.preferredLauncherDesignId,
         })
 
         if (result.success) {
@@ -266,6 +470,7 @@ export const useMissionStore = defineStore('mission', {
 
     ensureStationResupplyMissions(currentDay: number) {
       const stationStore = useStationStore()
+      const fleetStore = useFleetStore()
 
       stationStore.stations.forEach((station) => {
         if (currentDay < station.constructionFinishedDay) return
@@ -275,8 +480,38 @@ export const useMissionStore = defineStore('mission', {
         )
 
         if (!hasResupplyMission) {
-          this.createStationResupplyMission(station.id, currentDay, { recurrenceDays: 7 })
+          const preferredLauncherId = isDebugMode
+            ? fleetStore.readyLaunchers.find((l) => {
+                const design = fleetStore.designs.find((d) => d.id === l.designId)
+                const orbitMap: Record<string, OrbitType> = {
+                  earth: 'LEO',
+                  moon: 'LUNAR',
+                  mars: 'MARTIAN',
+                }
+                const requiredOrbit = orbitMap[station.orbitBodyId] ?? 'LEO'
+                return design?.supportedOrbits.includes(requiredOrbit)
+              })?.id
+            : undefined
+
+          this.createStationResupplyMission(station.id, currentDay, {
+            recurrenceDays: 7,
+            preferredLauncherId,
+          })
         }
+      })
+    },
+
+    unlockMainMissions(completedMissionId: number) {
+      const unlockedMissions = this.missions.filter(
+        (mission) =>
+          mission.category === 'principale' &&
+          mission.status === 'En attente' &&
+          mission.unlockAfterMissionId === completedMissionId,
+      )
+
+      unlockedMissions.forEach((mission) => {
+        mission.status = 'Disponible'
+        this.log(`[OBJECTIF] Nouvelle mission principale disponible: "${mission.name}".`)
       })
     },
 
@@ -320,6 +555,21 @@ export const useMissionStore = defineStore('mission', {
         return
       }
 
+      if (mission.category === 'ravitaillement') {
+        const payloadTotal = this.getResupplyPayloadTotal({
+          nourriture: mission.reward.nourriture ?? 0,
+          eau: mission.reward.eau ?? 0,
+          o2: mission.reward.o2 ?? 0,
+          piecesDetachees: mission.reward.piecesDetachees ?? 0,
+        })
+        if (payloadTotal > launcherDesign.cargoCapacity) {
+          this.log(
+            `[ERREUR] Charge de ravitaillement (${payloadTotal}) superieure a la capacite de ${launcherDesign.name} (${launcherDesign.cargoCapacity}).`,
+          )
+          return
+        }
+      }
+
       if (!personnelStore.hasIngenieur) {
         this.log(`[ERREUR] Un Ingenieur est requis pour lancer "${mission.name}".`)
         return
@@ -361,17 +611,43 @@ export const useMissionStore = defineStore('mission', {
           const isRecurringMission = Boolean(mission.recurrenceDays)
           mission.status = isRecurringMission ? 'En attente' : 'Succès'
           resourceStore.addScience(mission.reward.science)
-          if (mission.reward.nourriture) resourceStore.addNourriture(mission.reward.nourriture)
-          if (mission.reward.eau) resourceStore.addEau(mission.reward.eau)
-          if (mission.reward.o2) resourceStore.addO2(mission.reward.o2)
-          if (mission.reward.piecesDetachees) {
-            resourceStore.addPiecesDetachees(mission.reward.piecesDetachees)
+
+          if (mission.stationId) {
+            const stationStore = useStationStore()
+            const station = stationStore.stations.find((s) => s.id === mission.stationId)
+            if (station && station.resources) {
+              if (mission.reward.nourriture) {
+                stationStore.addStationResources(mission.stationId, {
+                  nourriture: mission.reward.nourriture,
+                })
+              }
+              if (mission.reward.eau) {
+                stationStore.addStationResources(mission.stationId, { eau: mission.reward.eau })
+              }
+              if (mission.reward.o2) {
+                stationStore.addStationResources(mission.stationId, { o2: mission.reward.o2 })
+              }
+              if (mission.reward.piecesDetachees) {
+                stationStore.addStationResources(mission.stationId, {
+                  piecesDetachees: mission.reward.piecesDetachees,
+                })
+              }
+            }
+          } else {
+            if (mission.reward.nourriture) resourceStore.addNourriture(mission.reward.nourriture)
+            if (mission.reward.eau) resourceStore.addEau(mission.reward.eau)
+            if (mission.reward.o2) resourceStore.addO2(mission.reward.o2)
+            if (mission.reward.piecesDetachees) {
+              resourceStore.addPiecesDetachees(mission.reward.piecesDetachees)
+            }
           }
 
           if (isRecurringMission && mission.recurrenceDays) {
             const dayRef = currentDay ?? gameStore.elapsedDays
             mission.nextAvailableDay = dayRef + mission.recurrenceDays
           }
+
+          this.unlockMainMissions(mission.id)
 
           this.log(
             `[SUCCÈS] Mission "${mission.name}" a réussi avec ${launcher.name} ! Récompense: +${mission.reward.science} Science.`,
@@ -398,6 +674,48 @@ export const useMissionStore = defineStore('mission', {
       } else {
         this.log(`[ERREUR] Pas assez de ressources pour "${mission.name}".`)
       }
+    },
+
+    processAutoLaunchMissions(currentDay: number) {
+      const fleetStore = useFleetStore()
+      const availableMissions = this.missions.filter(
+        (m) => m.status === 'Disponible' && m.autoLaunch,
+      )
+
+      availableMissions.forEach((mission) => {
+        // On cherche un lanceur prêt et compatible
+        let launcher: (typeof fleetStore.readyLaunchers)[number] | undefined
+        if (mission.autoLaunchPreferredLauncherDesignId) {
+          launcher = fleetStore.readyLaunchers.find(
+            (l) =>
+              l.designId === mission.autoLaunchPreferredLauncherDesignId &&
+              this.validateResupplyPayloadCapacity(mission.reward as ResupplyPayload, l.id).success,
+          )
+        }
+
+        if (!launcher) {
+          launcher = fleetStore.readyLaunchers.find(
+            (l) =>
+              this.validateResupplyPayloadCapacity(mission.reward as ResupplyPayload, l.id)
+                .success &&
+              fleetStore.designs
+                .find((d) => d.id === l.designId)
+                ?.supportedOrbits.includes(mission.requiredOrbit),
+          )
+        }
+
+        if (launcher) {
+          // On vérifie aussi si on a les ressources (launchMission le fait déjà mais on veut être discret dans les logs si on n'a pas les fonds)
+          const resourceStore = useResourceStore()
+          if (
+            resourceStore.argent >= mission.cost.argent &&
+            resourceStore.carburant >= mission.cost.carburant
+          ) {
+            this.log(`[AUTO] Lancement automatique de la mission "${mission.name}"...`)
+            this.launchMission(mission.id, launcher.id, currentDay)
+          }
+        }
+      })
     },
 
     log(message: string) {

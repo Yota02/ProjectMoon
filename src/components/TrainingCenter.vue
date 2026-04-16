@@ -101,40 +101,112 @@
         <section v-else-if="activeTab === 'programs'" class="tab-section" key="programs">
           <div class="section-header">
             <div class="header-info">
-              <h3>Programmes Spéciaux</h3>
-              <p>Améliorez les capacités de votre base par l'entraînement.</p>
+              <h3>Programmes de Spécialisation</h3>
+              <p>Formez vos astronautes pour augmenter leur expérience et leurs capacités.</p>
             </div>
           </div>
 
-          <div class="program-card">
-            <div class="program-visual">
-              <BaseIcon name="graduation" :size="40" />
-            </div>
-            <div class="program-details">
-              <span class="tag">Certification EVA</span>
-              <h4>Simulation de Survie Intensive</h4>
-              <p>
-                Un cycle complet de 48h simulant des pannes critiques et des sorties
-                extravéhiculaires.
-              </p>
-              <div class="program-footer">
-                <div class="costs">
-                  <div class="cost">
-                    <BaseIcon name="coins" :size="14" />
-                    <span>100 Cr.</span>
-                  </div>
-                  <div class="cost">
-                    <BaseIcon name="rocket" :size="14" />
-                    <span>20 Carb.</span>
+          <div class="programs-layout">
+            <!-- Program Selection -->
+            <div class="programs-sidebar">
+              <div class="sidebar-group">
+                <label>1. Choisir un Astronaute</label>
+                <select v-model="selectedAstronautId" class="sidebar-select">
+                  <option :value="null">Sélectionner...</option>
+                  <option 
+                    v-for="a in availableForTraining" 
+                    :key="a.id" 
+                    :value="a.id"
+                  >
+                    {{ a.flag }} {{ a.name }} (Niv. {{ a.level }})
+                  </option>
+                </select>
+              </div>
+
+              <div class="sidebar-group">
+                <label>2. Choisir un Programme</label>
+                <div class="programs-list">
+                  <div 
+                    v-for="program in TRAINING_PROGRAMS" 
+                    :key="program.id"
+                    class="program-selection-card"
+                    :class="{ 
+                      selected: selectedProgramId === program.id,
+                      locked: isProgramLocked(program)
+                    }"
+                    @click="selectedProgramId = program.id"
+                  >
+                    <div class="prog-info">
+                      <span class="prog-label">{{ program.label }}</span>
+                      <span class="prog-duration">{{ program.duration }} jours</span>
+                    </div>
+                    <div class="prog-rewards">
+                      <div class="prog-xp">+{{ program.xpReward }} XP</div>
+                      <div v-if="program.targetSkill" class="prog-skill">
+                        <BaseIcon :name="getSkillIcon(program.targetSkill)" :size="10" />
+                        <span>+{{ program.skillReward }} {{ getSkillLabel(program.targetSkill) }}</span>
+                      </div>
+                    </div>
+                    <div v-if="isProgramLocked(program)" class="prog-lock">
+                       <BaseIcon name="lock" :size="12" />
+                       Niv. {{ program.minLevel }} requis
+                    </div>
                   </div>
                 </div>
-                <button
-                  @click="trainingStore.startTrainingProgram()"
-                  :disabled="!canRunProgram"
-                  class="launch-btn"
+              </div>
+
+              <div v-if="selectedProgram" class="program-summary">
+                <p class="prog-desc">{{ selectedProgram.description }}</p>
+                <div class="prog-costs">
+                   <div class="cost">
+                      <BaseIcon name="coins" :size="14" />
+                      <span>{{ selectedProgram.cost.argent }} Cr.</span>
+                   </div>
+                   <div v-if="selectedProgram.cost.carburant" class="cost">
+                      <BaseIcon name="rocket" :size="14" />
+                      <span>{{ selectedProgram.cost.carburant }} Carb.</span>
+                   </div>
+                   <div v-if="selectedProgram.cost.science" class="cost">
+                      <BaseIcon name="graduation" :size="14" />
+                      <span>{{ selectedProgram.cost.science }} Sci.</span>
+                   </div>
+                </div>
+                <button 
+                  class="enroll-btn"
+                  :disabled="!canEnroll"
+                  @click="handleEnroll"
                 >
-                  Lancer le cycle
+                  Démarrer la Formation
                 </button>
+              </div>
+            </div>
+
+            <!-- Active Sessions -->
+            <div class="sessions-main">
+              <h4 class="sessions-title">Sessions en cours</h4>
+              <div v-if="trainingStore.activeTrainingSessions.length === 0" class="no-sessions">
+                Aucune formation active.
+              </div>
+              <div v-else class="sessions-grid">
+                <div v-for="session in trainingStore.activeTrainingSessions" :key="session.id" class="session-card">
+                  <div class="session-header">
+                    <span class="session-astro">{{ getAstronautName(session.astronautId) }}</span>
+                    <span class="session-prog">{{ getProgramLabel(session.programId) }}</span>
+                  </div>
+                  <div class="session-progress">
+                    <div class="progress-info">
+                      <span>Progrès</span>
+                      <span>{{ Math.round((1 - session.remainingDays / session.totalDays) * 100) }}%</span>
+                    </div>
+                    <div class="progress-track">
+                      <div class="progress-fill" :style="{ width: (1 - session.remainingDays / session.totalDays) * 100 + '%' }"></div>
+                    </div>
+                    <div class="progress-time">
+                      <BaseIcon name="history" :size="12" />
+                      <span>Termine dans {{ Math.ceil(session.remainingDays) }} jours</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -163,7 +235,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { MARKET_REFRESH_COST, useTrainingStore } from '../stores/useTrainingStore'
+import { MARKET_REFRESH_COST, useTrainingStore, TRAINING_PROGRAMS } from '../stores/useTrainingStore'
 import { useResourceStore } from '../stores/useResourceStore'
 import BaseIcon from './ui/BaseIcon.vue'
 import AstronautCard from './ui/AstronautCard.vue'
@@ -180,9 +252,79 @@ const tabs = computed(() => [
 
 const totalTrainees = computed(() => trainingStore.totalTrainees)
 const canRefreshMarket = computed(() => resourceStore.argent >= MARKET_REFRESH_COST)
-const canRunProgram = computed(() => {
-  return resourceStore.argent >= 100 && resourceStore.carburant >= 20
+
+// Programs Logic
+const selectedAstronautId = ref<number | null>(null)
+const selectedProgramId = ref<string | null>(null)
+
+const availableForTraining = computed(() => 
+  trainingStore.astronauts.filter(a => a.status === 'disponible')
+)
+
+const selectedProgram = computed(() => 
+  TRAINING_PROGRAMS.find(p => p.id === selectedProgramId.value)
+)
+
+const selectedAstronaut = computed(() => 
+  trainingStore.astronauts.find(a => a.id === selectedAstronautId.value)
+)
+
+const isProgramLocked = (program: any) => {
+  if (!selectedAstronaut.value) return false
+  return selectedAstronaut.value.level < program.minLevel
+}
+
+const canEnroll = computed(() => {
+  if (!selectedAstronautId.value || !selectedProgramId.value || !selectedProgram.value || !selectedAstronaut.value) return false
+  
+  if (selectedAstronaut.value.status !== 'disponible') return false
+  if (selectedAstronaut.value.level < selectedProgram.value.minLevel) return false
+  
+  const prog = selectedProgram.value
+  const hasMoney = resourceStore.argent >= prog.cost.argent
+  const hasFuel = resourceStore.carburant >= prog.cost.carburant
+  const hasScience = !prog.cost.science || resourceStore.science >= prog.cost.science
+  
+  return hasMoney && hasFuel && hasScience
 })
+
+const handleEnroll = () => {
+  if (selectedAstronautId.value && selectedProgramId.value) {
+    const success = trainingStore.enrollInTraining(selectedAstronautId.value, selectedProgramId.value)
+    if (success) {
+      selectedAstronautId.value = null
+      selectedProgramId.value = null
+    }
+  }
+}
+
+const getSkillIcon = (skill: string) => {
+  const icons: Record<string, string> = {
+    pilotage: 'rocket',
+    ingenierie: 'wrench',
+    medecine: 'heart',
+    science: 'graduation'
+  }
+  return icons[skill]
+}
+
+const getSkillLabel = (skill: string) => {
+  const labels: Record<string, string> = {
+    pilotage: 'Pilotage',
+    ingenierie: 'Ingénierie',
+    medecine: 'Médecine',
+    science: 'Science'
+  }
+  return labels[skill]
+}
+
+const getAstronautName = (id: number) => {
+  return trainingStore.astronauts.find(a => a.id === id)?.name || 'Inconnu'
+}
+
+const getProgramLabel = (id: string) => {
+  return TRAINING_PROGRAMS.find(p => p.id === id)?.label || 'Inconnu'
+}
 </script>
 
 <style scoped>
@@ -610,6 +752,271 @@ const canRunProgram = computed(() => {
   .tabs-nav {
     width: 100%;
     overflow-x: auto;
+  }
+}
+
+/* New Programs Styles */
+.programs-layout {
+  display: grid;
+  grid-template-columns: 400px 1fr;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+.programs-sidebar {
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.sidebar-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sidebar-group label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: #37d7ff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.sidebar-select {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  padding: 0.75rem;
+  border-radius: 10px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.programs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.program-selection-card {
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.program-selection-card:hover:not(.locked) {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(55, 215, 255, 0.3);
+}
+
+.program-selection-card.selected {
+  background: rgba(55, 215, 255, 0.1);
+  border-color: #37d7ff;
+}
+
+.program-selection-card.locked {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.prog-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
+.prog-label {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.9rem;
+  color: #fff;
+}
+
+.prog-duration {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.prog-rewards {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.prog-xp {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  color: #4be0a2;
+}
+
+.prog-skill {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+  color: #37d7ff;
+}
+
+.prog-lock {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  font-size: 0.7rem;
+  color: #f87171;
+}
+
+.program-summary {
+  margin-top: 1rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.prog-desc {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin-bottom: 1.5rem;
+  line-height: 1.4;
+}
+
+.prog-costs {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.enroll-btn {
+  width: 100%;
+  background: linear-gradient(90deg, #37d7ff, #00d4ff);
+  color: #000;
+  border: none;
+  padding: 0.8rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.enroll-btn:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 212, 255, 0.3);
+}
+
+.enroll-btn:disabled {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.2);
+  cursor: not-allowed;
+}
+
+.sessions-main {
+  flex: 1;
+}
+
+.sessions-title {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1rem;
+  color: #64748b;
+  margin: 0 0 1rem 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.no-sessions {
+  padding: 3rem;
+  background: rgba(15, 23, 42, 0.2);
+  border: 1px dashed rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.2);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.sessions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.session-card {
+  background: rgba(30, 41, 59, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 1.25rem;
+}
+
+.session-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.session-astro {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 1.1rem;
+  color: #fff;
+}
+
+.session-prog {
+  font-size: 0.8rem;
+  color: #37d7ff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.session-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.progress-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.progress-track {
+  height: 6px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #37d7ff, #4be0a2);
+  transition: width 0.3s ease-out;
+}
+
+.progress-time {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  color: #64748b;
+  margin-top: 0.25rem;
+}
+
+@media (max-width: 1100px) {
+  .programs-layout {
+    grid-template-columns: 1fr;
   }
 }
 </style>

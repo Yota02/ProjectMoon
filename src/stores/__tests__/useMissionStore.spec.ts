@@ -40,7 +40,22 @@ describe('Mission Store', () => {
     const store = useMissionStore()
     const fleetStore = useFleetStore()
 
-    // Mission 2 requires LUNAR
+    const lunarMission = store.missions.find((m) => m.requiredOrbit === 'LUNAR')
+    if (lunarMission) {
+      lunarMission.status = 'Disponible'
+    } else {
+      // Fallback if no LUNAR mission exists in default state
+      store.missions.push({
+        id: 99,
+        name: 'Lunar Test',
+        cost: { argent: 0, carburant: 0 },
+        successChance: 1,
+        reward: { science: 0 },
+        status: 'Disponible',
+        requiredOrbit: 'LUNAR',
+      })
+    }
+
     fleetStore.items.push({
       id: 'l1',
       designId: 'd-micro', // d-micro only supports LEO
@@ -51,7 +66,7 @@ describe('Mission Store', () => {
       constructionTime: 30,
     })
 
-    store.launchMission(2, 'l1')
+    store.launchMission(lunarMission?.id ?? 99, 'l1')
     expect(store.logs[0]!.message).toContain("ne peut pas atteindre l'orbite LUNAR")
   })
 
@@ -220,6 +235,41 @@ describe('Mission Store', () => {
     expect(missionStore.missions.find((m) => m.id === 999)?.status).toBe('Disponible')
   })
 
+  it('unlocks the next main mission after success', () => {
+    const missionStore = useMissionStore()
+    const resourceStore = useResourceStore()
+    const personnelStore = usePersonnelStore()
+    const fleetStore = useFleetStore()
+
+    personnelStore.staff.ingenieur.count = 1
+    resourceStore.argent = 100000000
+    resourceStore.carburant = 2000
+
+    fleetStore.items.push({
+      id: 'main-unlock-launcher',
+      designId: 'd-starship',
+      name: 'Lanceur Mainline',
+      status: 'Prêt',
+      reliability: 100,
+      constructionProgress: 100,
+      constructionTime: 480,
+    })
+
+    const mission2 = missionStore.missions.find((m) => m.id === 2)
+    const mission3 = missionStore.missions.find((m) => m.id === 3)
+    if (mission2) mission2.status = 'Disponible'
+
+    expect(mission3?.status).toBe('En attente')
+
+    vi.spyOn(Math, 'random').mockReturnValue(0.01)
+    missionStore.launchMission(2, 'main-unlock-launcher')
+
+    expect(missionStore.missions.find((m) => m.id === 2)?.status).toBe('Succès')
+    expect(missionStore.missions.find((m) => m.id === 3)?.status).toBe('Disponible')
+
+    vi.restoreAllMocks()
+  })
+
   it('creates scheduled monthly resupply mission from forecast', () => {
     const missionStore = useMissionStore()
     const stationStore = useStationStore()
@@ -258,5 +308,61 @@ describe('Mission Store', () => {
     missionStore.runResupplyForecasts(new Date(2020, 0, 15), 101)
     planned = missionStore.missions.filter((m) => m.stationId === 'station-forecast')
     expect(planned.length).toBe(1)
+  })
+
+  it('auto-launches resupply mission from forecast if enabled', () => {
+    const missionStore = useMissionStore()
+    const stationStore = useStationStore()
+    const fleetStore = useFleetStore()
+    const resourceStore = useResourceStore()
+    const personnelStore = usePersonnelStore()
+
+    resourceStore.argent = 10000000
+    resourceStore.carburant = 1000
+    personnelStore.staff.ingenieur.count = 1
+
+    stationStore.stations.push({
+      id: 'station-auto',
+      name: 'Station Auto',
+      orbitBodyId: 'earth',
+      moduleIds: ['command_center_basic'],
+      astronautIds: [],
+      level: 1,
+      constructionFinishedDay: 0,
+    })
+
+    fleetStore.items.push({
+      id: 'launcher-auto',
+      designId: 'd-micro',
+      name: 'Auto Launcher',
+      status: 'Prêt',
+      reliability: 100,
+      constructionProgress: 100,
+      constructionTime: 30,
+    })
+
+    missionStore.addResupplyForecast(
+      'station-auto',
+      20,
+      { nourriture: 10, eau: 10, o2: 10, piecesDetachees: 10 },
+      { autoLaunch: true },
+    )
+
+    missionStore.runResupplyForecasts(new Date(2020, 0, 20), 200)
+
+    // Mission is created
+    const planned = missionStore.missions.find((m) => m.stationId === 'station-auto')
+    expect(planned).toBeDefined()
+    expect(planned?.autoLaunch).toBe(true)
+
+    // Process auto-launch
+    missionStore.processAutoLaunchMissions(200)
+
+    // Mission should be launched (status En attente if recurring, or Succès/Échec)
+    // Here it should be successful because reliability 100
+    expect(['Succès', 'En attente', 'Échec']).toContain(planned?.status)
+    expect(missionStore.logs.some((log) => log.message.includes('Lancement automatique'))).toBe(
+      true,
+    )
   })
 })

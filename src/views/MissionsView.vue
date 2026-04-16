@@ -40,6 +40,9 @@
         <div>
           <h2 class="text-2xl font-bold text-white font-['Orbitron']">Centre de Contrôle</h2>
           <p class="text-slate-400 text-sm">Gestion des opérations de lancement et suivi télémétrique.</p>
+          <p class="mt-2 text-slate-400 text-xs italic border-l-2 border-amber-500 pl-4 bg-amber-500/5 py-2 max-w-xl">
+            — Risque technique réel : chaque lancement a une probabilité d’échec dépendante de ta qualité, tes tests et la fatigue des équipes.
+          </p>
         </div>
       </div>
       <div class="flex items-center gap-2 px-4 py-2 bg-slate-900/50 rounded-lg border border-slate-700 font-mono text-xs text-slate-300">
