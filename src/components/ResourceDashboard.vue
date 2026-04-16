@@ -61,7 +61,7 @@
           </div>
           <div class="footer">
             <span class="trend positive">+{{ resourceStore.production.carburant }}/s</span>
-            <button class="manual-btn" @click="resourceStore.addCarburant(2)">Raffiner</button>
+            <button class="manual-btn" @click="buyCarburant">Acheter</button>
           </div>
         </div>
         <div class="card-bg"></div>
@@ -78,7 +78,10 @@
             <span class="unit">rations</span>
           </div>
           <div class="footer">
-            <span class="trend" :class="stationStore.stationConsumption.nourriture > 0 ? 'negative' : 'neutral'">
+            <span
+              class="trend"
+              :class="stationStore.stationConsumption.nourriture > 0 ? 'negative' : 'neutral'"
+            >
               -{{ stationStore.stationConsumption.nourriture.toFixed(1) }}/j
             </span>
           </div>
@@ -97,7 +100,10 @@
             <span class="unit">L</span>
           </div>
           <div class="footer">
-            <span class="trend" :class="stationStore.stationConsumption.eau > 0 ? 'negative' : 'neutral'">
+            <span
+              class="trend"
+              :class="stationStore.stationConsumption.eau > 0 ? 'negative' : 'neutral'"
+            >
               -{{ stationStore.stationConsumption.eau.toFixed(1) }}/j
             </span>
           </div>
@@ -116,7 +122,10 @@
             <span class="unit">m³</span>
           </div>
           <div class="footer">
-            <span class="trend" :class="stationStore.stationConsumption.o2 > 0 ? 'negative' : 'neutral'">
+            <span
+              class="trend"
+              :class="stationStore.stationConsumption.o2 > 0 ? 'negative' : 'neutral'"
+            >
               -{{ stationStore.stationConsumption.o2.toFixed(1) }}/j
             </span>
           </div>
@@ -131,11 +140,16 @@
             <span class="symbol">⚙️</span>
           </div>
           <div class="value-group">
-            <span class="value">{{ Math.floor(resourceStore.piecesDetachees).toLocaleString() }}</span>
+            <span class="value">{{
+              Math.floor(resourceStore.piecesDetachees).toLocaleString()
+            }}</span>
             <span class="unit">unités</span>
           </div>
           <div class="footer">
-            <span class="trend" :class="stationStore.stationConsumption.piecesDetachees > 0 ? 'negative' : 'neutral'">
+            <span
+              class="trend"
+              :class="stationStore.stationConsumption.piecesDetachees > 0 ? 'negative' : 'neutral'"
+            >
               -{{ stationStore.stationConsumption.piecesDetachees.toFixed(1) }}/j
             </span>
           </div>
@@ -154,6 +168,14 @@ import { useStationStore } from '../stores/useStationStore'
 const resourceStore = useResourceStore()
 const contractStore = useContractStore()
 const stationStore = useStationStore()
+
+const buyCarburant = () => {
+  const amount = 100
+  const price = amount * 100
+  if (resourceStore.argent >= price) {
+    resourceStore.buyCarburant(amount)
+  }
+}
 </script>
 
 <style scoped>

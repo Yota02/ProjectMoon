@@ -32,6 +32,9 @@ export interface FleetDesign {
   supportedOrbits: OrbitType[]
   canReachMoon: boolean
   isRefuelable: boolean
+  // Propriétés pour la consommation de carburant
+  power: number // Puissance du moteur (en unités arbitraires)
+  weight: number // Poids à vide (en tonnes)
 }
 
 const isDebugMode = import.meta.env.VITE_DEBUG_MODE === 'test'
@@ -76,6 +79,8 @@ export const useFleetStore = defineStore('fleet', {
         supportedOrbits: ['LEO'],
         canReachMoon: false,
         isRefuelable: false,
+        power: 50,
+        weight: 10,
       },
       {
         id: 'd-medium',
@@ -92,6 +97,8 @@ export const useFleetStore = defineStore('fleet', {
         supportedOrbits: ['LEO', 'MEO'],
         canReachMoon: false,
         isRefuelable: false,
+        power: 100,
+        weight: 25,
       },
       {
         id: 'd-heavy',
@@ -108,6 +115,8 @@ export const useFleetStore = defineStore('fleet', {
         supportedOrbits: ['LEO', 'MEO', 'GEO'],
         canReachMoon: true,
         isRefuelable: false,
+        power: 200,
+        weight: 50,
       },
       {
         id: 'd-super-heavy',
@@ -124,6 +133,8 @@ export const useFleetStore = defineStore('fleet', {
         supportedOrbits: ['LEO', 'MEO', 'GEO', 'HEO', 'LUNAR'],
         canReachMoon: true,
         isRefuelable: true,
+        power: 400,
+        weight: 100,
       },
       {
         id: 'd-starship',
@@ -140,6 +151,8 @@ export const useFleetStore = defineStore('fleet', {
         supportedOrbits: ['LEO', 'MEO', 'GEO', 'HEO', 'LUNAR', 'MARTIAN'],
         canReachMoon: true,
         isRefuelable: true,
+        power: 600,
+        weight: 120,
       },
     ] as FleetDesign[],
   }),
@@ -167,6 +180,24 @@ export const useFleetStore = defineStore('fleet', {
         const launcher = state.items.find((item) => item.id === launcherId)
         if (!launcher) return 0
         return state.designs.find((design) => design.id === launcher.designId)?.cargoCapacity ?? 0
+      }
+    },
+    // Calcule la consommation de carburant pour un lancement
+    calculateFuelConsumption: (state) => {
+      return (launcherId: string, payloadWeight: number = 0) => {
+        const launcher = state.items.find((item) => item.id === launcherId)
+        if (!launcher) return 0
+        const design = state.designs.find((d) => d.id === launcher.designId)
+        if (!design) return 0
+
+        // Formule: carburant nécessaire = (poids total / puissance) * facteur
+        // Le poids total = poids du lanceur + charge utile
+        const totalWeight = design.weight + payloadWeight
+        // Plus la puissance est élevée, moins on consomme
+        // Plus le poids est élevé, plus on consomme
+        const consumption = Math.ceil((totalWeight / design.power) * 10)
+
+        return consumption
       }
     },
   },
@@ -198,6 +229,8 @@ export const useFleetStore = defineStore('fleet', {
         supportedOrbits: [...baseDesign.supportedOrbits],
         canReachMoon: baseDesign.canReachMoon,
         isRefuelable: baseDesign.isRefuelable,
+        power: baseDesign.power,
+        weight: baseDesign.weight,
       }
 
       this.designs.push(newDesign)

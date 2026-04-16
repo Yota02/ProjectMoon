@@ -53,6 +53,7 @@ export interface Station {
   mapHeight: number
   mapOffsetX: number
   mapOffsetY: number
+  civilianPopulation: number
 }
 
 export const STATION_MODULES: StationModule[] = [
@@ -148,6 +149,7 @@ export const useStationStore = defineStore('station', () => {
             mapHeight: 12,
             mapOffsetX: 0,
             mapOffsetY: 0,
+            civilianPopulation: 0,
           },
           {
             id: 'lunar-station-debug',
@@ -167,6 +169,7 @@ export const useStationStore = defineStore('station', () => {
             mapHeight: 12,
             mapOffsetX: 0,
             mapOffsetY: 0,
+            civilianPopulation: 0,
           },
         ]
       : [],
@@ -201,6 +204,12 @@ export const useStationStore = defineStore('station', () => {
         }, 0)
       )
     }, 0)
+  })
+
+  const marsCivilianPopulation = computed(() => {
+    return stations.value
+      .filter((s) => s.orbitBodyId === 'mars' && s.constructionFinishedDay <= gameStore.elapsedDays)
+      .reduce((total, s) => total + s.civilianPopulation, 0)
   })
 
   const stationBonuses = computed(() => {
@@ -264,9 +273,7 @@ export const useStationStore = defineStore('station', () => {
       name,
       orbitBodyId,
       moduleIds: ['command_center_basic'],
-      placedModules: [
-        { x: 5, y: 5, moduleId: 'command_center_basic', rotation: 'horizontal' }
-      ],
+      placedModules: [{ x: 5, y: 5, moduleId: 'command_center_basic', rotation: 'horizontal' }],
       astronautIds: [],
       level: 1,
       constructionFinishedDay: gameStore.elapsedDays + 10,
@@ -280,13 +287,20 @@ export const useStationStore = defineStore('station', () => {
       mapHeight: 12,
       mapOffsetX: 0,
       mapOffsetY: 0,
+      civilianPopulation: 0,
     }
 
     stations.value.push(newStation)
     return { success: true, station: newStation }
   }
 
-  const isModulePlacementPossible = (stationId: string, moduleId: string, x: number, y: number, rotation: 'horizontal' | 'vertical') => {
+  const isModulePlacementPossible = (
+    stationId: string,
+    moduleId: string,
+    x: number,
+    y: number,
+    rotation: 'horizontal' | 'vertical',
+  ) => {
     const station = stations.value.find((s) => s.id === stationId)
     const module = STATION_MODULES.find((m) => m.id === moduleId)
     if (!station || !module) return false
@@ -298,22 +312,23 @@ export const useStationStore = defineStore('station', () => {
     if (x < 0 || y < 0 || x + w > station.mapWidth || y + h > station.mapHeight) return false
 
     // Overlap
-    return !station.placedModules.some(placed => {
-      const pm = STATION_MODULES.find(m => m.id === placed.moduleId)
+    return !station.placedModules.some((placed) => {
+      const pm = STATION_MODULES.find((m) => m.id === placed.moduleId)
       if (!pm) return false
       const pw = placed.rotation === 'horizontal' ? pm.width : pm.height
       const ph = placed.rotation === 'horizontal' ? pm.height : pm.width
-      
-      return (
-        x < placed.x + pw &&
-        x + w > placed.x &&
-        y < placed.y + ph &&
-        y + h > placed.y
-      )
+
+      return x < placed.x + pw && x + w > placed.x && y < placed.y + ph && y + h > placed.y
     })
   }
 
-  const addModuleToStation = (stationId: string, moduleId: string, x?: number, y?: number, rotation: 'horizontal' | 'vertical' = 'horizontal') => {
+  const addModuleToStation = (
+    stationId: string,
+    moduleId: string,
+    x?: number,
+    y?: number,
+    rotation: 'horizontal' | 'vertical' = 'horizontal',
+  ) => {
     const station = stations.value.find((s) => s.id === stationId)
     const module = STATION_MODULES.find((m) => m.id === moduleId)
 
@@ -335,12 +350,16 @@ export const useStationStore = defineStore('station', () => {
     } else {
       // Automatic placement for legacy calls
       // Find a free spot or just stack them (visual designer should handle actual placement)
-      x = 0; y = 0; // fallback
+      x = 0
+      y = 0 // fallback
       let found = false
       for (let ty = 0; ty < station.mapHeight; ty++) {
         for (let tx = 0; tx < station.mapWidth; tx++) {
           if (isModulePlacementPossible(stationId, moduleId, tx, ty, rotation)) {
-            x = tx; y = ty; found = true; break
+            x = tx
+            y = ty
+            found = true
+            break
           }
         }
         if (found) break
@@ -351,7 +370,7 @@ export const useStationStore = defineStore('station', () => {
     resourceStore.addScience(-module.cost.science)
 
     station.placedModules.push({ x, y, moduleId, rotation })
-    station.moduleIds = station.placedModules.map(m => m.moduleId)
+    station.moduleIds = station.placedModules.map((m) => m.moduleId)
     return { success: true }
   }
 
@@ -359,18 +378,25 @@ export const useStationStore = defineStore('station', () => {
     const station = stations.value.find((s) => s.id === stationId)
     if (!station) return { success: false, message: 'Station introuvable' }
 
-    const index = station.placedModules.findIndex(m => m.x === x && m.y === y)
+    const index = station.placedModules.findIndex((m) => m.x === x && m.y === y)
     if (index === -1) return { success: false, message: 'Module introuvable' }
 
     const placed = station.placedModules[index]
-    
+    if (!placed) return { success: false, message: 'Module introuvable' }
+
     // Cannot remove command center if it's the only one
-    if (placed.moduleId === 'command_center_basic' && station.placedModules.filter(m => m.moduleId === 'command_center_basic').length <= 1) {
-      return { success: false, message: 'Impossible de supprimer le dernier centre de commandement' }
+    if (
+      placed.moduleId === 'command_center_basic' &&
+      station.placedModules.filter((m) => m.moduleId === 'command_center_basic').length <= 1
+    ) {
+      return {
+        success: false,
+        message: 'Impossible de supprimer le dernier centre de commandement',
+      }
     }
 
     station.placedModules.splice(index, 1)
-    station.moduleIds = station.placedModules.map(m => m.moduleId)
+    station.moduleIds = station.placedModules.map((m) => m.moduleId)
 
     return { success: true }
   }
@@ -437,6 +463,28 @@ export const useStationStore = defineStore('station', () => {
     return { success: true }
   }
 
+  const addCivilianPopulation = (stationId: string, amount: number) => {
+    const station = stations.value.find((s) => s.id === stationId)
+    if (!station) return { success: false, message: 'Station introuvable' }
+
+    station.civilianPopulation += amount
+    return { success: true }
+  }
+
+  const growCivilianPopulation = (daysPassed: number) => {
+    stations.value.forEach((station) => {
+      if (
+        station.orbitBodyId === 'mars' &&
+        station.constructionFinishedDay <= gameStore.elapsedDays
+      ) {
+        if (station.civilianPopulation > 0 && station.resources) {
+          const growthRate = 0.05 * daysPassed
+          station.civilianPopulation += Math.floor(station.civilianPopulation * growthRate)
+        }
+      }
+    })
+  }
+
   return {
     stations,
     availableModules,
@@ -444,6 +492,7 @@ export const useStationStore = defineStore('station', () => {
     isModuleUnlocked,
     isStationConstructionUnlocked,
     totalPersonnelCapacity,
+    marsCivilianPopulation,
     stationBonuses,
     stationConsumption,
     createStation,
@@ -454,5 +503,7 @@ export const useStationStore = defineStore('station', () => {
     removeAstronautFromStation,
     consumeStationResources,
     addStationResources,
+    addCivilianPopulation,
+    growCivilianPopulation,
   }
 })

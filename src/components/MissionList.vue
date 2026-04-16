@@ -285,7 +285,10 @@
                     </div>
                     <div class="flex items-center justify-between">
                       <span class="text-xs font-mono text-slate-200"
-                        >{{ mission.cost.carburant }} kg</span
+                        >{{
+                          getFuelConsumptionForMission(mission, selectedLaunchers[mission.id] ?? '')
+                        }}
+                        kg</span
                       >
                       <BaseIcon name="rocket" :size="14" class="text-orange-500/50" />
                     </div>
@@ -403,6 +406,7 @@ import { usePersonnelStore } from '../stores/usePersonnelStore'
 import { useFleetStore } from '../stores/useFleetStore'
 import { useSolarSystemStore, PLANETS } from '../stores/useSolarSystemStore'
 import { useGameStore } from '../stores/useGameStore'
+import { useStationStore } from '../stores/useStationStore'
 import BaseIcon from './ui/BaseIcon.vue'
 import ActiveMissionCard from './ui/ActiveMissionCard.vue'
 
@@ -412,6 +416,7 @@ const personnelStore = usePersonnelStore()
 const fleetStore = useFleetStore()
 const solarStore = useSolarSystemStore()
 const gameStore = useGameStore()
+const stationStore = useStationStore()
 
 const selectedLaunchers = ref<Record<number, string>>({})
 
@@ -433,6 +438,23 @@ const activeMissions = computed(() => {
 const mainMissions = computed(() => {
   return missionStore.missions.filter((mission) => mission.category === 'principale')
 })
+
+const getFuelConsumptionForMission = (mission: any, launcherId: string) => {
+  const launcher = fleetStore.items.find((i) => i.id === launcherId)
+  if (!launcher) return 0
+  const design = fleetStore.designs.find((d) => d.id === launcher.designId)
+  if (!design) return 0
+
+  const payloadWeight =
+    mission.category === 'ravitaillement'
+      ? (mission.reward.nourriture ?? 0) +
+        (mission.reward.eau ?? 0) +
+        (mission.reward.o2 ?? 0) +
+        (mission.reward.piecesDetachees ?? 0)
+      : 0
+  const totalWeight = design.weight + payloadWeight
+  return Math.ceil((totalWeight / design.power) * 10)
+}
 
 const sortedMainMissions = computed(() => {
   return [...mainMissions.value].sort((a, b) => a.id - b.id)
@@ -558,18 +580,34 @@ const getMissionMiniObjectives = (mission: Mission): MiniObjective[] => {
     ]
   }
 
+  const fuelNeeded = selectedLaunchers[mission.id]
+    ? getFuelConsumptionForMission(mission, selectedLaunchers[mission.id])
+    : 0
   const hasResources =
-    resourceStore.argent >= mission.cost.argent && resourceStore.carburant >= mission.cost.carburant
+    resourceStore.argent >= mission.cost.argent && resourceStore.carburant >= fuelNeeded
 
-  return [
+  const objectives: MiniObjective[] = [
     { label: 'Ingenieur operationnel', done: personnelStore.hasIngenieur },
     {
       label: mission.launcherRequirement ?? 'Lanceur compatible pret',
       done: hasCompatibleReadyLauncherForMission(mission),
     },
     { label: 'Ressources de lancement', done: hasResources },
-    { label: 'Objectif de mission valide', done: mission.status === 'Succès' },
   ]
+
+  if (mission.populationRequirement) {
+    const { type, count } = mission.populationRequirement
+    if (type === 'marsCivilian') {
+      objectives.push({
+        label: `Population civile sur Mars: ${stationStore.marsCivilianPopulation.toLocaleString()}/${count.toLocaleString()}`,
+        done: stationStore.marsCivilianPopulation >= count,
+      })
+    }
+  }
+
+  objectives.push({ label: 'Objectif de mission valide', done: mission.status === 'Succès' })
+
+  return objectives
 }
 
 const isLauncherCompatible = (launcher: any, mission: Mission) => {
@@ -588,7 +626,9 @@ const getLaunchButtonText = (mission: Mission) => {
   if (!launcher) return 'LANCEUR INVALIDE'
   if (!isLauncherCompatible(launcher, mission)) return 'LANCEUR INCOMPATIBLE'
   if (resourceStore.argent < mission.cost.argent) return 'FONDS INSUFFISANTS'
-  if (resourceStore.carburant < mission.cost.carburant) return 'CARBURANT INSUFFISANT'
+
+  const fuelNeeded = getFuelConsumptionForMission(mission, launcherId)
+  if (resourceStore.carburant < fuelNeeded) return 'CARBURANT INSUFFISANT'
 
   return 'LANCER SÉQUENCE'
 }

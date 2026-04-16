@@ -272,8 +272,18 @@ const missionMiniObjectives = computed(() => {
   const mission = currentMainMission.value
   if (!mission) return []
 
+  const selectedLauncher = fleetStore.items.find(
+    (l) =>
+      l.status === 'Prêt' &&
+      fleetStore.designs
+        .find((d) => d.id === l.designId)
+        ?.supportedOrbits.includes(mission.requiredOrbit),
+  )
+  const fuelNeeded = selectedLauncher
+    ? fleetStore.calculateFuelConsumption(selectedLauncher.id, 0)
+    : 0
   const hasResources =
-    resourceStore.argent >= mission.cost.argent && resourceStore.carburant >= mission.cost.carburant
+    resourceStore.argent >= mission.cost.argent && resourceStore.carburant >= fuelNeeded
 
   const hasCompatibleLauncher = fleetStore.items.some((launcher) => {
     if (launcher.status !== 'Prêt') return false
@@ -326,7 +336,7 @@ const currentLauncherName = computed(() => {
     return true
   })
 
-  return compatibleLauncher ? compatibleLauncher.name : (mission.launcherRequirement || 'Requis')
+  return compatibleLauncher ? compatibleLauncher.name : mission.launcherRequirement || 'Requis'
 })
 
 const formatCurrency = (val: number) => {

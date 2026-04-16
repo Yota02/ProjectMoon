@@ -125,6 +125,7 @@ import { useFleetStore, type OrbitType } from './stores/useFleetStore'
 import { useBaseStore } from './stores/useBaseStore'
 import { useMissionStore } from './stores/useMissionStore'
 import { usePersonnelStore } from './stores/usePersonnelStore'
+import { useSatelliteStore } from './stores/useSatelliteStore'
 import BaseIcon from './components/ui/BaseIcon.vue'
 import GlobalResourceBar from './components/GlobalResourceBar.vue'
 
@@ -136,6 +137,7 @@ const fleetStore = useFleetStore()
 const baseStore = useBaseStore()
 const missionStore = useMissionStore()
 const personnelStore = usePersonnelStore()
+const satelliteStore = useSatelliteStore()
 
 const sortedMainMissions = computed(() => {
   return [...missionStore.missions]
@@ -194,8 +196,7 @@ const currentTierStepProgressPercent = computed(() => {
   const steps = [
     personnelStore.hasIngenieur,
     hasCompatibleReadyLauncherForMission(mission.requiredOrbit),
-    resourceStore.argent >= mission.cost.argent &&
-      resourceStore.carburant >= mission.cost.carburant,
+    resourceStore.argent >= mission.cost.argent,
     mission.status === 'Succès',
   ]
 
@@ -246,6 +247,13 @@ const availableNavItems = computed(() => {
       to: '/fleet',
       requiredBuilding: 'launch_pad',
     },
+    {
+      id: 'satellites',
+      label: 'Satellites',
+      icon: 'globe',
+      to: '/satellites',
+      requiredBuilding: 'hq',
+    },
     { id: 'rd', label: 'Recherche (R&D)', icon: 'flask', to: '/rd', requiredBuilding: 'lab' },
     { id: 'finance', label: 'Finances', icon: 'coins', to: '/finance', requiredBuilding: null },
   ]
@@ -261,6 +269,7 @@ onMounted(() => {
     resourceStore.tick(deltaTime)
     researchStore.tick(deltaTime)
     fleetStore.tick(deltaTime)
+    satelliteStore.tick(deltaTime)
   })
   gameLoop.start()
 })

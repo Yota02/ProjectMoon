@@ -73,6 +73,8 @@ export interface Mission {
   preferredLauncherId?: string
   autoLaunch?: boolean
   autoLaunchPreferredLauncherDesignId?: string
+  populationRequirement?: { type: 'marsCivilian'; count: number }
+  populationReward?: number
 }
 
 export interface MissionLog {
@@ -206,7 +208,7 @@ export const useMissionStore = defineStore('mission', {
       },
       {
         id: 10,
-        name: 'Programme d extraction asteroidale',
+        name: "Programme d'extraction asteroidale",
         cost: { argent: 70000000, carburant: 900 },
         successChance: 0.2,
         reward: { science: 3000 },
@@ -214,9 +216,25 @@ export const useMissionStore = defineStore('mission', {
         requiredOrbit: 'MARTIAN',
         category: 'principale',
         objective:
-          'Ouvrir une route industrielle vers les asteroides pour soutenir l expansion interplanetaire.',
+          "Ouvrir une route industrielle vers les asteroides pour soutenir l'expansion interplanetaire.",
         launcherRequirement: 'Vaisseau Interplanetaire de classe lourde requis',
         unlockAfterMissionId: 9,
+      },
+      {
+        id: 11,
+        name: "Capture et mise en orbite d'astéroïde",
+        cost: { argent: 90000000, carburant: 1100 },
+        successChance: 0.18,
+        reward: { science: 4000 },
+        status: 'En attente',
+        requiredOrbit: 'MARTIAN',
+        category: 'principale',
+        objective:
+          "Capturer un asterode et le placer en orbite martienne pour servir de base d'extraction.",
+        launcherRequirement: 'Vaisseau Interplanetaire de classe lourde avec module de capture',
+        unlockAfterMissionId: 10,
+        populationRequirement: { type: 'marsCivilian', count: 1000000 },
+        populationReward: 1000000,
       },
     ] as Mission[],
     logs: [] as MissionLog[], // Historique des missions
@@ -502,12 +520,21 @@ export const useMissionStore = defineStore('mission', {
     },
 
     unlockMainMissions(completedMissionId: number) {
-      const unlockedMissions = this.missions.filter(
-        (mission) =>
-          mission.category === 'principale' &&
-          mission.status === 'En attente' &&
-          mission.unlockAfterMissionId === completedMissionId,
-      )
+      const stationStore = useStationStore()
+      const unlockedMissions = this.missions.filter((mission) => {
+        if (mission.category !== 'principale') return false
+        if (mission.status !== 'En attente') return false
+        if (mission.unlockAfterMissionId !== completedMissionId) return false
+
+        if (mission.populationRequirement) {
+          const { type, count } = mission.populationRequirement
+          if (type === 'marsCivilian') {
+            if (stationStore.marsCivilianPopulation < count) return false
+          }
+        }
+
+        return true
+      })
 
       unlockedMissions.forEach((mission) => {
         mission.status = 'Disponible'
@@ -515,7 +542,7 @@ export const useMissionStore = defineStore('mission', {
       })
     },
 
-    launchMission(missionId: number, launcherId: string, currentDay?: number) {
+    async launchMission(missionId: number, launcherId: string, currentDay?: number) {
       const resourceStore = useResourceStore()
       const personnelStore = usePersonnelStore()
       const fleetStore = useFleetStore()
@@ -524,7 +551,7 @@ export const useMissionStore = defineStore('mission', {
       const mission = this.missions.find((m) => m.id === missionId)
       const launcher = fleetStore.items.find((l) => l.id === launcherId)
       const launcherDesign = launcher
-        ? fleetStore.designs.find((d) => d.id === launcher.designId)
+        ? fleetStore.designs.find((design) => design.id === launcher.designId)
         : null
 
       if (!mission) return
@@ -575,20 +602,43 @@ export const useMissionStore = defineStore('mission', {
         return
       }
 
+      // Calculer la consommation de carburant basée sur le lanceur et la charge utile
+      const payloadWeight =
+        mission.category === 'ravitaillement'
+          ? this.getResupplyPayloadTotal({
+              nourriture: mission.reward.nourriture ?? 0,
+              eau: mission.reward.eau ?? 0,
+              o2: mission.reward.o2 ?? 0,
+              piecesDetachees: mission.reward.piecesDetachees ?? 0,
+            })
+          : 0
+
+      const fuelConsumption = fleetStore.calculateFuelConsumption(launcherId, payloadWeight)
+      const totalCostArgent = mission.cost.argent
+
       // Vérifier si le joueur a assez de ressources
-      if (
-        resourceStore.argent >= mission.cost.argent &&
-        resourceStore.carburant >= mission.cost.carburant
-      ) {
+      if (resourceStore.argent >= totalCostArgent && resourceStore.carburant >= fuelConsumption) {
         // Consommer les ressources
-        resourceStore.addArgent(-mission.cost.argent)
-        resourceStore.addCarburant(-mission.cost.carburant)
+        resourceStore.addArgent(-totalCostArgent)
+        resourceStore.addCarburant(-fuelConsumption)
 
         // Calculer la réussite avec la probabilité
+        const satelliteStore = (await import('./useSatelliteStore')).useSatelliteStore()
+        const orbitToBody: Record<string, string> = {
+          LEO: 'earth',
+          MEO: 'earth',
+          GEO: 'earth',
+          HEO: 'earth',
+          LUNAR: 'moon',
+          MARTIAN: 'mars',
+        }
+        const targetBody = orbitToBody[mission.requiredOrbit] || 'earth'
+        const satNavBonus = (satelliteStore.navigationBonus(targetBody) || 0) / 100
+
         const baseSuccessChance = (mission.successChance + launcher.reliability / 100) / 2
         const effectiveSuccessChance = Math.min(
           0.98,
-          baseSuccessChance + personnelStore.missionSuccessBonus,
+          baseSuccessChance + personnelStore.missionSuccessBonus + satNavBonus,
         )
         const roll = Math.random()
         const isSuccess = roll <= effectiveSuccessChance
@@ -648,6 +698,19 @@ export const useMissionStore = defineStore('mission', {
           }
 
           this.unlockMainMissions(mission.id)
+
+          if (mission.populationReward && mission.requiredOrbit === 'MARTIAN') {
+            const stationStore = useStationStore()
+            const marsStations = stationStore.stations.filter(
+              (s) => s.orbitBodyId === 'mars' && s.constructionFinishedDay <= gameStore.elapsedDays,
+            )
+            marsStations.forEach((station) => {
+              stationStore.addCivilianPopulation(station.id, mission.populationReward!)
+            })
+            this.log(
+              `[INFO] +${mission.populationReward.toLocaleString()} population civile ajoutee sur Mars.`,
+            )
+          }
 
           this.log(
             `[SUCCÈS] Mission "${mission.name}" a réussi avec ${launcher.name} ! Récompense: +${mission.reward.science} Science.`,

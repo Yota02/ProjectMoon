@@ -135,6 +135,7 @@ export const useGameStore = defineStore('game', {
       }
 
       stationStore.consumeStationResources(daysPassed)
+      stationStore.growCivilianPopulation(daysPassed)
     },
     checkEvents() {
       // Check for space race trigger
