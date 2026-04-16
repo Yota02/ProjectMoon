@@ -580,7 +580,6 @@ const zoomIn = () => {
 const zoomOut = () => {
   if (zoom.value > MIN_ZOOM) zoom.value = Math.max(MIN_ZOOM, zoom.value - ZOOM_STEP)
 }
-
 const updateViewBounds = () => {
   if (mapContainer.value) {
     viewBounds.value = {
@@ -593,7 +592,6 @@ const updateViewBounds = () => {
 }
 
 // Update bounds initially and on scroll
-import { onMounted } from 'vue'
 onMounted(() => {
   updateViewBounds()
   window.addEventListener('resize', updateViewBounds)

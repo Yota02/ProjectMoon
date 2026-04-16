@@ -2,7 +2,7 @@
   <div class="flex h-screen bg-slate-950 text-slate-200 font-sans overflow-hidden">
     <!-- Sidebar de Navigation -->
     <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col hidden md:flex">
-      <div class="p-6">
+      <div class="p-6 overflow-y-auto flex-1">
         <div class="flex items-center gap-2 mb-8">
           <div
             class="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(59,130,246,0.5)]"
@@ -41,22 +41,32 @@
         </nav>
       </div>
 
-      <div class="mt-auto p-6 border-t border-slate-800">
-        <div class="flex items-center gap-3 text-sm text-slate-400 mb-2 font-mono">
-          <BaseIcon name="calendar" :size="16" />
-          <span class="text-white font-black tracking-widest">{{ gameStore.formattedDate }}</span>
+      <div class="p-6 border-t border-slate-800 space-y-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3 text-sm text-slate-400 font-mono">
+            <BaseIcon name="calendar" :size="16" />
+            <span class="text-white font-black tracking-widest">{{ gameStore.formattedDate }}</span>
+          </div>
         </div>
+
+        <TimeControls />
+
         <div
           class="flex items-center justify-between bg-slate-950/80 p-3 rounded-xl border border-slate-800 shadow-inner"
         >
           <span class="text-[10px] text-slate-500 uppercase font-black tracking-widest"
-            >Rythme</span
+            >{{ $t('sidebar.rythme') }}</span
           >
           <div class="flex items-center gap-2">
             <div
-              class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse"
+              :class="[
+                'w-1.5 h-1.5 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]',
+                gameStore.gameSpeed === 0 ? 'bg-slate-600' : 'bg-emerald-500 animate-pulse',
+              ]"
             ></div>
-            <span class="text-[10px] font-mono text-emerald-400 font-bold">1 JOUR / 0.5s</span>
+            <span class="text-[10px] font-mono text-emerald-400 font-bold uppercase">
+              {{ gameStore.gameSpeed === 0 ? $t('sidebar.pause') : `x${gameStore.gameSpeed} (1 ${$t('sidebar.day')} / ${0.5 / (gameStore.gameSpeed || 1)}s)` }}
+            </span>
           </div>
         </div>
       </div>
@@ -70,22 +80,32 @@
       >
         <div>
           <h2 class="text-2xl font-bold text-white">
-            {{ route.name === 'dashboard' ? 'Tableau de Bord' : route.name }}
+            {{ route.name === 'dashboard' ? $t('header.dashboard') : route.name }}
           </h2>
-          <p class="text-slate-400 text-sm">Bienvenue Directeur. Les systèmes sont nominaux.</p>
+          <p class="text-slate-400 text-sm">{{ $t('header.welcome') }}</p>
         </div>
         <div class="flex flex-col items-end gap-2">
+          <div class="flex items-center gap-2 mb-1">
+            <button 
+              @click="$i18n.locale = 'fr'" 
+              :class="['text-[10px] font-bold px-1.5 py-0.5 rounded', $i18n.locale === 'fr' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-300']"
+            >FR</button>
+            <button 
+              @click="$i18n.locale = 'en'" 
+              :class="['text-[10px] font-bold px-1.5 py-0.5 rounded', $i18n.locale === 'en' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-300']"
+            >EN</button>
+          </div>
           <GlobalResourceBar class="hidden xl:flex" />
           <div class="flex items-center gap-6">
             <div class="hidden lg:flex items-center gap-4">
               <div class="text-right">
-                <p class="text-xs text-slate-500 uppercase tracking-wider font-bold">Crédits</p>
+                <p class="text-xs text-slate-500 uppercase tracking-wider font-bold">{{ $t('header.credits') }}</p>
                 <p class="font-mono text-emerald-400 font-bold">
                   {{ resourceStore.argent.toLocaleString() }} €
                 </p>
               </div>
               <div class="text-right border-l border-slate-800 pl-4">
-                <p class="text-xs text-slate-500 uppercase tracking-wider font-bold">Science</p>
+                <p class="text-xs text-slate-500 uppercase tracking-wider font-bold">{{ $t('header.science') }}</p>
                 <p class="font-mono text-blue-400 font-bold">
                   {{ resourceStore.science.toLocaleString() }}🧪
                 </p>
@@ -93,10 +113,10 @@
             </div>
             <div class="text-right hidden sm:block border-l border-slate-800 pl-4">
               <p class="text-xs text-slate-500 uppercase tracking-wider font-bold">
-                Campagne principale
+                {{ $t('header.campaign') }}
               </p>
-              <p class="font-mono text-blue-400 font-bold">Palier {{ currentCampaignTierText }}</p>
-              <p class="text-[11px] text-slate-400">Avancement {{ campaignProgressPercent }}%</p>
+              <p class="font-mono text-blue-400 font-bold">{{ $t('header.tier') }} {{ currentCampaignTierText }}</p>
+              <p class="text-[11px] text-slate-400">{{ $t('header.progress') }} {{ campaignProgressPercent }}%</p>
             </div>
           </div>
         </div>
@@ -114,12 +134,14 @@
 
     <!-- Global Modals -->
     <EventModal />
+    <LogConsole />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { gameLoop } from './engine/GameLoop'
 import { useResourceStore } from './stores/useResourceStore'
 import { useResearchStore } from './stores/useResearchStore'
@@ -132,7 +154,10 @@ import { useSatelliteStore } from './stores/useSatelliteStore'
 import BaseIcon from './components/ui/BaseIcon.vue'
 import GlobalResourceBar from './components/GlobalResourceBar.vue'
 import EventModal from './components/ui/EventModal.vue'
+import TimeControls from './components/ui/TimeControls.vue'
+import LogConsole from './components/ui/LogConsole.vue'
 
+const { t } = useI18n()
 const route = useRoute()
 const resourceStore = useResourceStore()
 const researchStore = useResearchStore()
@@ -222,44 +247,44 @@ const availableNavItems = computed(() => {
   const items = [
     {
       id: 'dashboard',
-      label: "Vue d'ensemble",
+      label: t('sidebar.dashboard'),
       icon: 'dashboard',
       to: '/',
       requiredBuilding: null,
     },
-    { id: 'solar', label: 'Système Solaire', icon: 'globe', to: '/solar', requiredBuilding: null },
+    { id: 'solar', label: t('sidebar.solar'), icon: 'globe', to: '/solar', requiredBuilding: null },
     {
       id: 'stations',
-      label: 'Stations Spatiales',
+      label: t('sidebar.stations'),
       icon: 'globe',
       to: '/stations',
       requiredBuilding: 'hq',
     },
-    { id: 'base', label: 'Base', icon: 'home', to: '/base', requiredBuilding: null },
+    { id: 'base', label: t('sidebar.base'), icon: 'home', to: '/base', requiredBuilding: null },
     {
       id: 'training',
-      label: 'Entraînement',
+      label: t('sidebar.training'),
       icon: 'graduation',
       to: '/training',
       requiredBuilding: 'training_center',
     },
-    { id: 'missions', label: 'Missions', icon: 'globe', to: '/missions', requiredBuilding: 'hq' },
+    { id: 'missions', label: t('sidebar.missions'), icon: 'globe', to: '/missions', requiredBuilding: 'hq' },
     {
       id: 'fleet',
-      label: 'Flotte & Lanceurs',
+      label: t('sidebar.fleet'),
       icon: 'rocket',
       to: '/fleet',
       requiredBuilding: 'launch_pad',
     },
     {
       id: 'satellites',
-      label: 'Satellites',
+      label: t('sidebar.satellites'),
       icon: 'globe',
       to: '/satellites',
       requiredBuilding: 'hq',
     },
-    { id: 'rd', label: 'Recherche (R&D)', icon: 'flask', to: '/rd', requiredBuilding: 'lab' },
-    { id: 'finance', label: 'Finances', icon: 'coins', to: '/finance', requiredBuilding: null },
+    { id: 'rd', label: t('sidebar.rd'), icon: 'flask', to: '/rd', requiredBuilding: 'lab' },
+    { id: 'finance', label: t('sidebar.finance'), icon: 'coins', to: '/finance', requiredBuilding: null },
   ]
   return items.filter((item) => {
     if (!item.requiredBuilding) return true

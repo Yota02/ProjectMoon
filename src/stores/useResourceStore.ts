@@ -1,5 +1,4 @@
 import { defineStore } from 'pinia'
-import { useFleetStore } from './useFleetStore'
 
 const isDebugMode = import.meta.env.VITE_DEBUG_MODE === 'test'
 
@@ -46,7 +45,6 @@ export const useResourceStore = defineStore('resource', {
     },
     // Nouvelle action pour acheter du carburant avec de l'argent
     buyCarburant(amount: number) {
-      const fleetStore = useFleetStore()
       // Prix de base du carburant: 100 unités d'argent par unité de carburant
       const pricePerUnit = 100
       const totalCost = amount * pricePerUnit

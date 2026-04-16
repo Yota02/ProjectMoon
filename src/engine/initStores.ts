@@ -11,6 +11,7 @@ import { useResearchStore } from '@/stores/useResearchStore'
 import { useSatelliteStore } from '@/stores/useSatelliteStore'
 import { useSolarSystemStore } from '@/stores/useSolarSystemStore'
 import { useEventStore } from '@/stores/useEventStore'
+import { useLogStore } from '@/stores/useLogStore'
 
 /**
  * Bootstraps all stores so that their EventBus listeners are registered
@@ -40,6 +41,9 @@ export function initAllStores() {
     
     const eventStore = useEventStore()
     eventStore.setupListeners()
+
+    const logStore = useLogStore()
+    logStore.setupListeners()
   
   const gameStore = useGameStore()
   

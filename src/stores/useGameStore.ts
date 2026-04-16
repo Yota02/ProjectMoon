@@ -1,11 +1,13 @@
 import { defineStore } from 'pinia'
 import { gameEvents } from '@/engine/EventBus'
+import { gameLoop } from '@/engine/GameLoop'
 
 export const useGameStore = defineStore('game', {
   state: () => ({
     startDate: new Date(2014, 0, 1), // 1er Janvier 2014
     elapsedDays: 0,
-    msPerDay: 500, // 0.5s = 1 jour
+    msPerDay: 500, // 0.5s = 1 jour (Vitesse x1)
+    gameSpeed: 1, // 0=Pause, 1=x1, 2=x2, 5=x5
     dayTimer: 0,
     spaceRaceStartYear: 2018,
     isSpaceRaceActive: false,
@@ -33,6 +35,17 @@ export const useGameStore = defineStore('game', {
     },
   },
   actions: {
+    setGameSpeed(speed: number) {
+      this.gameSpeed = speed
+      if (speed === 0) {
+        gameLoop.stop()
+      } else {
+        const newTickRate = this.msPerDay / speed
+        gameLoop.setTickRate(newTickRate)
+        gameLoop.start()
+      }
+      gameEvents.emit('speed-changed', { speed })
+    },
     initOfflineProgress() {
       const now = Date.now()
       if (this.lastSavedTime) {

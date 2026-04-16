@@ -16,6 +16,10 @@ export class GameLoop {
     this.callbacks.push(callback);
   }
 
+  setTickRate(newTickRate: number) {
+    this.tickRate = newTickRate;
+  }
+
   start() {
     if (this.timerId !== null) return; // Déjà démarré
     this.lastTime = performance.now();

@@ -11,7 +11,6 @@ describe('BaseMinimap.vue', () => {
   })
 
   it('renders the map container with correct dimensions', () => {
-    const baseStore = useBaseStore()
     // Default is 10x10
     const scale = 5
     

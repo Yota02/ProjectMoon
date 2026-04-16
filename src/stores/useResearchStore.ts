@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { useResourceStore } from './useResourceStore'
 import { useGameStore } from './useGameStore'
 import { useBaseStore } from './useBaseStore'
+import { gameEvents } from '@/engine/EventBus'
 
 const isDebugMode = import.meta.env.VITE_DEBUG_MODE === 'test'
 
@@ -703,9 +704,16 @@ export const useResearchStore = defineStore('research', {
       const research = this.researches[id]
       if (!research) return
 
+      const gameStore = useGameStore()
       research.progress = 100
       research.status = 'completed'
       this.activeResearchId = null
+
+      gameEvents.emit('research-completed', {
+        researchId: id,
+        researchName: research.name,
+        date: gameStore.formattedDate,
+      })
 
       // Débloquer les suivants
       Object.values(this.researches).forEach((r) => {

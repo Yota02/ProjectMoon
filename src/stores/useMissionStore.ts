@@ -753,6 +753,12 @@ export const useMissionStore = defineStore('mission', {
             `[SUCCÈS] Mission "${mission.name}" a réussi avec ${launcher.name} ! Récompense : ${logReward.join(', ')}.`,
           )
 
+          gameEvents.emit('mission-success', {
+            missionId: mission.id,
+            missionName: mission.name,
+            date: gameStore.formattedDate,
+          })
+
           // Démarrer un voyage visuel dans le système solaire
           const solarStore = useSolarSystemStore()
           if (mission.requiredOrbit === 'LUNAR') {
@@ -770,6 +776,11 @@ export const useMissionStore = defineStore('mission', {
             mission.nextAvailableDay = dayRef + mission.recurrenceDays
           }
           this.log(`[ÉCHEC] Mission "${mission.name}" avec ${launcher.name} a échoué...`)
+          gameEvents.emit('mission-failed', {
+            missionId: mission.id,
+            missionName: mission.name,
+            date: gameStore.formattedDate,
+          })
         }
       } else {
         this.log(`[ERREUR] Pas assez de ressources pour "${mission.name}".`)

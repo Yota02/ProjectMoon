@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { useResourceStore } from './useResourceStore'
+import { useGameStore } from './useGameStore'
 import { gameEvents } from '@/engine/EventBus'
 
 export type Faction = 'USA' | 'Europe' | 'Chine' | 'Asie_Est' | 'Privé' | 'Indépendant'
@@ -200,10 +201,18 @@ export const useContractStore = defineStore('contract', {
 
     signSubsidy(subsidyId: string) {
       const resourceStore = useResourceStore()
+      const gameStore = useGameStore()
+      
       const subsidy = this.subsidies.find((s) => s.id === subsidyId)
       if (!subsidy || subsidy.status !== 'available') return
 
       resourceStore.addArgent(subsidy.amount * 1000000)
+
+      gameEvents.emit('contract-signed', {
+        contractId: subsidy.id,
+        contractName: subsidy.agency,
+        date: gameStore.formattedDate,
+      })
 
       // Reputation Logic
       const faction = subsidy.faction
@@ -261,11 +270,19 @@ export const useContractStore = defineStore('contract', {
 
     acceptContract(contractId: string) {
       const resourceStore = useResourceStore()
+      const gameStore = useGameStore()
       const contract = this.contracts.find((c) => c.id === contractId)
 
       if (contract && contract.status === 'available') {
         contract.status = 'active'
         resourceStore.addArgent(contract.reward)
+        
+        gameEvents.emit('contract-signed', {
+          contractId: contract.id,
+          contractName: contract.title,
+          date: gameStore.formattedDate,
+        })
+
         this.updateProduction()
       }
     },

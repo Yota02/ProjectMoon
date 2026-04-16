@@ -185,7 +185,7 @@ export const useStationStore = defineStore('station', () => {
   const resourceStore = useResourceStore()
   const researchStore = useResearchStore()
 
-  gameEvents.on('day-elapsed', ({ daysPassed }) => {
+  gameEvents.on('day-elapsed', ({ daysPassed, currentDate }) => {
     if (daysPassed <= 0) return
     const { argentPerDay, sciencePerDay, carburantPerDay } = stationBonuses.value
 
@@ -193,7 +193,8 @@ export const useStationStore = defineStore('station', () => {
     if (sciencePerDay !== 0) resourceStore.addScience(sciencePerDay * daysPassed)
     if (carburantPerDay !== 0) resourceStore.addCarburant(carburantPerDay * daysPassed)
 
-    consumeStationResources(daysPassed)
+    const formattedDate = `${currentDate.getDate().toString().padStart(2, '0')}/${(currentDate.getMonth() + 1).toString().padStart(2, '0')}/${currentDate.getFullYear()}`
+    consumeStationResources(daysPassed, formattedDate)
     growCivilianPopulation(daysPassed)
   })
 
@@ -451,7 +452,7 @@ export const useStationStore = defineStore('station', () => {
     return { success: true }
   }
 
-  const consumeStationResources = (daysPassed: number) => {
+  const consumeStationResources = (daysPassed: number, formattedDate: string) => {
     stations.value.forEach((station) => {
       if (gameStore.elapsedDays >= station.constructionFinishedDay && station.resources) {
         const crewCount = station.astronautIds.length
@@ -467,6 +468,33 @@ export const useStationStore = defineStore('station', () => {
           0,
           station.resources.piecesDetachees - 0.25 * daysPassed,
         )
+
+        // --- ALERTS ---
+        const threshold = 10
+        if (station.resources.nourriture < threshold) {
+          gameEvents.emit('station-low-resource', {
+            stationId: station.id,
+            stationName: station.name,
+            resourceName: 'Nourriture',
+            date: formattedDate,
+          })
+        }
+        if (station.resources.eau < threshold) {
+          gameEvents.emit('station-low-resource', {
+            stationId: station.id,
+            stationName: station.name,
+            resourceName: 'Eau',
+            date: formattedDate,
+          })
+        }
+        if (station.resources.o2 < threshold) {
+          gameEvents.emit('station-low-resource', {
+            stationId: station.id,
+            stationName: station.name,
+            resourceName: 'Oxygène',
+            date: formattedDate,
+          })
+        }
 
         // --- GESTION DES CRISES ---
         if (station.resources.o2 <= 0) {
