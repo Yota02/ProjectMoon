@@ -32,6 +32,8 @@ export interface AstronautProfile {
   xpToNextLevel: number
   status: 'disponible' | 'entrainement' | 'mission'
   skills: AstronautSkills
+  sante: number
+  moral: number
 }
 
 export interface TrainingSession {
@@ -185,6 +187,8 @@ function createAstronautCandidate(type: TrainingType, id: number): AstronautProf
     xpToNextLevel: (experience === 'Junior' ? 1 : experience === 'Confirme' ? 5 : 10) * 100,
     status: 'disponible',
     skills,
+    sante: 100,
+    moral: 100,
   }
 }
 

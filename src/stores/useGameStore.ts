@@ -42,6 +42,7 @@ export const useGameStore = defineStore('game', {
       } else {
         const newTickRate = this.msPerDay / speed
         gameLoop.setTickRate(newTickRate)
+        gameLoop.addTickHandler((dt) => this.tick(dt))
         gameLoop.start()
       }
       gameEvents.emit('speed-changed', { speed })

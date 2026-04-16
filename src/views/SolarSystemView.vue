@@ -98,6 +98,32 @@
         </text>
       </g>
 
+      <!-- Orbital Objects (Stations & Satellites) -->
+      <g v-for="obj in orbitalObjects" :key="obj.id"
+         :transform="`translate(${obj.x}, ${obj.y})`"
+         class="cursor-pointer group"
+         @click.stop="openPlanetModal(obj.orbitBodyId || obj.bodyId)">
+        
+        <!-- Satellite dot -->
+        <circle v-if="obj.type === 'satellite'"
+                r="1.5"
+                :fill="obj.health > 20 ? '#10b981' : '#f59e0b'"
+                class="filter drop-shadow-[0_0_2px_rgba(16,185,129,0.5)]" />
+        
+        <!-- Station icon simplified -->
+        <g v-else-if="obj.type === 'station'">
+          <rect x="-2" y="-2" width="4" height="4" fill="#3b82f6" rx="1" />
+          <rect x="-4" y="-0.5" width="8" height="1" fill="#60a5fa" />
+        </g>
+
+        <!-- Label on hover -->
+        <text y="-8" text-anchor="middle"
+              class="text-[6px] fill-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none font-bold"
+              :style="{ fontSize: `${8 / scale}px` }">
+          {{ obj.name }}
+        </text>
+      </g>
+
       <!-- Definitions for effects -->
       <defs>
         <radialGradient id="sunGlow">
@@ -115,6 +141,15 @@
       @close="showModal = false"
     >
       <div v-if="selectedPlanet" class="space-y-8">
+        <!-- Visualizer Section -->
+        <div class="w-full">
+           <PlanetVisualizer 
+             :planet="selectedPlanet" 
+             :stations="orbitalStations" 
+             :satellites="orbitalSatellites"
+           />
+        </div>
+
         <!-- Info Section -->
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div class="bg-slate-950/50 p-4 rounded-xl border border-slate-800 flex items-center gap-4">
@@ -238,18 +273,21 @@
 import { ref, computed } from 'vue'
 import { useSolarSystemStore } from '../stores/useSolarSystemStore'
 import { useStationStore } from '../stores/useStationStore'
+import { useSatelliteStore } from '../stores/useSatelliteStore'
 import { useBaseStore } from '../stores/useBaseStore'
 import { useGameStore } from '../stores/useGameStore'
 import { storeToRefs } from 'pinia'
 import BaseModal from '../components/ui/BaseModal.vue'
 import BaseIcon from '../components/ui/BaseIcon.vue'
+import PlanetVisualizer from '../components/PlanetVisualizer.vue'
 
 const solarStore = useSolarSystemStore()
 const stationStore = useStationStore()
+const satelliteStore = useSatelliteStore()
 const baseStore = useBaseStore()
 const gameStore = useGameStore()
 
-const { planets, planetPositions, travelPositions } = storeToRefs(solarStore)
+const { planets, planetPositions, travelPositions, orbitalObjects } = storeToRefs(solarStore)
 const { getBodyPositionAt } = solarStore
 
 // State for Modal
@@ -263,6 +301,11 @@ const selectedPlanet = computed(() => {
 const orbitalStations = computed(() => {
   if (!selectedPlanetId.value) return []
   return stationStore.stations.filter(s => s.orbitBodyId === selectedPlanetId.value)
+})
+
+const orbitalSatellites = computed(() => {
+  if (!selectedPlanetId.value) return []
+  return satelliteStore.activeSatellites.filter(s => s.bodyId === selectedPlanetId.value && s.status === 'En Orbite')
 })
 
 const openPlanetModal = (id: string) => {

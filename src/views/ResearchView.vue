@@ -56,6 +56,7 @@
           :researches="researchStore.getByCategory(activeTab)"
           :has-active-research="!!researchStore.activeResearchId"
           @start="researchStore.startResearch($event)"
+          @navigate-to="handleNavigation"
         />
       </transition>
     </div>
@@ -86,6 +87,25 @@ const tabs = [
 
 const activeTabLabel = computed(() => activeTab.value)
 const activeTabDescription = computed(() => tabs.find(t => t.id === activeTab.value)?.description || '')
+
+const handleNavigation = (researchId: string) => {
+  const research = researchStore.researches[researchId]
+  if (research) {
+    activeTab.value = research.category
+    
+    // On pourrait ajouter un scroll vers l'élément ici si besoin
+    setTimeout(() => {
+      const el = document.getElementById(`research-${researchId}`)
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        el.classList.add('ring-2', 'ring-blue-500', 'ring-offset-4', 'ring-offset-slate-900')
+        setTimeout(() => {
+          el.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-4', 'ring-offset-slate-900')
+        }, 2000)
+      }
+    }, 100)
+  }
+}
 </script>
 
 <style scoped>

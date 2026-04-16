@@ -1,5 +1,6 @@
 <template>
   <div 
+    :id="`research-${research.id}`"
     :class="[
       'p-4 rounded-xl border transition-all duration-300 relative overflow-hidden',
       statusClasses
@@ -50,18 +51,26 @@
     <div v-if="research.prerequisites.length > 0 && research.status === 'locked'" class="mb-4 space-y-1">
       <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Requis :</p>
       <div class="flex flex-wrap gap-1">
-        <span 
+        <button 
           v-for="preId in research.prerequisites" 
           :key="preId"
+          @click.stop="$emit('navigate-to', preId)"
           :class="[
-            'text-[9px] px-1.5 py-0.5 rounded border font-medium',
+            'text-[9px] px-1.5 py-0.5 rounded border font-medium flex items-center gap-1 transition-colors group/pre',
             isPrerequisiteMet(preId) 
               ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' 
-              : 'bg-slate-900 border-slate-800 text-slate-500'
+              : 'bg-slate-900 border-slate-800 text-slate-500 hover:border-blue-500/50 hover:text-blue-400'
           ]"
+          :title="'Aller à ' + getResearchName(preId)"
         >
+          <BaseIcon 
+            v-if="getResearchCategory(preId) !== research.category"
+            :name="getCategoryIcon(getResearchCategory(preId))" 
+            :size="8" 
+            class="opacity-60 group-hover/pre:opacity-100"
+          />
           {{ getResearchName(preId) }}
-        </span>
+        </button>
       </div>
     </div>
 
@@ -102,10 +111,27 @@ const props = defineProps<{
   hasActiveResearch: boolean
 }>()
 
-defineEmits(['start'])
+const emit = defineEmits(['start', 'navigate-to'])
 
 const researchStore = useResearchStore()
 const resourceStore = useResourceStore()
+
+const getResearchCategory = (id: string) => {
+  return researchStore.researches[id]?.category || ''
+}
+
+const getCategoryIcon = (category: string) => {
+  switch (category) {
+    case 'Lanceurs': return 'rocket'
+    case 'Bâtiments': return 'building'
+    case 'Moteur': return 'battery'
+    case 'Informatique': return 'cpu'
+    case 'Humain': return 'user'
+    case 'Economique': return 'coins'
+    case 'Colonisation': return 'globe'
+    default: return 'flask'
+  }
+}
 
 const forecastYear = computed(() => researchStore.getTierYear(props.research.tier))
 const multiplier = computed(() => researchStore.getDifficultyMultiplier(props.research.id))

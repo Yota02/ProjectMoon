@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { useGameStore } from './useGameStore'
+import { useStationStore } from './useStationStore'
+import { useSatelliteStore } from './useSatelliteStore'
 
 export interface Zone {
   id: string
@@ -193,13 +195,90 @@ export const useSolarSystemStore = defineStore('solarSystem', () => {
     }
   }
 
+  const getOrbitalPosition = (bodyId: string, orbitType: string, index: number, total: number, elapsedDays: number) => {
+    const planet = planets.value.find(p => p.id === bodyId)
+    if (!planet) return { x: 0, y: 0 }
+
+    const bodyPos = getBodyPositionAt(bodyId, elapsedDays)
+    
+    // Distances orbitales simplifiées (pixels au dessus du rayon de la planète)
+    const orbitDistances: Record<string, number> = {
+      'LEO': 5,
+      'MEO': 10,
+      'GEO': 15,
+      'HEO': 20,
+      'LUNAR': 6,
+      'MARTIAN': 8
+    }
+
+    const distance = planet.radius + (orbitDistances[orbitType] || 10)
+    
+    // Angle : position de départ basée sur l'index + rotation au fil du temps
+    // On fait tourner plus vite les orbites basses
+    const rotationSpeed = 0.5 / (distance / 10) 
+    const initialAngle = (index / total) * 2 * Math.PI
+    const angle = initialAngle + (elapsedDays * rotationSpeed)
+
+    return {
+      x: bodyPos.x + Math.cos(angle) * distance,
+      y: bodyPos.y + Math.sin(angle) * distance
+    }
+  }
+
+  const orbitalObjects = computed(() => {
+    const stationStore = useStationStore()
+    const satelliteStore = useSatelliteStore()
+    const elapsedDays = gameStore.elapsedDays
+
+    const objects: any[] = []
+
+    // Grouper par corps céleste et type d'orbite pour répartir les angles
+    const groups: Record<string, any[]> = {}
+
+    stationStore.stations.forEach(s => {
+      if (elapsedDays < (s.constructionFinishedDay || 0)) return
+      const key = `${s.orbitBodyId}-LEO` 
+      if (!groups[key]) groups[key] = []
+      groups[key].push({ ...s, type: 'station' })
+    })
+
+    satelliteStore.activeSatellites.forEach(s => {
+      if (s.status !== 'En Orbite') return
+      const key = `${s.bodyId}-${s.orbit}`
+      if (!groups[key]) groups[key] = []
+      groups[key].push({ ...s, type: 'satellite' })
+    })
+
+    for (const key in groups) {
+      const parts = key.split('-')
+      const bodyId = parts[0]
+      const orbitType = parts[1] || 'LEO'
+      
+      const group = groups[key]
+      if (group) {
+        group.forEach((obj, index) => {
+          const pos = getOrbitalPosition(bodyId, orbitType, index, group.length, elapsedDays)
+          objects.push({
+            ...obj,
+            ...pos,
+            orbitType
+          })
+        })
+      }
+    }
+
+    return objects
+  })
+
   return {
     planets,
     planetPositions,
     activeTravels,
     travelPositions,
+    orbitalObjects,
     startTravel,
     getBodyPositionAt,
+    getOrbitalPosition,
     unlockZone,
     establishBase
   }

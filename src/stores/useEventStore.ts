@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { gameEvents } from '@/engine/EventBus'
 import { useResourceStore } from './useResourceStore'
 import { useContractStore } from './useContractStore'
+import { useSatelliteStore } from './useSatelliteStore'
 
 export interface GameEventChoice {
   id: string
@@ -21,21 +22,28 @@ const EVENTS_LIBRARY: GameEventDef[] = [
   {
     id: 'solar-flare',
     title: 'Éruption Solaire Massive',
-    description: "Une éjection de masse coronale a sévèrement irradié l'orbite terrestre. Nos systèmes de communication sont en danger critique. Faut-il mettre les satellites en veille (perte de revenus) ou risquer des dommages ?",
+    description: "Une éjection de masse coronale a sévèrement irradié l'orbite terrestre. Nos systèmes de communication sont en danger critique. Faut-il mettre les satellites en veille pour protéger l'électronique ou risquer des dommages ?",
     type: 'crisis',
     choices: [
       {
         id: 'c1',
-        label: 'Activer le bouclier EMP (Coûte 500 000 €)',
+        label: 'Mise en veille préventive (Revenus suspendus 1 semaine)',
         onSelect: () => {
-          useResourceStore().addArgent(-500000)
+          useSatelliteStore().setOffline(7)
         },
       },
       {
         id: 'c2',
-        label: 'Ignorer (Perte de 150 Science)',
+        label: 'Ignorer (Risque de dommages matériels)',
         onSelect: () => {
-          useResourceStore().addScience(-150)
+          const satStore = useSatelliteStore()
+          satStore.activeSatellites.forEach((sat) => {
+            if (sat.status === 'En Orbite') {
+              sat.health = Math.max(0, sat.health - (10 + Math.random() * 20))
+              if (sat.health <= 0) sat.status = 'Désactivé'
+            }
+          })
+          useResourceStore().addScience(-50)
         },
       },
     ],
@@ -136,8 +144,8 @@ export const useEventStore = defineStore('event', {
     _handleDayElapsed() {
       this.daysSinceLastEvent += 1
 
-      // Tous les 30 jours min, on a 3% de chance d'avoir un Event narratif
-      if (this.daysSinceLastEvent > 30 && Math.random() < 0.03) {
+      // Tous les 100 jours min (~2.5 events par an), on a 2% de chance d'avoir un Event narratif
+      if (this.daysSinceLastEvent > 100 && Math.random() < 0.02) {
         if (!this.activeEventId) {
           this.triggerRandomEvent()
           this.daysSinceLastEvent = 0

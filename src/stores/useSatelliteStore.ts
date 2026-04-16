@@ -200,6 +200,8 @@ export const useSatelliteStore = defineStore('satellite', {
       { id: 'c-earth-net', name: 'Réseau Terrestre', type: 'Communication', bodyId: 'earth', satellitesCount: 0, totalBonus: 0, color: '#3b82f6' },
       { id: 'c-earth-gps', name: 'GPS Terre', type: 'Navigation', bodyId: 'earth', satellitesCount: 0, totalBonus: 0, color: '#10b981' },
     ] as Constellation[],
+    isSystemOffline: false,
+    offlineDaysRemaining: 0,
   }),
 
   getters: {
@@ -211,6 +213,7 @@ export const useSatelliteStore = defineStore('satellite', {
       })
     },
     totalIncome: (state) => {
+      if (state.isSystemOffline) return 0
       return state.activeSatellites
         .filter((s) => s.status === 'En Orbite')
         .reduce((sum, sat) => {
@@ -224,6 +227,7 @@ export const useSatelliteStore = defineStore('satellite', {
         }, 0)
     },
     totalScience: (state) => {
+      if (state.isSystemOffline) return 0
       return state.activeSatellites
         .filter((s) => s.status === 'En Orbite')
         .reduce((sum, sat) => {
@@ -337,6 +341,14 @@ export const useSatelliteStore = defineStore('satellite', {
     tick(deltaTime: number) {
         const daysPassed = deltaTime / 500
         
+        if (this.isSystemOffline) {
+          this.offlineDaysRemaining -= daysPassed
+          if (this.offlineDaysRemaining <= 0) {
+            this.isSystemOffline = false
+            this.offlineDaysRemaining = 0
+          }
+        }
+
         this.activeSatellites.forEach(sat => {
             if (sat.status === 'En Orbite') {
                 sat.health = Math.max(0, sat.health - 0.05 * daysPassed)
@@ -347,6 +359,11 @@ export const useSatelliteStore = defineStore('satellite', {
         const resourceStore = useResourceStore()
         resourceStore.addArgent(this.totalIncome * daysPassed)
         resourceStore.addScience((this.totalScience / 1000) * daysPassed)
+    },
+
+    setOffline(days: number) {
+      this.isSystemOffline = true
+      this.offlineDaysRemaining = days
     }
   },
   persist: true,

@@ -21,6 +21,7 @@ export interface StationModule {
     sciencePerDay?: number
     carburantPerDay?: number
     personnelCapacity?: number
+    energiePerDay?: number
   }
   width: number
   height: number
@@ -33,6 +34,7 @@ export interface StationResources {
   eau: number
   o2: number
   piecesDetachees: number
+  energie: number
 }
 
 export interface PlacedModule {
@@ -65,11 +67,11 @@ export const STATION_MODULES: StationModule[] = [
   {
     id: 'habitat_basic',
     name: 'Module Habitation Alpha',
-    description: "Permet d'accueillir 2 astronautes.",
+    description: "Permet d'accueillir 2 astronautes. Consomme de l'énergie.",
     type: 'housing',
     cost: { argent: 500, science: 50 },
     researchId: 'c-station-habitat',
-    bonuses: { personnelCapacity: 2 },
+    bonuses: { personnelCapacity: 2, energiePerDay: -5 },
     width: 2,
     height: 1,
     symbol: 'HB',
@@ -78,11 +80,11 @@ export const STATION_MODULES: StationModule[] = [
   {
     id: 'lab_basic',
     name: 'Laboratoire de Microgravité',
-    description: 'Produit de la science chaque jour.',
+    description: "Produit de la science chaque jour. Consomme beaucoup d'énergie.",
     type: 'science',
     cost: { argent: 800, science: 100 },
     researchId: 'c-station-lab',
-    bonuses: { sciencePerDay: 5 },
+    bonuses: { sciencePerDay: 5, energiePerDay: -10 },
     width: 2,
     height: 1,
     symbol: 'LB',
@@ -91,11 +93,11 @@ export const STATION_MODULES: StationModule[] = [
   {
     id: 'solar_panel_basic',
     name: 'Panneaux Solaires',
-    description: "Génère un petit revenu par la vente d'énergie.",
+    description: "Génère de l'énergie pour la station.",
     type: 'production',
     cost: { argent: 300, science: 30 },
     researchId: 'c-station-power',
-    bonuses: { argentPerDay: 10 },
+    bonuses: { energiePerDay: 30 },
     width: 1,
     height: 2,
     symbol: 'SN',
@@ -104,11 +106,11 @@ export const STATION_MODULES: StationModule[] = [
   {
     id: 'fuel_depot_basic',
     name: 'Dépôt de Carburant Orbital',
-    description: 'Produit du carburant.',
+    description: "Produit du carburant. Consomme de l'énergie.",
     type: 'production',
     cost: { argent: 600, science: 80 },
     researchId: 'c-station-base',
-    bonuses: { carburantPerDay: 2 },
+    bonuses: { carburantPerDay: 2, energiePerDay: -8 },
     width: 2,
     height: 2,
     symbol: 'FD',
@@ -117,11 +119,11 @@ export const STATION_MODULES: StationModule[] = [
   {
     id: 'command_center_basic',
     name: 'Centre de Commandement',
-    description: 'Indispensable pour coordonner la station.',
+    description: "Indispensable pour coordonner la station. Consomme de l'énergie.",
     type: 'command',
     cost: { argent: 1000, science: 200 },
     researchId: 'c-station-base',
-    bonuses: { sciencePerDay: 2, argentPerDay: 5 },
+    bonuses: { sciencePerDay: 2, argentPerDay: 5, energiePerDay: -5 },
     width: 2,
     height: 2,
     symbol: 'HQ',
@@ -149,7 +151,7 @@ export const useStationStore = defineStore('station', () => {
             astronautIds: [999, 1000],
             level: 1,
             constructionFinishedDay: 0,
-            resources: { nourriture: 100, eau: 100, o2: 100, piecesDetachees: 50 },
+            resources: { nourriture: 100, eau: 100, o2: 100, piecesDetachees: 50, energie: 100 },
             mapWidth: 12,
             mapHeight: 12,
             mapOffsetX: 0,
@@ -170,7 +172,7 @@ export const useStationStore = defineStore('station', () => {
             astronautIds: [],
             level: 1,
             constructionFinishedDay: 0,
-            resources: { nourriture: 50, eau: 50, o2: 50, piecesDetachees: 25 },
+            resources: { nourriture: 50, eau: 50, o2: 50, piecesDetachees: 25, energie: 50 },
             mapWidth: 12,
             mapHeight: 12,
             mapOffsetX: 0,
@@ -302,6 +304,7 @@ export const useStationStore = defineStore('station', () => {
         eau: 50,
         o2: 50,
         piecesDetachees: 25,
+        energie: 50,
       },
       mapWidth: 12,
       mapHeight: 12,
@@ -573,8 +576,31 @@ export const useStationStore = defineStore('station', () => {
         station.constructionFinishedDay <= gameStore.elapsedDays
       ) {
         if (station.civilianPopulation > 0 && station.resources) {
-          const growthRate = 0.05 * daysPassed
-          station.civilianPopulation += Math.floor(station.civilianPopulation * growthRate)
+          // Cap population growth by available housing
+          const capacity = station.placedModules.reduce((subTotal, placed) => {
+            const module = STATION_MODULES.find((m) => m.id === placed.moduleId)
+            return subTotal + (module?.bonuses.personnelCapacity || 0)
+          }, 0)
+          
+          // Civilians can exceed astronaut capacity slightly (x5) but not infinitely
+          const maxCivilian = capacity * 10 
+          
+          if (station.civilianPopulation < maxCivilian) {
+            const growthRate = 0.02 * daysPassed // 2% per day base
+            // Use floating point growth to allow slow accumulation
+            const floatGrowth = station.civilianPopulation * growthRate
+            
+            // Add a small random element to growth
+            const randomFactor = 0.8 + Math.random() * 0.4 // 80% to 120%
+            let growth = floatGrowth * randomFactor
+            
+            // Ensure at least some growth if under cap
+            if (growth < 0.1 && daysPassed > 0) {
+              growth = 0.1 * daysPassed
+            }
+            
+            station.civilianPopulation = Math.min(maxCivilian, station.civilianPopulation + growth)
+          }
         }
       }
     })

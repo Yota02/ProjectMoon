@@ -34,6 +34,7 @@
             :research="research"
             :has-active-research="hasActiveResearch"
             @start="$emit('start', $event)"
+            @navigate-to="$emit('navigate-to', $event)"
           />
         </div>
       </div>
@@ -54,7 +55,7 @@ const props = defineProps<{
   hasActiveResearch: boolean
 }>()
 
-defineEmits(['start'])
+defineEmits(['start', 'navigate-to'])
 
 const totalCount = computed(() => props.researches.length)
 const completedCount = computed(() => props.researches.filter(r => r.status === 'completed').length)

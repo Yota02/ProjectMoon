@@ -255,7 +255,11 @@ export const useMissionStore = defineStore('mission', {
     },
   },
   actions: {
-    setupListeners() {
+    async setupListeners() {
+      const { useCompetitorStore } = await import('./useCompetitorStore')
+      const competitorStore = useCompetitorStore()
+      competitorStore.setupCompetitorListeners()
+      
       gameEvents.on('day-elapsed', ({ elapsedDays, currentDate }) => {
         this.ensureStationResupplyMissions(elapsedDays)
         this.refreshWeeklyMissions(elapsedDays)

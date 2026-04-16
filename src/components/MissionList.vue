@@ -227,6 +227,31 @@
                   </div>
                 </div>
 
+                <!-- Section Course à l'espace (pour missions principales) -->
+                <div v-if="mission.category === 'principale' && mission.status !== 'Succès'" 
+                     class="bg-slate-950/80 p-4 rounded-xl border border-amber-500/20 space-y-3">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[9px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-1">
+                      <BaseIcon name="star" :size="10" /> Course à l'Espace
+                    </span>
+                    <span class="text-[9px] text-slate-500">Progression des Agences</span>
+                  </div>
+                  <div class="space-y-2">
+                    <div v-for="comp in competitorStore.competitors" :key="comp.name" class="space-y-1">
+                      <div class="flex justify-between items-center text-[9px]">
+                        <span class="text-slate-300 font-bold">{{ comp.name }}</span>
+                        <span class="font-mono" :class="(comp.progress[mission.id] || 0) > 80 ? 'text-red-400' : 'text-slate-400'">
+                          {{ Math.round(comp.progress[mission.id] || 0) }}%
+                        </span>
+                      </div>
+                      <div class="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
+                        <div class="h-full transition-all duration-1000"
+                             :style="{ width: (comp.progress[mission.id] || 0) + '%', backgroundColor: comp.color }"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div class="space-y-2">
                   <div
                     class="flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-500"
@@ -407,6 +432,7 @@ import { useFleetStore } from '../stores/useFleetStore'
 import { useSolarSystemStore, PLANETS } from '../stores/useSolarSystemStore'
 import { useGameStore } from '../stores/useGameStore'
 import { useStationStore } from '../stores/useStationStore'
+import { useCompetitorStore } from '../stores/useCompetitorStore'
 import BaseIcon from './ui/BaseIcon.vue'
 import ActiveMissionCard from './ui/ActiveMissionCard.vue'
 
@@ -417,6 +443,7 @@ const fleetStore = useFleetStore()
 const solarStore = useSolarSystemStore()
 const gameStore = useGameStore()
 const stationStore = useStationStore()
+const competitorStore = useCompetitorStore()
 
 const selectedLaunchers = ref<Record<number, string>>({})
 

@@ -87,6 +87,45 @@
           </div>
         </section>
 
+        <!-- Course à l'Espace -->
+        <section v-if="competitorStore.currentRaceStatus" class="bg-slate-900 border border-slate-700/50 rounded-xl p-5 relative overflow-hidden group">
+          <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <BaseIcon name="rocket" :size="80" />
+          </div>
+          
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-black uppercase tracking-widest text-slate-500 flex items-center gap-2">
+              <BaseIcon name="star" :size="16" class="text-yellow-500" />
+              Course à l'Espace
+            </h3>
+            <span class="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded font-bold uppercase">En cours</span>
+          </div>
+
+          <div class="space-y-4 relative z-10">
+            <div>
+              <p class="text-xs text-slate-400 mb-1">Jalon actuel : <span class="text-white font-bold">{{ competitorStore.currentRaceStatus.mission.name }}</span></p>
+              <div class="space-y-3 mt-4">
+                <div v-for="comp in competitorStore.currentRaceStatus.competitors" :key="comp.name" class="space-y-1">
+                  <div class="flex justify-between items-end text-[10px]">
+                    <span class="font-bold flex items-center gap-2">
+                       <div class="w-2 h-2 rounded-full" :style="{ backgroundColor: comp.color }"></div>
+                       {{ comp.name }}
+                    </span>
+                    <span class="font-mono" :class="comp.progress > 80 ? 'text-red-400 animate-pulse' : 'text-slate-400'">
+                      {{ Math.round(comp.progress) }}%
+                    </span>
+                  </div>
+                  <ProgressBar :progress="comp.progress" :color-class="comp.progress > 80 ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]' : ''" :style="{ backgroundColor: 'rgba(255,255,255,0.05)' }" />
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-4 pt-4 border-t border-slate-800 text-[10px] text-slate-500 italic">
+            "Si un concurrent atteint 100% avant vous, le bonus de réputation sera perdu."
+          </div>
+        </section>
+
         <!-- Contrats -->
         <section class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
           <div
@@ -232,6 +271,7 @@ import { usePersonnelStore } from '../stores/usePersonnelStore'
 import { useResearchStore } from '../stores/useResearchStore'
 import { useContractStore } from '../stores/useContractStore'
 import { useFleetStore } from '../stores/useFleetStore'
+import { useCompetitorStore } from '../stores/useCompetitorStore'
 import StatCard from '../components/ui/StatCard.vue'
 import ActiveMissionCard from '../components/ui/ActiveMissionCard.vue'
 import ContractItem from '../components/ui/ContractItem.vue'
@@ -247,6 +287,7 @@ const researchStore = useResearchStore()
 const contractStore = useContractStore()
 const fleetStore = useFleetStore()
 const personnelStore = usePersonnelStore()
+const competitorStore = useCompetitorStore()
 
 const projectNames: Record<number, string> = {
   1: 'Projet Pioneer I',
