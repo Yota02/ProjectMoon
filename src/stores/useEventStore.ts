@@ -3,6 +3,7 @@ import { gameEvents } from '@/engine/EventBus'
 import { useResourceStore } from './useResourceStore'
 import { useContractStore } from './useContractStore'
 import { useSatelliteStore } from './useSatelliteStore'
+import { useGameStore } from './useGameStore'
 
 export interface GameEventChoice {
   id: string
@@ -19,6 +20,30 @@ export interface GameEventDef {
 }
 
 const EVENTS_LIBRARY: GameEventDef[] = [
+  {
+    id: 'oil-crisis',
+    title: 'Crise Géopolitique Majeure',
+    description: "Des tensions extrêmes au Moyen-Orient ont provoqué un choc pétrolier. Le prix du carburant rocket a triplé sur les marchés mondiaux.",
+    type: 'crisis',
+    choices: [
+      {
+        id: 'c1',
+        label: 'Subir la hausse (Prix x3 pendant 60 jours)',
+        onSelect: () => {
+          useResourceStore().setCarburantPriceMultiplier(3, 60)
+        },
+      },
+      {
+        id: 'c2',
+        label: 'Piocher dans les réserves stratégiques (-500k €, Prix x1.5)',
+        onSelect: () => {
+          const res = useResourceStore()
+          res.addArgent(-500000)
+          res.setCarburantPriceMultiplier(1.5, 60)
+        },
+      },
+    ],
+  },
   {
     id: 'solar-flare',
     title: 'Éruption Solaire Massive',
@@ -162,8 +187,17 @@ export const useEventStore = defineStore('event', {
     },
 
     triggerRandomEvent() {
+      const gameStore = useGameStore()
+      const isYear4 = gameStore.currentYear >= 2017
+
       // Exclut les événements "Crise spécifiques" qui doivent être invoqués manuellement
-      const pool = EVENTS_LIBRARY.filter((e) => !e.id.startsWith('crisis-'))
+      // Et exclut les crises avant l'année 4
+      const pool = EVENTS_LIBRARY.filter((e) => {
+        if (e.id.startsWith('crisis-')) return false
+        if (!isYear4 && e.type === 'crisis') return false
+        return true
+      })
+
       if (pool.length === 0) return
 
       const idx = Math.floor(Math.random() * pool.length)
@@ -185,5 +219,5 @@ export const useEventStore = defineStore('event', {
       }
     },
   },
-  persist: true,
+
 })

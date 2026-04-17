@@ -191,11 +191,14 @@ export const useFleetStore = defineStore('fleet', {
         if (!design) return 0
 
         // Formule: carburant nécessaire = (poids total / puissance) * facteur
-        // Le poids total = poids du lanceur + charge utile
         const totalWeight = design.weight + payloadWeight
-        // Plus la puissance est élevée, moins on consomme
-        // Plus le poids est élevé, plus on consomme
-        const consumption = Math.ceil((totalWeight / design.power) * 10)
+        let consumption = Math.ceil((totalWeight / design.power) * 10)
+
+        // Breakthrough: Propulsion Nucléaire Thermique
+        const researchStore = useResearchStore()
+        if (researchStore.completedResearchIds.includes('m-nucleaire')) {
+          consumption = Math.ceil(consumption / 2)
+        }
 
         return consumption
       }
@@ -289,5 +292,5 @@ export const useFleetStore = defineStore('fleet', {
       })
     },
   },
-  persist: true,
+
 })

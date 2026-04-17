@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useGameStore } from './useGameStore'
 import { useStationStore } from './useStationStore'
 import { useSatelliteStore } from './useSatelliteStore'
+import { gameEvents } from '@/engine/EventBus'
 
 export interface Zone {
   id: string
@@ -16,6 +17,15 @@ export interface Zone {
   }
   unlocked: boolean
   baseId?: string
+  scanProgress?: number // 0 to 100
+}
+
+export interface PlanetaryHazard {
+  id: string
+  type: 'tempête' | 'éruption' | 'froid'
+  name: string
+  severity: number // 0 to 1 impact
+  remainingDays: number
 }
 
 export interface CelestialBody {
@@ -26,6 +36,7 @@ export interface CelestialBody {
   period: number // Période orbitale en jours terrestres
   color: string
   zones?: Zone[]
+  hazards?: PlanetaryHazard[]
 }
 
 export interface Travel {
@@ -270,6 +281,42 @@ export const useSolarSystemStore = defineStore('solarSystem', () => {
     return objects
   })
 
+  const advanceZoneScan = (amount: number, zoneId: string) => {
+    for (const planet of planets.value) {
+      const zone = planet.zones?.find((z) => z.id === zoneId)
+      if (zone) {
+        zone.scanProgress = Math.min(100, (zone.scanProgress || 0) + amount)
+        return
+      }
+    }
+  }
+
+  gameEvents.on('day-elapsed', ({ daysPassed }) => {
+    planets.value.forEach((planet) => {
+      // Update hazards
+      if (planet.hazards) {
+        planet.hazards = planet.hazards.filter((h) => {
+          h.remainingDays -= daysPassed
+          return h.remainingDays > 0
+        })
+      }
+
+      // Randomly trigger hazards (especially Mars dust storms)
+      if (planet.id === 'mars' && Math.random() < 0.005 * daysPassed) {
+        if (!planet.hazards) planet.hazards = []
+        if (!planet.hazards.find((h) => h.type === 'tempête')) {
+          planet.hazards.push({
+            id: 'tempete-' + Math.random().toString(36).substr(2, 5),
+            type: 'tempête',
+            name: 'Tempête de Poussière',
+            severity: 0.8,
+            remainingDays: 10 + Math.random() * 10,
+          })
+        }
+      }
+    })
+  })
+
   return {
     planets,
     planetPositions,
@@ -280,8 +327,9 @@ export const useSolarSystemStore = defineStore('solarSystem', () => {
     getBodyPositionAt,
     getOrbitalPosition,
     unlockZone,
-    establishBase
+    establishBase,
+    advanceZoneScan,
   }
 }, {
-  persist: true
+
 })

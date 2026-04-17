@@ -366,5 +366,5 @@ export const useSatelliteStore = defineStore('satellite', {
       this.offlineDaysRemaining = days
     }
   },
-  persist: true,
+
 })

@@ -13,8 +13,20 @@ export const useGameStore = defineStore('game', {
     isSpaceRaceActive: false,
     lastMonthDay: 0,
     lastSavedTime: Date.now(),
+    orbitalDebris: 0, // 0 to 100%
+    debrisFineThreshold: 60, // A partir de 60%, risque d'amende
+    hype: 20, // 0 to 100%
+    lastYearDay: 0,
   }),
   getters: {
+    debrisPenalty: (state) => {
+      // Chaque 10% de débris réduit la chance de succès de 2%
+      return (state.orbitalDebris / 10) * 0.02
+    },
+    hypeBonus: (state) => {
+      // Chaque 20% de hype ajoute 1% de chance de succès (bonus d'attention/financement)
+      return (state.hype / 20) * 0.01
+    },
     currentDate: (state) => {
       const date = new Date(state.startDate)
       date.setDate(date.getDate() + state.elapsedDays)
@@ -88,9 +100,22 @@ export const useGameStore = defineStore('game', {
         if (currentMonth > lastMonth) {
           this.lastMonthDay = this.elapsedDays
 
+          this.checkDebrisFines()
+
           gameEvents.emit('month-elapsed', {
             currentMonth,
             lastMonthDay: this.lastMonthDay,
+          })
+        }
+
+        const currentYearNum = Math.floor(this.elapsedDays / 365)
+        const lastYearNum = Math.floor(this.lastYearDay / 365)
+
+        if (currentYearNum > lastYearNum) {
+          this.lastYearDay = this.elapsedDays
+          gameEvents.emit('year-elapsed', {
+            currentYear: currentYearNum,
+            elapsedDays: this.elapsedDays
           })
         }
 
@@ -107,6 +132,28 @@ export const useGameStore = defineStore('game', {
       this.isSpaceRaceActive = true
       gameEvents.emit('space-race-started', {})
     },
+    addOrbitalDebris(amount: number) {
+      this.orbitalDebris = Math.min(100, Math.max(0, this.orbitalDebris + amount))
+    },
+    addHype(amount: number) {
+      this.hype = Math.min(100, Math.max(0, this.hype + amount))
+    },
+    async checkDebrisFines() {
+      if (this.orbitalDebris > this.debrisFineThreshold) {
+        // 5% de chance par mois de prendre une amende si au dessus du seuil
+        if (Math.random() < 0.05) {
+          const fineAmount = 500000 + (this.orbitalDebris - this.debrisFineThreshold) * 50000
+          
+          const { useResourceStore } = await import('./useResourceStore')
+          const { useMissionStore } = await import('./useMissionStore')
+          const resourceStore = useResourceStore()
+          const missionStore = useMissionStore()
+          
+          resourceStore.addArgent(-fineAmount)
+          missionStore.log(`[ENVIRONNEMENT] Amende : -${Math.round(fineAmount).toLocaleString()} € pour encombrement orbital (${Math.round(this.orbitalDebris)}%).`)
+        }
+      }
+    }
   },
-  persist: true,
+
 })

@@ -7,6 +7,7 @@ import { gameEvents } from '@/engine/EventBus'
 const isDebugMode = import.meta.env.VITE_DEBUG_MODE === 'test'
 
 export type ResearchStatus = 'locked' | 'available' | 'researching' | 'completed'
+export type ResearchType = 'standard' | 'breakthrough'
 
 export interface ResearchNode {
   id: string
@@ -20,12 +21,16 @@ export interface ResearchNode {
     | 'Humain'
     | 'Economique'
     | 'Colonisation'
+    | 'Avancé'
   cost: number
   duration: number // en secondes (ticks)
   progress: number // 0 à 100
   status: ResearchStatus
   prerequisites: string[]
   tier: number
+  type?: ResearchType
+  isPrototypeRequired?: boolean
+  prototypeSuccess?: boolean // Flag to track if prototype mission was successful
 }
 
 const TIER_YEARS: Record<number, number> = {
@@ -122,6 +127,7 @@ function createInitialResearches() {
       status: isDebugMode ? 'completed' : 'locked',
       prerequisites: ['l-super-heavy', 'l-reusable', 'h-survie'],
       tier: 4,
+      isPrototypeRequired: true,
     },
 
     // BÂTIMENTS
@@ -250,7 +256,7 @@ function createInitialResearches() {
     'm-nucleaire': {
       id: 'm-nucleaire',
       name: 'Propulsion Nucléaire Thermique',
-      description: "Le summum de l'efficacité pour les voyages interplanétaires.",
+      description: "Le summum de l'efficacité. Divise par 2 le temps de trajet vers Mars et le coût en carburant.",
       category: 'Moteur',
       cost: 600,
       duration: 240,
@@ -258,6 +264,7 @@ function createInitialResearches() {
       status: isDebugMode ? 'completed' : 'locked',
       prerequisites: ['m-plasma', 'i-ia'],
       tier: 3,
+      type: 'breakthrough',
     },
     'm-antimatter': {
       id: 'm-antimatter',
@@ -270,6 +277,7 @@ function createInitialResearches() {
       status: isDebugMode ? 'completed' : 'locked',
       prerequisites: ['m-nucleaire', 'i-quantum'],
       tier: 4,
+      type: 'breakthrough',
     },
 
     // INFORMATIQUE
@@ -639,6 +647,19 @@ function createInitialResearches() {
       prerequisites: ['c-mars', 'm-nucleaire', 'h-genetics', 'c-helium3'],
       tier: 4,
     },
+    'c-closed-loop': {
+      id: 'c-closed-loop',
+      name: 'Recyclage en Circuit Fermé',
+      description: 'Stoppe totalement le besoin en eau pour les colonies et stations.',
+      category: 'Colonisation',
+      cost: 800,
+      duration: 250,
+      progress: 0,
+      status: isDebugMode ? 'completed' : 'locked',
+      prerequisites: ['h-survie', 'c-ferme'],
+      tier: 3,
+      type: 'breakthrough',
+    },
   }
   return researches
 }
@@ -688,6 +709,11 @@ export const useResearchStore = defineStore('research', {
       const research = this.researches[id]
 
       if (!research || research.status !== 'available' || this.activeResearchId) return
+
+      if (research.isPrototypeRequired && !research.prototypeSuccess) {
+        // Optionnel: log ou message d'erreur
+        return
+      }
 
       const multiplier = this.getDifficultyMultiplier(id)
       const adjustedCost = Math.round(research.cost * multiplier)
@@ -753,5 +779,5 @@ export const useResearchStore = defineStore('research', {
       })
     },
   },
-  persist: true,
+
 })

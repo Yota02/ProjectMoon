@@ -7,7 +7,7 @@ import { gameEvents } from '@/engine/EventBus'
 import { useEventStore } from './useEventStore'
 import { useTrainingStore } from './useTrainingStore'
 
-export type StationModuleType = 'housing' | 'science' | 'production' | 'storage' | 'command'
+export type StationModuleType = 'housing' | 'science' | 'production' | 'storage' | 'command' | 'leisure'
 
 export interface StationModule {
   id: string
@@ -22,6 +22,7 @@ export interface StationModule {
     carburantPerDay?: number
     personnelCapacity?: number
     energiePerDay?: number
+    moralBoost?: number // Nouveau : bonus de moral passif
   }
   width: number
   height: number
@@ -59,6 +60,8 @@ export interface Station {
   mapOffsetX: number
   mapOffsetY: number
   civilianPopulation: number
+  moral: number // 0 à 100
+  isOnStrike: boolean
   owner?: 'player' | 'external'
   lastCrisisDay?: number
 }
@@ -128,6 +131,45 @@ export const STATION_MODULES: StationModule[] = [
     height: 2,
     symbol: 'HQ',
     colorClass: 'bg-indigo-500/80 border-indigo-300/80',
+  },
+  {
+    id: 'jardin_botanique',
+    name: 'Jardin Botanique Zéro-G',
+    description: "Améliore le moral des colons et produit un peu d'O2.",
+    type: 'leisure',
+    cost: { argent: 1500, science: 300 },
+    researchId: 'c-ferme',
+    bonuses: { moralBoost: 2, energiePerDay: -15 },
+    width: 3,
+    height: 2,
+    symbol: 'JB',
+    colorClass: 'bg-emerald-500/80 border-emerald-300/80',
+  },
+  {
+    id: 'cinema_spatial',
+    name: 'Cinéma Holographique',
+    description: "Grand divertissement pour les résidents. Bonus de moral important.",
+    type: 'leisure',
+    cost: { argent: 2500, science: 150 },
+    researchId: 'e-tourism',
+    bonuses: { moralBoost: 5, energiePerDay: -20 },
+    width: 2,
+    height: 2,
+    symbol: 'CH',
+    colorClass: 'bg-sky-500/80 border-sky-300/80',
+  },
+  {
+    id: 'hotel_spatial',
+    name: 'Hôtel de Luxe Orbital',
+    description: "Attire des civils fortunés. Génère beaucoup d'argent via les impôts.",
+    type: 'housing',
+    cost: { argent: 5000, science: 100 },
+    researchId: 'e-tourism',
+    bonuses: { personnelCapacity: 10, argentPerDay: 50, moralBoost: 1, energiePerDay: -40 },
+    width: 3,
+    height: 3,
+    symbol: 'HT',
+    colorClass: 'bg-amber-600/80 border-amber-400/80',
   },
 ]
 
@@ -241,11 +283,18 @@ export const useStationStore = defineStore('station', () => {
 
     stations.value.forEach((station) => {
       if (gameStore.elapsedDays >= station.constructionFinishedDay) {
+        // Taxes civiles : 1$ par jour par colon, réduit si moral bas
+        const taxPerColon = station.moral > 50 ? 1 : 0.5
+        argentPerDay += station.civilianPopulation * taxPerColon
+
         station.placedModules.forEach((placed) => {
           const module = STATION_MODULES.find((m) => m.id === placed.moduleId)
           if (module) {
             argentPerDay += module.bonuses.argentPerDay || 0
-            sciencePerDay += module.bonuses.sciencePerDay || 0
+            // Si en grève, pas de production de science
+            if (!station.isOnStrike) {
+              sciencePerDay += module.bonuses.sciencePerDay || 0
+            }
             carburantPerDay += module.bonuses.carburantPerDay || 0
           }
         })
@@ -263,12 +312,17 @@ export const useStationStore = defineStore('station', () => {
 
     stations.value.forEach((station) => {
       if (gameStore.elapsedDays >= station.constructionFinishedDay) {
-        // Consumption per astronaut
+        // Consommation par astronaute
         nourriture += station.astronautIds.length * 1
         eau += station.astronautIds.length * 1
         o2 += station.astronautIds.length * 1
 
-        // Fixed maintenance consumption per station
+        // Consommation par civil (50% de plus que les astronautes)
+        nourriture += station.civilianPopulation * 1.5
+        eau += station.civilianPopulation * 1.5
+        o2 += station.civilianPopulation * 1.5
+
+        // Maintenance fixe
         piecesDetachees += 0.5
       }
     })
@@ -311,6 +365,8 @@ export const useStationStore = defineStore('station', () => {
       mapOffsetX: 0,
       mapOffsetY: 0,
       civilianPopulation: 0,
+      moral: 100,
+      isOnStrike: false,
       owner: 'player',
     }
 
@@ -459,18 +515,77 @@ export const useStationStore = defineStore('station', () => {
     stations.value.forEach((station) => {
       if (gameStore.elapsedDays >= station.constructionFinishedDay && station.resources) {
         const crewCount = station.astronautIds.length
-        if (crewCount > 0 && station.resources) {
+        const civilianCount = station.civilianPopulation
+
+        // Consommation de ressources
+        if ((crewCount > 0 || civilianCount > 0) && station.resources) {
+          // Les civils consomment 1.5x plus
+          const totalConsumptionFactor = (crewCount * 0.5) + (civilianCount * 0.75)
+          
           station.resources.nourriture = Math.max(
             0,
-            station.resources.nourriture - (crewCount * 0.5) * daysPassed,
+            station.resources.nourriture - totalConsumptionFactor * daysPassed,
           )
-          station.resources.eau = Math.max(0, station.resources.eau - (crewCount * 0.5) * daysPassed)
-          station.resources.o2 = Math.max(0, station.resources.o2 - (crewCount * 0.5) * daysPassed)
+          
+          const researchStore = useResearchStore()
+          const isWaterRecycled = researchStore.completedResearchIds.includes('c-closed-loop')
+          
+          if (!isWaterRecycled) {
+            station.resources.eau = Math.max(0, station.resources.eau - totalConsumptionFactor * daysPassed)
+          }
+          
+          station.resources.o2 = Math.max(0, station.resources.o2 - totalConsumptionFactor * daysPassed)
         }
         station.resources.piecesDetachees = Math.max(
           0,
           station.resources.piecesDetachees - 0.25 * daysPassed,
         )
+
+        // --- GESTION DU MORAL ---
+        let moralChange = 0
+
+        // Bonus passif des modules de loisir
+        station.placedModules.forEach(placed => {
+          const module = STATION_MODULES.find(m => m.id === placed.moduleId)
+          if (module?.bonuses.moralBoost) {
+            moralChange += module.bonuses.moralBoost * 0.1 * daysPassed
+          }
+        })
+
+        // Malus si manque de ressources
+        if (station.resources.o2 < 5) moralChange -= 2 * daysPassed
+        if (station.resources.nourriture < 5) moralChange -= 1 * daysPassed
+        if (station.resources.eau < 5) moralChange -= 1 * daysPassed
+        
+        // Malus de surpopulation (si pop > capacity)
+        const capacity = station.placedModules.reduce((subTotal, placed) => {
+          const module = STATION_MODULES.find((m) => m.id === placed.moduleId)
+          return subTotal + (module?.bonuses.personnelCapacity || 0)
+        }, 0)
+        if (station.civilianPopulation > capacity) {
+          moralChange -= 0.5 * daysPassed
+        }
+
+        station.moral = Math.min(100, Math.max(0, station.moral + moralChange))
+
+        // --- GRÈVES ET EXODE ---
+        if (station.moral < 20 && !station.isOnStrike) {
+          station.isOnStrike = true
+          gameEvents.emit('station-strike-started', { stationId: station.id, stationName: station.name })
+          trainingStore.log(`[SOCIAL] Grève générale sur ${station.name} ! La production de Science est arrêtée.`)
+        } else if (station.moral > 40 && station.isOnStrike) {
+          station.isOnStrike = false
+          trainingStore.log(`[SOCIAL] Fin de la grève sur ${station.name}. Les chercheurs reprennent le travail.`)
+        }
+
+        if (station.moral < 10 && station.civilianPopulation > 0) {
+          const exodusRate = 0.05 * daysPassed // 5% de la pop part chaque jour
+          const departures = Math.ceil(station.civilianPopulation * exodusRate)
+          station.civilianPopulation -= departures
+          if (departures > 0) {
+            trainingStore.log(`[EXODE] ${departures} civils ont quitté ${station.name} pour la concurrence (moral trop bas).`)
+          }
+        }
 
         // --- ALERTS ---
         const threshold = 10
@@ -508,6 +623,9 @@ export const useStationStore = defineStore('station', () => {
   }
 
   const _handleOxygenCrisis = (station: Station, daysPassed: number) => {
+    // Les crises n'apparaissent qu'à partir de l'année 4 (2017)
+    if (gameStore.currentYear < 2017) return
+
     if (station.astronautIds.length === 0 && station.civilianPopulation <= 0) {
       return
     }
@@ -571,30 +689,25 @@ export const useStationStore = defineStore('station', () => {
 
   const growCivilianPopulation = (daysPassed: number) => {
     stations.value.forEach((station) => {
-      if (
-        station.orbitBodyId === 'mars' &&
-        station.constructionFinishedDay <= gameStore.elapsedDays
-      ) {
-        if (station.civilianPopulation > 0 && station.resources) {
+      if (station.constructionFinishedDay <= gameStore.elapsedDays) {
+        if (station.resources) {
           // Cap population growth by available housing
           const capacity = station.placedModules.reduce((subTotal, placed) => {
             const module = STATION_MODULES.find((m) => m.id === placed.moduleId)
             return subTotal + (module?.bonuses.personnelCapacity || 0)
           }, 0)
           
-          // Civilians can exceed astronaut capacity slightly (x5) but not infinitely
           const maxCivilian = capacity * 10 
           
-          if (station.civilianPopulation < maxCivilian) {
-            const growthRate = 0.02 * daysPassed // 2% per day base
-            // Use floating point growth to allow slow accumulation
-            const floatGrowth = station.civilianPopulation * growthRate
+          if (station.civilianPopulation < maxCivilian && station.moral > 40) {
+            // Taux de croissance influencé par le moral
+            const moralMultiplier = station.moral / 100
+            const growthRate = 0.02 * moralMultiplier * daysPassed
             
-            // Add a small random element to growth
-            const randomFactor = 0.8 + Math.random() * 0.4 // 80% to 120%
+            const floatGrowth = (station.civilianPopulation + 1) * growthRate
+            const randomFactor = 0.8 + Math.random() * 0.4
             let growth = floatGrowth * randomFactor
             
-            // Ensure at least some growth if under cap
             if (growth < 0.1 && daysPassed > 0) {
               growth = 0.1 * daysPassed
             }
@@ -628,5 +741,4 @@ export const useStationStore = defineStore('station', () => {
     growCivilianPopulation,
   }
 }, {
-  persist: true
 })

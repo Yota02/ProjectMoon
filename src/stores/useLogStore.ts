@@ -71,5 +71,5 @@ export const useLogStore = defineStore('log', {
       })
     }
   },
-  persist: true,
+
 })

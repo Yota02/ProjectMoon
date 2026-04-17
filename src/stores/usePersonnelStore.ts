@@ -127,5 +127,5 @@ export const usePersonnelStore = defineStore('personnel', {
       if (this.logs.length > 10) this.logs.pop()
     },
   },
-  persist: true,
+
 })

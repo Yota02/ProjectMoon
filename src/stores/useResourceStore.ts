@@ -4,13 +4,17 @@ const isDebugMode = import.meta.env.VITE_DEBUG_MODE === 'test'
 
 export const useResourceStore = defineStore('resource', {
   state: () => ({
-    argent: isDebugMode ? 999000000000 : 1000000000,
-    science: isDebugMode ? 999000000 : 1000000,
+    argent: isDebugMode ? 999000000000 : 1000000,
+    science: isDebugMode ? 999000000 : 100,
     carburant: 0,
-    nourriture: 100,
-    eau: 100,
-    o2: 100,
-    piecesDetachees: 50,
+    nourriture: 50,
+    eau: 50,
+    o2: 50,
+    piecesDetachees: 10,
+    carburantPriceBase: 100,
+    carburantPriceMultiplier: 1,
+    carburantPriceMultiplierDuration: 0, // en jours
+    marketCrashMultiplier: 1, // Réduit les gains d'argent après l'extraction astéroïdale
     production: {
       argent: 2,
       science: 0,
@@ -21,6 +25,9 @@ export const useResourceStore = defineStore('resource', {
       piecesDetachees: 0,
     },
   }),
+  getters: {
+    currentCarburantPrice: (state) => Math.round(state.carburantPriceBase * state.carburantPriceMultiplier),
+  },
   actions: {
     addArgent(amount: number) {
       this.argent += amount
@@ -43,11 +50,16 @@ export const useResourceStore = defineStore('resource', {
     addPiecesDetachees(amount: number) {
       this.piecesDetachees += amount
     },
+    setCarburantPriceMultiplier(multiplier: number, duration: number) {
+      this.carburantPriceMultiplier = multiplier
+      this.carburantPriceMultiplierDuration = duration
+    },
+    applyMarketCrash() {
+      this.marketCrashMultiplier = 0.4 // Réduction de 60% des gains
+    },
     // Nouvelle action pour acheter du carburant avec de l'argent
     buyCarburant(amount: number) {
-      // Prix de base du carburant: 100 unités d'argent par unité de carburant
-      const pricePerUnit = 100
-      const totalCost = amount * pricePerUnit
+      const totalCost = amount * this.currentCarburantPrice
 
       if (this.argent >= totalCost) {
         this.addArgent(-totalCost)
@@ -58,6 +70,16 @@ export const useResourceStore = defineStore('resource', {
     },
     tick(deltaTime: number) {
       const daysPassed = deltaTime / 500
+      
+      // Gérer la durée du multiplicateur de prix
+      if (this.carburantPriceMultiplierDuration > 0) {
+        this.carburantPriceMultiplierDuration -= daysPassed
+        if (this.carburantPriceMultiplierDuration <= 0) {
+          this.carburantPriceMultiplierDuration = 0
+          this.carburantPriceMultiplier = 1
+        }
+      }
+
       this.science += this.production.science * daysPassed
       this.carburant += this.production.carburant * daysPassed
       this.nourriture += this.production.nourriture * daysPassed
@@ -66,5 +88,5 @@ export const useResourceStore = defineStore('resource', {
       this.piecesDetachees += this.production.piecesDetachees * daysPassed
     },
   },
-  persist: true,
+
 })

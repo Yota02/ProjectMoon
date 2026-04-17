@@ -157,5 +157,5 @@ export const useCompetitorStore = defineStore('competitor', () => {
     currentRaceStatus
   }
 }, {
-  persist: true
+
 })

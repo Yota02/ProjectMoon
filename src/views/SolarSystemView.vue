@@ -91,6 +91,12 @@
                style="clip-path: circle(50%); mix-blend-mode: screen;"
                class="transition-all duration-500 group-hover:scale-110" />
         
+        <!-- Hazard Icon on Planet -->
+        <g v-if="planet.hazards && planet.hazards.length > 0" :transform="`translate(${planet.radius + 5}, -${planet.radius + 5})`">
+          <circle r="6" fill="#ef4444" class="animate-pulse" />
+          <text text-anchor="middle" y="3" class="text-[8px] fill-white font-black">!</text>
+        </g>
+
         <!-- Label -->
         <text :y="planet.radius + 15" text-anchor="middle" 
               class="text-[10px] fill-slate-500 font-bold uppercase tracking-widest pointer-events-none group-hover:fill-white transition-colors"
@@ -196,49 +202,81 @@
                  class="bg-slate-900 border border-slate-800 p-4 rounded-xl group transition-all"
                  :class="zone.unlocked ? 'hover:border-amber-500/50' : 'opacity-60 grayscale'">
               <div class="flex justify-between items-start">
-                <div>
+                <div class="flex-grow">
                   <h5 class="text-white font-bold flex items-center gap-2">
                     {{ zone.name }}
-                    <span v-if="!zone.unlocked" class="text-[9px] bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded uppercase">Verrouillé</span>
+                    <span v-if="!zone.unlocked" class="text-[9px] bg-slate-800 text-slate-500 px-1.5 py-0.5 rounded uppercase font-black">Verrouillé</span>
+                    <span v-if="explorationStore.getProspectionResult(zone.id)" class="text-[9px] bg-emerald-900/40 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded uppercase font-black">Scanné & Prospecté</span>
                   </h5>
                   <p class="text-xs text-slate-400 mt-1">{{ zone.description }}</p>
+                  
+                  <!-- Scan Progress Bar -->
+                  <div v-if="zone.unlocked && !explorationStore.getProspectionResult(zone.id)" class="mt-3 w-full max-w-xs">
+                    <div class="flex justify-between items-center mb-1">
+                      <span class="text-[8px] text-slate-500 uppercase font-black">Scan de surface</span>
+                      <span class="text-[8px] text-blue-400 font-black">{{ (zone.scanProgress || 0).toFixed(0) }}%</span>
+                    </div>
+                    <div class="h-1 bg-slate-800 rounded-full overflow-hidden">
+                      <div class="h-full bg-blue-500 transition-all duration-300" :style="{ width: (zone.scanProgress || 0) + '%' }"></div>
+                    </div>
+                  </div>
                 </div>
-                <div v-if="zone.unlocked">
-                  <router-link :to="{ name: 'base', query: { zoneId: zone.id } }" 
-                               class="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white text-xs font-bold rounded-lg transition-colors">
-                    {{ zone.baseId ? 'Gérer la base' : 'Établir une base' }}
+
+                <div v-if="zone.unlocked" class="flex flex-col gap-2 ml-4">
+                  <!-- Base already exists -->
+                  <router-link v-if="zone.baseId" :to="{ name: 'base', query: { zoneId: zone.id } }" 
+                               class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-black uppercase rounded-lg transition-colors text-center whitespace-nowrap">
+                    Gérer la base
+                  </router-link>
+
+                  <!-- Scan not finished -->
+                  <div v-else-if="(zone.scanProgress || 0) < 100" class="flex flex-col gap-1 items-end">
+                    <button v-if="!isRoverScanning(zone.id)"
+                            @click="startScanning(zone.id)"
+                            class="px-3 py-1.5 bg-blue-600/30 hover:bg-blue-600 border border-blue-500/30 text-white text-[10px] font-black uppercase rounded-lg transition-all text-center whitespace-nowrap">
+                      {{ explorationStore.rovers.filter(r => r.status === 'Ready').length > 0 ? 'Lancer Scan rover' : 'Acheter Rover (50M)' }}
+                    </button>
+                    <div v-else class="px-3 py-1.5 bg-slate-800 text-slate-500 text-[10px] font-black uppercase rounded-lg text-center flex items-center gap-2">
+                       <span class="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+                      Scan en cours...
+                    </div>
+                  </div>
+
+                  <!-- Scan finished, no prospection -->
+                  <button v-else-if="!explorationStore.getProspectionResult(zone.id)"
+                          @click="openProspection(zone)"
+                          class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase rounded-lg transition-all text-center whitespace-nowrap animate-pulse">
+                    Prospecter
+                  </button>
+
+                  <!-- Ready to establish -->
+                  <router-link v-else :to="{ name: 'base', query: { zoneId: zone.id } }" 
+                               class="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 text-white text-[10px] font-black uppercase rounded-lg transition-colors text-center whitespace-nowrap">
+                    Établir base
                   </router-link>
                 </div>
+
                 <div v-else class="text-right">
                   <p class="text-[9px] text-slate-500 font-bold uppercase">Recherche requise</p>
                 </div>
               </div>
               
-              <!-- Zone Resources -->
-              <div class="mt-4 grid grid-cols-4 gap-2">
-                <div class="bg-slate-950/50 p-2 rounded-lg border border-slate-800/50 text-center">
-                  <p class="text-[8px] text-slate-500 uppercase">Minéraux</p>
-                  <p class="text-xs font-bold" :class="zone.resources.minerals > 0.7 ? 'text-emerald-400' : 'text-slate-300'">
-                    {{ (zone.resources.minerals * 100).toFixed(0) }}%
-                  </p>
+              <div v-if="explorationStore.getProspectionResult(zone.id)" class="mt-4 grid grid-cols-4 gap-2">
+                <div class="bg-blue-900/10 p-2 rounded-lg border border-blue-800/20 text-center">
+                  <p class="text-[8px] text-slate-500 uppercase font-black">Minéraux</p>
+                  <p class="text-xs font-bold text-white">{{ (zone.resources.minerals * (explorationStore.getProspectionResult(zone.id)?.mineralQuality || 1) * 100).toFixed(0) }}%</p>
                 </div>
-                <div class="bg-slate-950/50 p-2 rounded-lg border border-slate-800/50 text-center">
-                  <p class="text-[8px] text-slate-500 uppercase">Eau</p>
-                  <p class="text-xs font-bold" :class="zone.resources.water > 0.7 ? 'text-blue-400' : 'text-slate-300'">
-                    {{ (zone.resources.water * 100).toFixed(0) }}%
-                  </p>
+                <div class="bg-blue-900/10 p-2 rounded-lg border border-blue-800/20 text-center">
+                  <p class="text-[8px] text-slate-500 uppercase font-black">Eau</p>
+                  <p class="text-xs font-bold text-white">{{ (zone.resources.water * (explorationStore.getProspectionResult(zone.id)?.waterQuality || 1) * 100).toFixed(0) }}%</p>
                 </div>
-                <div class="bg-slate-950/50 p-2 rounded-lg border border-slate-800/50 text-center">
-                  <p class="text-[8px] text-slate-500 uppercase">Énergie</p>
-                  <p class="text-xs font-bold" :class="zone.resources.energy > 0.7 ? 'text-yellow-400' : 'text-slate-300'">
-                    {{ (zone.resources.energy * 100).toFixed(0) }}%
-                  </p>
+                <div class="bg-blue-900/10 p-2 rounded-lg border border-blue-800/20 text-center">
+                  <p class="text-[8px] text-slate-500 uppercase font-black">Énergie</p>
+                  <p class="text-xs font-bold text-white">{{ (zone.resources.energy * (explorationStore.getProspectionResult(zone.id)?.energyQuality || 1) * 100).toFixed(0) }}%</p>
                 </div>
-                <div class="bg-slate-950/50 p-2 rounded-lg border border-slate-800/50 text-center">
-                  <p class="text-[8px] text-slate-500 uppercase">Science</p>
-                  <p class="text-xs font-bold" :class="zone.resources.science > 0.7 ? 'text-purple-400' : 'text-slate-300'">
-                    {{ (zone.resources.science * 100).toFixed(0) }}%
-                  </p>
+                <div class="bg-blue-900/10 p-2 rounded-lg border border-blue-800/20 text-center">
+                  <p class="text-[8px] text-slate-500 uppercase font-black">Science</p>
+                  <p class="text-xs font-bold text-white">{{ (zone.resources.science * (explorationStore.getProspectionResult(zone.id)?.scienceQuality || 1) * 100).toFixed(0) }}%</p>
                 </div>
               </div>
             </div>
@@ -285,6 +323,21 @@
         </div>
       </div>
     </BaseModal>
+
+    <!-- Prospection Modal Layer -->
+    <div v-if="showProspectionModal" class="absolute inset-0 z-[100] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+      <div class="w-full max-w-xl">
+        <ProspectionMinigame 
+          v-if="prospectionZone"
+          :zoneId="prospectionZone.id"
+          :zoneName="prospectionZone.name"
+          @complete="handleProspectionComplete"
+        />
+        <button @click="showProspectionModal = false" class="mt-4 w-full text-slate-500 font-bold uppercase text-[10px] hover:text-white transition-colors">
+          Annuler l'opération
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -295,16 +348,19 @@ import { useStationStore } from '../stores/useStationStore'
 import { useSatelliteStore } from '../stores/useSatelliteStore'
 import { useBaseStore } from '../stores/useBaseStore'
 import { useGameStore } from '../stores/useGameStore'
+import { useExplorationStore } from '../stores/useExplorationStore'
 import { storeToRefs } from 'pinia'
 import BaseModal from '../components/ui/BaseModal.vue'
 import BaseIcon from '../components/ui/BaseIcon.vue'
 import PlanetVisualizer from '../components/PlanetVisualizer.vue'
+import ProspectionMinigame from '../components/ProspectionMinigame.vue'
 
 const solarStore = useSolarSystemStore()
 const stationStore = useStationStore()
 const satelliteStore = useSatelliteStore()
 const baseStore = useBaseStore()
 const gameStore = useGameStore()
+const explorationStore = useExplorationStore()
 
 const { planets, planetPositions, travelPositions, orbitalObjects } = storeToRefs(solarStore)
 const { getBodyPositionAt } = solarStore
@@ -393,6 +449,33 @@ const doPan = (e: MouseEvent) => {
 
 const stopPan = () => {
   isPanning.value = false
+}
+
+const isRoverScanning = (zoneId: string) => {
+  return explorationStore.activeMissions.some(m => m.zoneId === zoneId)
+}
+
+const startScanning = (zoneId: string) => {
+  const readyRovers = explorationStore.rovers.filter(r => r.status === 'Ready')
+  if (readyRovers.length === 0) {
+    explorationStore.buyRover('d-scout')
+  } else {
+    explorationStore.startScan(zoneId, readyRovers[0].id)
+  }
+}
+
+// Minigame State
+const showProspectionModal = ref(false)
+const prospectionZone = ref<any>(null)
+
+const openProspection = (zone: any) => {
+  prospectionZone.value = zone
+  showProspectionModal.value = true
+}
+
+const handleProspectionComplete = (results: any) => {
+  explorationStore.setProspectionResult(results)
+  showProspectionModal.value = false
 }
 
 const resetView = () => {

@@ -10,8 +10,14 @@
           <h1 class="text-2xl font-black text-white leading-tight">
             Base de {{ currentZone.name }}
           </h1>
-          <p class="text-slate-400 font-bold uppercase tracking-widest text-[10px]">
+          <p class="text-slate-400 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2">
             {{ currentZone.planetName }} • {{ currentZone.description }}
+            <span v-if="activeHazards.length > 0" class="flex gap-1">
+               <span v-for="h in activeHazards" :key="h.id" 
+                     class="bg-red-600 text-white px-2 py-0.5 rounded text-[8px] animate-pulse">
+                 ⚠️ {{ h.name }} (-{{ (h.severity * 100).toFixed(0) }}% Energie)
+               </span>
+            </span>
           </p>
         </div>
       </div>
@@ -188,7 +194,12 @@
                 class="z-30 flex p-[2px] pointer-events-none"
                 :style="getBuildingPreviewStyle()"
               >
-                <div class="w-full h-full rounded border-2 border-blue-400 bg-blue-400/20 relative">
+                <div class="w-full h-full rounded border-2 border-blue-400 bg-blue-400/20 relative overflow-hidden flex items-center justify-center">
+                  <img
+                    v-if="getBuildingDef(selectedBuildingId)?.image"
+                    :src="getBuildingDef(selectedBuildingId)?.image"
+                    class="w-full h-full object-contain pixelated opacity-50"
+                  />
                   <!-- Indicateur d'entrée en prévisualisation -->
                   <div
                     class="absolute w-2 h-2 bg-yellow-400 rounded-full border border-black shadow-[0_0_5px_rgba(250,204,21,0.5)] z-10"
@@ -264,8 +275,15 @@
                     !baseStore.isBuildingConnected(b)
                       ? 'grayscale opacity-70 border-red-500/50'
                       : '',
+                    getBuildingDef(b.buildingId)?.image ? 'bg-slate-800/20 border-slate-700/50' : ''
                   ]"
                 >
+                  <img
+                    v-if="getBuildingDef(b.buildingId)?.image"
+                    :src="getBuildingDef(b.buildingId)?.image"
+                    class="absolute inset-0 w-full h-full object-contain pixelated p-1"
+                    :class="b.rotation === 'vertical' ? 'rotate-90' : ''"
+                  />
                   <!-- Indicateur d'entrée -->
                   <div
                     class="absolute w-2 h-2 bg-yellow-400 rounded-full border border-black shadow-[0_0_5px_rgba(250,204,21,0.5)] z-10"
@@ -331,21 +349,28 @@
               "
               @click="selectedBuildingId = building.id"
             >
-              <div class="flex items-center justify-between">
-                <p class="font-bold text-slate-100">{{ building.name }}</p>
-                <span
-                  class="text-xs font-mono"
-                  :class="
-                    baseStore.canBuildBuilding(building.id) ? 'text-emerald-400' : 'text-red-400'
-                  "
-                >
-                  {{ baseStore.isBuildingUnlocked(building.id) ? 'OK' : 'Bloque' }}
-                </span>
+              <div class="flex items-center gap-3">
+                <div v-if="building.image" class="w-12 h-12 bg-slate-700 rounded border border-slate-600 p-1 flex-shrink-0">
+                   <img :src="building.image" class="w-full h-full object-contain pixelated" />
+                </div>
+                <div class="flex-grow">
+                  <div class="flex items-center justify-between">
+                    <p class="font-bold text-slate-100">{{ building.name }}</p>
+                    <span
+                      class="text-xs font-mono"
+                      :class="
+                        baseStore.canBuildBuilding(building.id) ? 'text-emerald-400' : 'text-red-400'
+                      "
+                    >
+                      {{ baseStore.isBuildingUnlocked(building.id) ? 'OK' : 'Bloque' }}
+                    </span>
+                  </div>
+                  <p class="text-xs text-slate-400 mt-1">
+                    Taille: {{ building.width }}x{{ building.height }} | Cout:
+                    {{ building.cost.argent }} ME / {{ building.cost.science }} science
+                  </p>
+                </div>
               </div>
-              <p class="text-xs text-slate-400 mt-1">
-                Taille: {{ building.width }}x{{ building.height }} | Cout:
-                {{ building.cost.argent }} ME / {{ building.cost.science }} science
-              </p>
             </div>
           </div>
         </div>
@@ -509,12 +534,20 @@ import { computed, ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useBaseStore } from '../stores/useBaseStore'
 import { useSolarSystemStore } from '../stores/useSolarSystemStore'
+import { useExplorationStore } from '../stores/useExplorationStore'
 import BaseMinimap from '../components/BaseMinimap.vue'
 import BaseIcon from '../components/ui/BaseIcon.vue'
 
 const baseStore = useBaseStore()
 const solarStore = useSolarSystemStore()
+const explorationStore = useExplorationStore()
 const route = useRoute()
+
+const activeHazards = computed(() => {
+  if (!currentZone.value) return []
+  const planet = solarStore.planets.find(p => p.name === currentZone.value?.planetName)
+  return planet?.hazards || []
+})
 
 const currentZone = computed(() => {
   const zoneId = route.query.zoneId as string || 'earth-kourou'
@@ -836,3 +869,25 @@ const placedSummary = computed(() => {
   return Object.values(map)
 })
 </script>
+
+<style scoped>
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+</style>

@@ -44,7 +44,7 @@ describe('useStationStore', () => {
       civilianPopulation: 0
     }]
     
-    gameStore.elapsedDays = 1
+    gameStore.elapsedDays = 1100 // Year 2017 (Year 4)
 
     // This should not throw "TypeError: can't access property "_handleOxygenCrisis", (void 0) is undefined"
     expect(() => {
@@ -52,7 +52,7 @@ describe('useStationStore', () => {
     }).not.toThrow()
   })
 
-  it('should only trigger crisis event once every 30 days', () => {
+  it('should NOT trigger crisis before Year 4 (2017)', () => {
     const stationStore = useStationStore()
     const gameStore = useGameStore()
     
@@ -70,22 +70,48 @@ describe('useStationStore', () => {
       civilianPopulation: 0
     }]
     
-    gameStore.elapsedDays = 1
+    gameStore.elapsedDays = 1 // Year 2014
     stationStore.consumeStationResources(1)
-    expect(stationStore.stations[0].lastCrisisDay).toBe(1)
-    
-    gameStore.elapsedDays = 2
-    stationStore.consumeStationResources(1)
-    // Should NOT have updated lastCrisisDay (it was already 1)
-    expect(stationStore.stations[0].lastCrisisDay).toBe(1)
-
-    gameStore.elapsedDays = 32
-    stationStore.consumeStationResources(1)
-    // Should HAVE updated lastCrisisDay to 32
-    expect(stationStore.stations[0].lastCrisisDay).toBe(32)
+    expect(stationStore.stations[0].lastCrisisDay).toBeUndefined()
   })
 
-  it('should NOT trigger crisis if station is empty', () => {
+  it('should only trigger crisis event once every 30 days in Year 4+', () => {
+    const stationStore = useStationStore()
+    const gameStore = useGameStore()
+    
+    stationStore.stations = [{
+      id: 'test-station',
+      name: 'Test Station',
+      orbitBodyId: 'earth',
+      moduleIds: [],
+      placedModules: [],
+      astronautIds: [1],
+      level: 1,
+      constructionFinishedDay: 0,
+      resources: { nourriture: 10, eau: 10, o2: 0, piecesDetachees: 10 },
+      mapWidth: 10, mapHeight: 10, mapOffsetX: 0, mapOffsetY: 0,
+      civilianPopulation: 0
+    }]
+    
+    gameStore.elapsedDays = 1100 // Year 2017
+    expect(gameStore.currentYear).toBe(2017)
+    stationStore.consumeStationResources(1, '01/01/2017')
+    expect(stationStore.stations[0].lastCrisisDay).toBe(1100)
+    
+    gameStore.elapsedDays = 1101
+    stationStore.consumeStationResources(1, '02/01/2017')
+    // Should NOT have updated lastCrisisDay (it was already 1100)
+    expect(stationStore.stations[0].lastCrisisDay).toBe(1100)
+
+    gameStore.elapsedDays = 1132
+    expect(gameStore.currentYear).toBe(2017)
+    stationStore.consumeStationResources(1, '01/02/2017')
+    
+    // Debug: If this fails, let's see why
+    expect(stationStore.stations[0].lastCrisisDay).toBe(1132)
+  })
+
+  it('should NOT trigger crisis if station is empty even in Year 4', () => {
     const stationStore = useStationStore()
     const gameStore = useGameStore()
     
@@ -103,8 +129,8 @@ describe('useStationStore', () => {
       civilianPopulation: 0 // Empty
     }]
     
-    gameStore.elapsedDays = 1
-    stationStore.consumeStationResources(1)
+    gameStore.elapsedDays = 1100 // Year 2017
+    stationStore.consumeStationResources(1, '01/01/2017')
     
     // Should NOT have a lastCrisisDay because the function returned early
     expect(stationStore.stations[0].lastCrisisDay).toBeUndefined()

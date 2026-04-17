@@ -560,5 +560,5 @@ export const useTrainingStore = defineStore('training', {
       if (this.logs.length > 10) this.logs.pop()
     },
   },
-  persist: true,
+
 })

@@ -77,6 +77,10 @@ export interface Mission {
   autoLaunchPreferredLauncherDesignId?: string
   populationRequirement?: { type: 'marsCivilian'; count: number }
   populationReward?: number
+  isPrototype?: boolean
+  targetResearchId?: string
+  isCleaning?: boolean
+  isStreamed?: boolean
 }
 
 export interface MissionLog {
@@ -307,6 +311,58 @@ export const useMissionStore = defineStore('mission', {
       return { success: true as const }
     },
 
+    createCleaningMission() {
+      const mission: Mission = {
+        id: this.nextMissionId++,
+        name: `Nettoyage orbital (Harpon/Laser)`,
+        cost: {
+          argent: 1500000,
+          carburant: 40,
+        },
+        successChance: 0.8,
+        reward: {
+          science: 50,
+        },
+        status: 'Disponible',
+        requiredOrbit: 'LEO',
+        isCleaning: true,
+        objective: `Nettoyer l'orbite basse des debris spatiaux pour securiser les prochains lancements.`,
+        launcherRequirement: 'Micro-Lanceur minimum',
+      }
+
+      this.missions.push(mission)
+      this.log(`[INFO] Nouvelle mission de nettoyage disponible.`)
+      return mission
+    },
+
+    createPrototypeMission(researchId: string) {
+      const researchStore = useResearchStore()
+      const research = researchStore.researches[researchId]
+      if (!research) return
+
+      const mission: Mission = {
+        id: this.nextMissionId++,
+        name: `PROTOTYPE: ${research.name}`,
+        cost: {
+          argent: 500000000, // Expensive
+          carburant: 100,
+        },
+        successChance: 0.5, // 50% fixed as requested
+        reward: {
+          science: 1500, // Large reward on success
+        },
+        status: 'Disponible',
+        requiredOrbit: 'LEO', // Testing often in LEO
+        isPrototype: true,
+        targetResearchId: researchId,
+        objective: `Tester le prototype pour debloquer la technologie ${research.name}. "On apprend de ses erreurs" : 500 Science garantis meme en cas d'echec !`,
+      }
+
+      this.missions.push(mission)
+      this.log(`[INFO] Nouveau prototype disponible: ${mission.name}.`)
+      return mission
+    },
+
     createStationResupplyMission(
       stationId: string,
       currentDay: number,
@@ -504,6 +560,26 @@ export const useMissionStore = defineStore('mission', {
     ensureStationResupplyMissions(currentDay: number) {
       const stationStore = useStationStore()
       const fleetStore = useFleetStore()
+      const researchStore = useResearchStore()
+      const gameStore = useGameStore()
+
+      // Check for researches requiring prototypes
+      Object.values(researchStore.researches).forEach(research => {
+        if (research.status === 'available' && research.isPrototypeRequired && !research.prototypeSuccess) {
+          const hasMission = this.missions.some(m => m.isPrototype && m.targetResearchId === research.id && m.status === 'Disponible')
+          if (!hasMission) {
+            this.createPrototypeMission(research.id)
+          }
+        }
+      })
+
+      // Check for orbital debris level and create cleaning mission if high
+      if (gameStore.orbitalDebris > 30) {
+        const hasCleaningMission = this.missions.some(m => m.isCleaning && m.status === 'Disponible')
+        if (!hasCleaningMission) {
+          this.createCleaningMission()
+        }
+      }
 
       stationStore.stations.forEach((station) => {
         if (currentDay < station.constructionFinishedDay) return
@@ -653,10 +729,13 @@ export const useMissionStore = defineStore('mission', {
         const baseSuccessChance = (mission.successChance + launcher.reliability / 100) / 2
         const effectiveSuccessChance = Math.min(
           0.98,
-          baseSuccessChance + personnelStore.missionSuccessBonus + satNavBonus,
+          baseSuccessChance + personnelStore.missionSuccessBonus + satNavBonus + gameStore.hypeBonus - gameStore.debrisPenalty,
         )
         const roll = Math.random()
         const isSuccess = roll <= effectiveSuccessChance
+
+        // Augmenter les débris orbitaux à chaque lancement
+        gameStore.addOrbitalDebris(0.5)
 
         // Gérer le lanceur après le vol
         if (launcherDesign.isReusable) {
@@ -675,6 +754,32 @@ export const useMissionStore = defineStore('mission', {
         if (isSuccess) {
           const isRecurringMission = Boolean(mission.recurrenceDays)
           mission.status = isRecurringMission ? 'En attente' : 'Succès'
+          
+          if (mission.isPrototype && mission.targetResearchId) {
+             const researchStore = useResearchStore()
+             const research = researchStore.researches[mission.targetResearchId]
+             if (research) research.prototypeSuccess = true
+          }
+
+          if (mission.isCleaning) {
+            gameStore.addOrbitalDebris(-15) // Un nettoyage retire 15% de débris
+            this.log(`[NETTOYAGE] Succès ! Le niveau de débris a baissé.`)
+          }
+
+          // --- LOGIQUE DE HYPE ET RÉPUTATION ---
+          const hypeGain = mission.category === 'principale' ? 10 : 5
+          gameStore.addHype(hypeGain)
+          
+          if (mission.isStreamed) {
+            const { useContractStore } = await import('./useContractStore')
+            const contractStore = useContractStore()
+            const factions = Object.keys(contractStore.factionsReputation) as (keyof typeof contractStore.factionsReputation)[]
+            factions.forEach(f => {
+              contractStore.factionsReputation[f] = Math.min(100, contractStore.factionsReputation[f] + 10)
+            })
+            this.log(`[MÉDIAS] Diffusion réussie ! +200% Réputation globale.`)
+          }
+          
           resourceStore.addScience(mission.reward.science)
 
           let argentGained = 0
@@ -695,7 +800,13 @@ export const useMissionStore = defineStore('mission', {
           }
 
           if (argentGained > 0) {
+            argentGained *= resourceStore.marketCrashMultiplier
             resourceStore.addArgent(argentGained)
+          }
+
+          if (mission.id === 10) {
+            resourceStore.applyMarketCrash()
+            this.log(`[ALERTE] KRASH BOURSIER : Le surplus de métaux rares a fait s'effondrer le marché. Les revenus des missions sont réduits de 60%.`)
           }
 
           if (mission.stationId) {
@@ -765,26 +876,43 @@ export const useMissionStore = defineStore('mission', {
 
           // Démarrer un voyage visuel dans le système solaire
           const solarStore = useSolarSystemStore()
+          const researchStore = useResearchStore()
+          const hasNuclearPropulsion = researchStore.completedResearchIds.includes('m-nucleaire')
+
           if (mission.requiredOrbit === 'LUNAR') {
             solarStore.startTravel(mission.name, 'earth', 'moon', 3) // 3 jours pour la lune
           } else if (mission.requiredOrbit === 'MARTIAN') {
-            solarStore.startTravel(mission.name, 'earth', 'mars', 200) // 200 jours pour Mars
+            const marsDuration = hasNuclearPropulsion ? 100 : 200
+            solarStore.startTravel(mission.name, 'earth', 'mars', marsDuration) // 200 jours pour Mars (100 si propulsion nucléaire)
           } else if (mission.requiredOrbit === 'LEO') {
             solarStore.startTravel(mission.name, 'earth', 'earth', 1) // Orbite terrestre
           }
         } else {
           const isRecurringMission = Boolean(mission.recurrenceDays)
           mission.status = isRecurringMission ? 'En attente' : 'Échec'
+          
+          if (mission.isPrototype) {
+            const failScience = 500
+            resourceStore.addScience(failScience)
+            gameStore.addOrbitalDebris(5)
+            this.log(`[ÉCHEC] Prototype "${mission.name}" a explosé ! On apprend de ses erreurs : +${failScience} Science. +5% Débris.`)
+          } else {
+            gameStore.addOrbitalDebris(2)
+            this.log(`[ÉCHEC] Mission "${mission.name}" avec ${launcher.name} a échoué... +2% Débris.`)
+          }
+
           if (isRecurringMission && mission.recurrenceDays) {
             const dayRef = currentDay ?? gameStore.elapsedDays
             mission.nextAvailableDay = dayRef + mission.recurrenceDays
           }
-          this.log(`[ÉCHEC] Mission "${mission.name}" avec ${launcher.name} a échoué...`)
-          gameEvents.emit('mission-failed', {
-            missionId: mission.id,
-            missionName: mission.name,
-            date: gameStore.formattedDate,
-          })
+          
+          if (!mission.isPrototype) {
+            gameEvents.emit('mission-failed', {
+              missionId: mission.id,
+              missionName: mission.name,
+              date: gameStore.formattedDate,
+            })
+          }
         }
       } else {
         this.log(`[ERREUR] Pas assez de ressources pour "${mission.name}".`)
@@ -837,5 +965,5 @@ export const useMissionStore = defineStore('mission', {
       if (this.logs.length > 10) this.logs.pop()
     },
   },
-  persist: true,
+
 })

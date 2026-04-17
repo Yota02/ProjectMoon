@@ -185,9 +185,50 @@ export const useContractStore = defineStore('contract', {
         }
       })
 
+      gameEvents.on('year-elapsed', () => {
+        this.processAnnualSubsidies()
+      })
+
       gameEvents.on('space-race-started', () => {
         this.triggerEvent('spaceRace')
       })
+    },
+
+    processAnnualSubsidies() {
+      const resourceStore = useResourceStore()
+      const gameStore = useGameStore()
+      
+      // Moyenne de la réputation des factions
+      const factions = Object.keys(this.factionsReputation)
+      const avgRep = factions.reduce((sum, f) => sum + this.factionsReputation[f as keyof typeof this.factionsReputation], 0) / factions.length
+      
+      // Subvention annuelle basée sur la réputation moyenne et la hype
+      // Base: 1M par point de réputation moyenne + bonus hype
+      const annualAmount = (avgRep * 1000000) * (1 + gameStore.hype / 100)
+      
+      if (annualAmount > 0) {
+        resourceStore.addArgent(annualAmount)
+        const { useLogStore } = require('./useLogStore')
+        const logStore = useLogStore()
+        logStore.addLog(`[FINANCE] Subvention annuelle reçue : +${Math.round(annualAmount).toLocaleString()} € (Basée sur une réputation moyenne de ${Math.round(avgRep)}% et une hype de ${Math.round(gameStore.hype)}%)`, 'success')
+      }
+    },
+
+    lobbyFaction(faction: Faction, scienceCost: number) {
+      const resourceStore = useResourceStore()
+      if (resourceStore.science >= scienceCost) {
+        resourceStore.addScience(-scienceCost)
+        // 1 point de réputation pour 10 science (ajustable)
+        const repGain = Math.floor(scienceCost / 10)
+        this.factionsReputation[faction as keyof typeof this.factionsReputation] += repGain
+        this.factionsReputation[faction as keyof typeof this.factionsReputation] = Math.min(100, this.factionsReputation[faction as keyof typeof this.factionsReputation])
+        
+        const { useLogStore } = require('./useLogStore')
+        const logStore = useLogStore()
+        logStore.addLog(`[LOBBYING] Influence exercée sur ${faction} : +${repGain} Réputation.`, 'info')
+        return true
+      }
+      return false
     },
 
     triggerEvent(eventId: string) {
@@ -287,5 +328,5 @@ export const useContractStore = defineStore('contract', {
       }
     },
   },
-  persist: true,
+
 })
