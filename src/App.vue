@@ -1,7 +1,9 @@
 <template>
   <div class="flex h-screen bg-slate-950 text-slate-200 font-sans overflow-hidden relative">
     <!-- Sidebar de Navigation -->
-    <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col hidden md:flex backdrop-blur-xl relative z-10">
+    <aside
+      class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col hidden md:flex backdrop-blur-xl relative z-10"
+    >
       <div class="p-6 overflow-y-auto flex-1">
         <div class="flex items-center gap-2 mb-8">
           <div
@@ -14,7 +16,7 @@
           </h1>
         </div>
 
-        <nav class="space-y-2">
+        <nav id="sidebar-nav" class="space-y-2">
           <router-link
             v-for="item in availableNavItems"
             :key="item.id"
@@ -49,14 +51,14 @@
           </div>
         </div>
 
-        <TimeControls />
+        <TimeControls id="time-controls" />
 
         <div
           class="flex items-center justify-between bg-slate-950/80 p-3 rounded-xl border border-slate-800 shadow-inner"
         >
-          <span class="text-[10px] text-slate-500 uppercase font-black tracking-widest"
-            >{{ $t('sidebar.rythme') }}</span
-          >
+          <span class="text-[10px] text-slate-500 uppercase font-black tracking-widest">{{
+            $t('sidebar.rythme')
+          }}</span>
           <div class="flex items-center gap-2">
             <div
               :class="[
@@ -65,7 +67,11 @@
               ]"
             ></div>
             <span class="text-[10px] font-mono text-emerald-400 font-bold uppercase">
-              {{ gameStore.gameSpeed === 0 ? $t('sidebar.pause') : `x${gameStore.gameSpeed} (1 ${$t('sidebar.day')} / ${0.5 / (gameStore.gameSpeed || 1)}s)` }}
+              {{
+                gameStore.gameSpeed === 0
+                  ? $t('sidebar.pause')
+                  : `x${gameStore.gameSpeed} (1 ${$t('sidebar.day')} / ${0.5 / (gameStore.gameSpeed || 1)}s)`
+              }}
             </span>
           </div>
         </div>
@@ -78,36 +84,66 @@
       <header
         class="p-6 lg:px-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-900/50 sticky top-0 z-10 backdrop-blur-md border-b border-slate-800/50"
       >
-        <div>
-          <h2 class="text-2xl font-bold text-white">
-            {{ route.name === 'dashboard' ? $t('header.dashboard') : route.name }}
-          </h2>
-          <p class="text-slate-400 text-sm">{{ $t('header.welcome') }}</p>
+        <div class="flex items-center gap-4">
+          <div>
+            <h2 class="text-2xl font-bold text-white flex items-center gap-3">
+              {{ route.name === 'dashboard' ? $t('header.dashboard') : route.name }}
+              
+              <!-- Bouton Aide Optionnel -->
+              <button 
+                v-if="currentViewTutorial"
+                @click="tutorialStore.startTutorial(currentViewTutorial, true)"
+                class="w-6 h-6 rounded-full bg-slate-800 border border-slate-700 text-slate-400 hover:text-blue-400 hover:border-blue-500/50 transition-all flex items-center justify-center text-xs font-bold"
+                title="Aide sur cette section"
+              >
+                ?
+              </button>
+            </h2>
+            <p class="text-slate-400 text-sm">{{ $t('header.welcome') }}</p>
+          </div>
         </div>
         <div class="flex flex-col items-end gap-2">
           <div class="flex items-center gap-2 mb-1">
-            <button 
-              @click="$i18n.locale = 'fr'" 
-              :class="['text-[10px] font-bold px-1.5 py-0.5 rounded', $i18n.locale === 'fr' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-300']"
-            >FR</button>
-            <button 
-              @click="$i18n.locale = 'en'" 
-              :class="['text-[10px] font-bold px-1.5 py-0.5 rounded', $i18n.locale === 'en' ? 'bg-blue-600 text-white' : 'text-slate-500 hover:text-slate-300']"
-            >EN</button>
+            <button
+              @click="$i18n.locale = 'fr'"
+              :class="[
+                'text-[10px] font-bold px-1.5 py-0.5 rounded',
+                $i18n.locale === 'fr'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-500 hover:text-slate-300',
+              ]"
+            >
+              FR
+            </button>
+            <button
+              @click="$i18n.locale = 'en'"
+              :class="[
+                'text-[10px] font-bold px-1.5 py-0.5 rounded',
+                $i18n.locale === 'en'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-slate-500 hover:text-slate-300',
+              ]"
+            >
+              EN
+            </button>
           </div>
-          <GlobalResourceBar class="hidden xl:flex" />
+          <GlobalResourceBar id="resource-bar" class="hidden xl:flex" />
           <div class="flex items-center gap-6">
             <div class="hidden lg:flex items-center gap-4">
               <div class="text-right">
-                <p class="text-xs text-slate-500 uppercase tracking-wider font-bold">{{ $t('header.credits') }}</p>
+                <p class="text-xs text-slate-500 uppercase tracking-wider font-bold">
+                  {{ $t('header.credits') }}
+                </p>
                 <p class="font-mono text-emerald-400 font-bold">
-                  {{ resourceStore.argent.toLocaleString() }} €
+                  {{ Math.floor(animatedArgent).toLocaleString() }} €
                 </p>
               </div>
               <div class="text-right border-l border-slate-800 pl-4">
-                <p class="text-xs text-slate-500 uppercase tracking-wider font-bold">{{ $t('header.science') }}</p>
+                <p class="text-xs text-slate-500 uppercase tracking-wider font-bold">
+                  {{ $t('header.science') }}
+                </p>
                 <p class="font-mono text-blue-400 font-bold">
-                  {{ resourceStore.science.toLocaleString() }}🧪
+                  {{ Math.floor(animatedScience).toLocaleString() }}🧪
                 </p>
               </div>
             </div>
@@ -115,8 +151,12 @@
               <p class="text-xs text-slate-500 uppercase tracking-wider font-bold">
                 {{ $t('header.campaign') }}
               </p>
-              <p class="font-mono text-blue-400 font-bold">{{ $t('header.tier') }} {{ currentCampaignTierText }}</p>
-              <p class="text-[11px] text-slate-400">{{ $t('header.progress') }} {{ campaignProgressPercent }}%</p>
+              <p class="font-mono text-blue-400 font-bold">
+                {{ $t('header.tier') }} {{ currentCampaignTierText }}
+              </p>
+              <p class="text-[11px] text-slate-400">
+                {{ $t('header.progress') }} {{ campaignProgressPercent }}%
+              </p>
             </div>
           </div>
         </div>
@@ -125,7 +165,7 @@
       <!-- View Container -->
       <div class="flex-1 overflow-y-auto">
         <router-view v-slot="{ Component }">
-          <transition name="page" mode="out-in">
+          <transition :name="pageTransitionName" mode="out-in">
             <component :is="Component" />
           </transition>
         </router-view>
@@ -135,11 +175,13 @@
     <!-- Global Modals -->
     <EventModal />
     <LogConsole />
+    <LaunchCinematicOverlay />
+    <TutorialOverlay />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { gameLoop } from './engine/GameLoop'
@@ -151,11 +193,15 @@ import { useBaseStore } from './stores/useBaseStore'
 import { useMissionStore } from './stores/useMissionStore'
 import { usePersonnelStore } from './stores/usePersonnelStore'
 import { useSatelliteStore } from './stores/useSatelliteStore'
+import { useTutorialStore } from './stores/useTutorialStore'
+import { welcomeTutorial, allTutorials } from './config/tutorials'
 import BaseIcon from './components/ui/BaseIcon.vue'
 import GlobalResourceBar from './components/GlobalResourceBar.vue'
 import EventModal from './components/ui/EventModal.vue'
 import TimeControls from './components/ui/TimeControls.vue'
 import LogConsole from './components/ui/LogConsole.vue'
+import LaunchCinematicOverlay from './components/ui/LaunchCinematicOverlay.vue'
+import TutorialOverlay from './components/ui/TutorialOverlay.vue'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -167,6 +213,22 @@ const baseStore = useBaseStore()
 const missionStore = useMissionStore()
 const personnelStore = usePersonnelStore()
 const satelliteStore = useSatelliteStore()
+const tutorialStore = useTutorialStore()
+
+const currentViewTutorial = computed(() => {
+  const routeName = String(route.name || '').toLowerCase()
+  const mapping: Record<string, string> = {
+    'dashboard': 'welcome',
+    'research': 'research',
+    'rd': 'research',
+    'base': 'base',
+    'personnel': 'personnel',
+    'fleet': 'fleet',
+    'missions': 'missions'
+  }
+  const tutorialId = mapping[routeName]
+  return tutorialId ? allTutorials[tutorialId] : null
+})
 
 const sortedMainMissions = computed(() => {
   return [...missionStore.missions]
@@ -226,7 +288,7 @@ const currentTierStepProgressPercent = computed(() => {
     personnelStore.hasIngenieur,
     hasCompatibleReadyLauncherForMission(mission.requiredOrbit),
     mission.cost ? resourceStore.argent >= mission.cost.argent : false,
-    mission.status === 'Succès',
+    false,
   ]
 
   const done = steps.filter(Boolean).length
@@ -235,6 +297,17 @@ const currentTierStepProgressPercent = computed(() => {
 
 const campaignProgressPercent = computed(() => {
   return currentTierStepProgressPercent.value
+})
+
+const pageTransitionName = computed(() => {
+  const routeName = String(route.name ?? '').toLowerCase()
+  if (routeName.includes('solaire') || route.path.startsWith('/solar')) {
+    return 'page-space'
+  }
+  if (routeName.includes('base') || route.path.startsWith('/base')) {
+    return 'page-base'
+  }
+  return 'page-management'
 })
 
 const hasBuilding = (buildingId: string) => {
@@ -268,7 +341,13 @@ const availableNavItems = computed(() => {
       to: '/training',
       requiredBuilding: 'training_center',
     },
-    { id: 'missions', label: t('sidebar.missions'), icon: 'globe', to: '/missions', requiredBuilding: 'hq' },
+    {
+      id: 'missions',
+      label: t('sidebar.missions'),
+      icon: 'globe',
+      to: '/missions',
+      requiredBuilding: 'hq',
+    },
     {
       id: 'fleet',
       label: t('sidebar.fleet'),
@@ -284,13 +363,113 @@ const availableNavItems = computed(() => {
       requiredBuilding: 'hq',
     },
     { id: 'rd', label: t('sidebar.rd'), icon: 'flask', to: '/rd', requiredBuilding: 'lab' },
-    { id: 'finance', label: t('sidebar.finance'), icon: 'coins', to: '/finance', requiredBuilding: null },
+    {
+      id: 'finance',
+      label: t('sidebar.finance'),
+      icon: 'coins',
+      to: '/finance',
+      requiredBuilding: null,
+    },
   ]
   return items.filter((item) => {
     if (!item.requiredBuilding) return true
     return hasBuilding(item.requiredBuilding)
   })
 })
+
+const animatedArgent = ref(resourceStore.argent)
+const animatedScience = ref(resourceStore.science)
+
+let argentAnimationFrame: number | null = null
+let scienceAnimationFrame: number | null = null
+
+const animateCounter = (
+  current: number,
+  target: number,
+  setter: (value: number) => void,
+  getFrame: () => number | null,
+  setFrame: (id: number | null) => void,
+) => {
+  const runningFrame = getFrame()
+  if (runningFrame !== null) {
+    window.cancelAnimationFrame(runningFrame)
+    setFrame(null)
+  }
+
+  const start = current
+  const delta = target - start
+  if (Math.abs(delta) < 0.01) {
+    setter(target)
+    return
+  }
+
+  const duration = Math.min(600, Math.max(300, 320 + Math.abs(delta) * 0.04))
+  const startTime = performance.now()
+
+  const step = (now: number) => {
+    const progress = Math.min(1, (now - startTime) / duration)
+    const eased = 1 - Math.pow(1 - progress, 3)
+    setter(start + delta * eased)
+
+    if (progress < 1) {
+      const frame = window.requestAnimationFrame(step)
+      setFrame(frame)
+      return
+    }
+
+    setFrame(null)
+  }
+
+  const initialFrame = window.requestAnimationFrame(step)
+  setFrame(initialFrame)
+}
+
+watch(
+  () => resourceStore.argent,
+  (nextArgent) => {
+    animateCounter(
+      animatedArgent.value,
+      nextArgent,
+      (value) => {
+        animatedArgent.value = value
+      },
+      () => argentAnimationFrame,
+      (id) => {
+        argentAnimationFrame = id
+      },
+    )
+  },
+)
+
+watch(
+  () => resourceStore.science,
+  (nextScience) => {
+    animateCounter(
+      animatedScience.value,
+      nextScience,
+      (value) => {
+        animatedScience.value = value
+      },
+      () => scienceAnimationFrame,
+      (id) => {
+        scienceAnimationFrame = id
+      },
+    )
+  },
+)
+
+watch(
+  () => currentViewTutorial.value,
+  (newTutorial) => {
+    if (newTutorial && !tutorialStore.completedTutorials.includes(newTutorial.id)) {
+      // Small delay to let the page transition and render
+      setTimeout(() => {
+        tutorialStore.startTutorial(newTutorial)
+      }, 800)
+    }
+  },
+  { immediate: true }
+)
 
 onMounted(() => {
   gameLoop.addTickHandler((deltaTime: number) => {
@@ -305,6 +484,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   gameLoop.stop()
+  if (argentAnimationFrame !== null) window.cancelAnimationFrame(argentAnimationFrame)
+  if (scienceAnimationFrame !== null) window.cancelAnimationFrame(scienceAnimationFrame)
 })
 </script>
 
@@ -317,21 +498,61 @@ body {
   margin: 0;
 }
 
-.page-enter-active,
-.page-leave-active {
+.page-management-enter-active,
+.page-management-leave-active {
   transition:
-    opacity 0.2s,
-    transform 0.2s;
+    opacity 0.24s ease,
+    transform 0.24s ease;
 }
 
-.page-enter-from {
+.page-management-enter-from {
   opacity: 0;
-  transform: translateY(10px);
+  transform: translateY(12px);
 }
 
-.page-leave-to {
+.page-management-leave-to {
   opacity: 0;
-  transform: translateY(-10px);
+  transform: translateY(-8px);
+}
+
+.page-space-enter-active,
+.page-space-leave-active {
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease,
+    filter 0.3s ease;
+}
+
+.page-space-enter-from {
+  opacity: 0;
+  transform: scale(0.96);
+  filter: blur(4px);
+}
+
+.page-space-leave-to {
+  opacity: 0;
+  transform: scale(1.03);
+  filter: blur(2px);
+}
+
+.page-base-enter-active,
+.page-base-leave-active {
+  transition:
+    opacity 0.28s ease,
+    transform 0.28s ease,
+    clip-path 0.28s ease;
+}
+
+.page-base-enter-from {
+  opacity: 0;
+  transform: translateX(26px);
+  clip-path: inset(0 0 0 18%);
+}
+
+.page-base-leave-to {
+  opacity: 0;
+  transform: translateX(-18px);
+  clip-path: inset(0 14% 0 0);
 }
 
 /* Custom Scrollbar */

@@ -4,6 +4,7 @@ import { usePersonnelStore } from './usePersonnelStore'
 import { useFleetStore, type OrbitType } from './useFleetStore'
 import { useSolarSystemStore } from './useSolarSystemStore'
 import { useStationStore } from './useStationStore'
+import { useResearchStore } from './useResearchStore'
 import { useGameStore } from './useGameStore'
 import { gameEvents } from '@/engine/EventBus'
 
@@ -81,6 +82,7 @@ export interface Mission {
   targetResearchId?: string
   isCleaning?: boolean
   isStreamed?: boolean
+  isAsteroidCapture?: boolean
 }
 
 export interface MissionLog {
@@ -263,7 +265,7 @@ export const useMissionStore = defineStore('mission', {
       const { useCompetitorStore } = await import('./useCompetitorStore')
       const competitorStore = useCompetitorStore()
       competitorStore.setupCompetitorListeners()
-      
+
       gameEvents.on('day-elapsed', ({ elapsedDays, currentDate }) => {
         this.ensureStationResupplyMissions(elapsedDays)
         this.refreshWeeklyMissions(elapsedDays)
@@ -332,6 +334,30 @@ export const useMissionStore = defineStore('mission', {
 
       this.missions.push(mission)
       this.log(`[INFO] Nouvelle mission de nettoyage disponible.`)
+      return mission
+    },
+
+    createAsteroidCaptureMission() {
+      const mission: Mission = {
+        id: this.nextMissionId++,
+        name: `Capture d'Astéroïde Alpha`,
+        cost: {
+          argent: 50000000,
+          carburant: 500,
+        },
+        successChance: 0.3,
+        reward: {
+          science: 200,
+        },
+        status: 'Disponible',
+        requiredOrbit: 'HEO',
+        isAsteroidCapture: true,
+        objective: `Capturer un asteroide et le placer en orbite haute pour l'extraction de materiaux rares.`,
+        launcherRequirement: 'Vaisseau Interplanetaire recommande',
+      }
+
+      this.missions.push(mission)
+      this.log(`[INFO] Nouvelle mission de capture d'astéroïde disponible.`)
       return mission
     },
 
@@ -564,9 +590,15 @@ export const useMissionStore = defineStore('mission', {
       const gameStore = useGameStore()
 
       // Check for researches requiring prototypes
-      Object.values(researchStore.researches).forEach(research => {
-        if (research.status === 'available' && research.isPrototypeRequired && !research.prototypeSuccess) {
-          const hasMission = this.missions.some(m => m.isPrototype && m.targetResearchId === research.id && m.status === 'Disponible')
+      Object.values(researchStore.researches).forEach((research) => {
+        if (
+          research.status === 'available' &&
+          research.isPrototypeRequired &&
+          !research.prototypeSuccess
+        ) {
+          const hasMission = this.missions.some(
+            (m) => m.isPrototype && m.targetResearchId === research.id && m.status === 'Disponible',
+          )
           if (!hasMission) {
             this.createPrototypeMission(research.id)
           }
@@ -575,9 +607,24 @@ export const useMissionStore = defineStore('mission', {
 
       // Check for orbital debris level and create cleaning mission if high
       if (gameStore.orbitalDebris > 30) {
-        const hasCleaningMission = this.missions.some(m => m.isCleaning && m.status === 'Disponible')
+        const hasCleaningMission = this.missions.some(
+          (m) => m.isCleaning && m.status === 'Disponible',
+        )
         if (!hasCleaningMission) {
           this.createCleaningMission()
+        }
+      }
+
+      // Check for Asteroid Capture mission
+      if (researchStore.completedResearchIds.includes('e-asteroid')) {
+        const hasAsteroidMission = this.missions.some(
+          (m) => m.isAsteroidCapture && m.status === 'Disponible',
+        )
+        const alreadyCaptured = this.missions.some(
+          (m) => m.isAsteroidCapture && m.status === 'Succès',
+        )
+        if (!hasAsteroidMission && !alreadyCaptured) {
+          this.createAsteroidCaptureMission()
         }
       }
 
@@ -713,6 +760,12 @@ export const useMissionStore = defineStore('mission', {
         resourceStore.addArgent(-totalCostArgent)
         resourceStore.addCarburant(-fuelConsumption)
 
+        gameEvents.emit('mission-launched', {
+          missionId: mission.id,
+          missionName: mission.name,
+          date: gameStore.formattedDate,
+        })
+
         // Calculer la réussite avec la probabilité
         const satelliteStore = (await import('./useSatelliteStore')).useSatelliteStore()
         const orbitToBody: Record<string, string> = {
@@ -729,7 +782,11 @@ export const useMissionStore = defineStore('mission', {
         const baseSuccessChance = (mission.successChance + launcher.reliability / 100) / 2
         const effectiveSuccessChance = Math.min(
           0.98,
-          baseSuccessChance + personnelStore.missionSuccessBonus + satNavBonus + gameStore.hypeBonus - gameStore.debrisPenalty,
+          baseSuccessChance +
+            personnelStore.missionSuccessBonus +
+            satNavBonus +
+            gameStore.hypeBonus -
+            gameStore.debrisPenalty,
         )
         const roll = Math.random()
         const isSuccess = roll <= effectiveSuccessChance
@@ -754,11 +811,11 @@ export const useMissionStore = defineStore('mission', {
         if (isSuccess) {
           const isRecurringMission = Boolean(mission.recurrenceDays)
           mission.status = isRecurringMission ? 'En attente' : 'Succès'
-          
+
           if (mission.isPrototype && mission.targetResearchId) {
-             const researchStore = useResearchStore()
-             const research = researchStore.researches[mission.targetResearchId]
-             if (research) research.prototypeSuccess = true
+            const researchStore = useResearchStore()
+            const research = researchStore.researches[mission.targetResearchId]
+            if (research) research.prototypeSuccess = true
           }
 
           if (mission.isCleaning) {
@@ -766,20 +823,30 @@ export const useMissionStore = defineStore('mission', {
             this.log(`[NETTOYAGE] Succès ! Le niveau de débris a baissé.`)
           }
 
+          if (mission.isAsteroidCapture) {
+            resourceStore.addMateriauxRares(50)
+            this.log(`[ASTÉROÏDE] Capture réussie ! +50 Matériaux Rares récupérés.`)
+          }
+
           // --- LOGIQUE DE HYPE ET RÉPUTATION ---
           const hypeGain = mission.category === 'principale' ? 10 : 5
           gameStore.addHype(hypeGain)
-          
+
           if (mission.isStreamed) {
             const { useContractStore } = await import('./useContractStore')
             const contractStore = useContractStore()
-            const factions = Object.keys(contractStore.factionsReputation) as (keyof typeof contractStore.factionsReputation)[]
-            factions.forEach(f => {
-              contractStore.factionsReputation[f] = Math.min(100, contractStore.factionsReputation[f] + 10)
+            const factions = Object.keys(
+              contractStore.factionsReputation,
+            ) as (keyof typeof contractStore.factionsReputation)[]
+            factions.forEach((f) => {
+              contractStore.factionsReputation[f] = Math.min(
+                100,
+                contractStore.factionsReputation[f] + 10,
+              )
             })
             this.log(`[MÉDIAS] Diffusion réussie ! +200% Réputation globale.`)
           }
-          
+
           resourceStore.addScience(mission.reward.science)
 
           let argentGained = 0
@@ -806,7 +873,9 @@ export const useMissionStore = defineStore('mission', {
 
           if (mission.id === 10) {
             resourceStore.applyMarketCrash()
-            this.log(`[ALERTE] KRASH BOURSIER : Le surplus de métaux rares a fait s'effondrer le marché. Les revenus des missions sont réduits de 60%.`)
+            this.log(
+              `[ALERTE] KRASH BOURSIER : Le surplus de métaux rares a fait s'effondrer le marché. Les revenus des missions sont réduits de 60%.`,
+            )
           }
 
           if (mission.stationId) {
@@ -890,22 +959,26 @@ export const useMissionStore = defineStore('mission', {
         } else {
           const isRecurringMission = Boolean(mission.recurrenceDays)
           mission.status = isRecurringMission ? 'En attente' : 'Échec'
-          
+
           if (mission.isPrototype) {
             const failScience = 500
             resourceStore.addScience(failScience)
             gameStore.addOrbitalDebris(5)
-            this.log(`[ÉCHEC] Prototype "${mission.name}" a explosé ! On apprend de ses erreurs : +${failScience} Science. +5% Débris.`)
+            this.log(
+              `[ÉCHEC] Prototype "${mission.name}" a explosé ! On apprend de ses erreurs : +${failScience} Science. +5% Débris.`,
+            )
           } else {
             gameStore.addOrbitalDebris(2)
-            this.log(`[ÉCHEC] Mission "${mission.name}" avec ${launcher.name} a échoué... +2% Débris.`)
+            this.log(
+              `[ÉCHEC] Mission "${mission.name}" avec ${launcher.name} a échoué... +2% Débris.`,
+            )
           }
 
           if (isRecurringMission && mission.recurrenceDays) {
             const dayRef = currentDay ?? gameStore.elapsedDays
             mission.nextAvailableDay = dayRef + mission.recurrenceDays
           }
-          
+
           if (!mission.isPrototype) {
             gameEvents.emit('mission-failed', {
               missionId: mission.id,
@@ -965,5 +1038,4 @@ export const useMissionStore = defineStore('mission', {
       if (this.logs.length > 10) this.logs.pop()
     },
   },
-
 })

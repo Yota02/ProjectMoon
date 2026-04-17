@@ -47,7 +47,7 @@
     </div>
 
     <!-- Contenu de la section active -->
-    <div class="min-h-[400px]">
+    <div id="research-tree" class="min-h-[400px]">
       <transition name="fade-slide" mode="out-in">
         <ResearchSection 
           :key="activeTab"

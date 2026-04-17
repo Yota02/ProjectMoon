@@ -3,7 +3,7 @@
     <div class="resource-item money">
       <div class="info">
         <span class="label">CREDITS</span>
-        <span class="value">{{ Math.floor(resourceStore.argent).toLocaleString() }}</span>
+        <span class="value">{{ Math.floor(animatedArgent).toLocaleString() }}</span>
       </div>
       <div class="trend">+{{ contractStore.totalMonthlyRevenue.toFixed(0) }}M/mois</div>
     </div>
@@ -13,7 +13,7 @@
     <div class="resource-item science">
       <div class="info">
         <span class="label">DATA</span>
-        <span class="value">{{ Math.floor(resourceStore.science).toLocaleString() }}</span>
+        <span class="value">{{ Math.floor(animatedScience).toLocaleString() }}</span>
       </div>
       <div class="trend">+{{ resourceStore.production.science }}/s</div>
     </div>
@@ -33,19 +33,35 @@
     <!-- New Resources -->
     <div class="extra-resources">
       <div class="mini-resource" :title="'Nourriture: ' + Math.floor(resourceStore.nourriture)">
-        <BaseIcon name="utensils" size="14" :class="resourceStore.nourriture < 50 ? 'text-red-500' : 'text-emerald-500'" />
+        <BaseIcon
+          name="utensils"
+          size="14"
+          :class="resourceStore.nourriture < 50 ? 'text-red-500' : 'text-emerald-500'"
+        />
         <span class="mini-value">{{ Math.floor(resourceStore.nourriture) }}</span>
       </div>
       <div class="mini-resource" :title="'Eau: ' + Math.floor(resourceStore.eau)">
-        <BaseIcon name="droplet" size="14" :class="resourceStore.eau < 50 ? 'text-red-500' : 'text-blue-500'" />
+        <BaseIcon
+          name="droplet"
+          size="14"
+          :class="resourceStore.eau < 50 ? 'text-red-500' : 'text-blue-500'"
+        />
         <span class="mini-value">{{ Math.floor(resourceStore.eau) }}</span>
       </div>
       <div class="mini-resource" :title="'Oxygène: ' + Math.floor(resourceStore.o2)">
-        <BaseIcon name="wind" size="14" :class="resourceStore.o2 < 50 ? 'text-red-500' : 'text-pink-500'" />
+        <BaseIcon
+          name="wind"
+          size="14"
+          :class="resourceStore.o2 < 50 ? 'text-red-500' : 'text-pink-500'"
+        />
         <span class="mini-value">{{ Math.floor(resourceStore.o2) }}</span>
       </div>
       <div class="mini-resource" :title="'Pièces: ' + Math.floor(resourceStore.piecesDetachees)">
-        <BaseIcon name="box" size="14" :class="resourceStore.piecesDetachees < 20 ? 'text-red-500' : 'text-slate-400'" />
+        <BaseIcon
+          name="box"
+          size="14"
+          :class="resourceStore.piecesDetachees < 20 ? 'text-red-500' : 'text-slate-400'"
+        />
         <span class="mini-value">{{ Math.floor(resourceStore.piecesDetachees) }}</span>
       </div>
     </div>
@@ -53,12 +69,99 @@
 </template>
 
 <script setup lang="ts">
+import { ref, watch, onUnmounted } from 'vue'
 import { useResourceStore } from '../stores/useResourceStore'
 import { useContractStore } from '../stores/useContractStore'
 import BaseIcon from './ui/BaseIcon.vue'
 
 const resourceStore = useResourceStore()
 const contractStore = useContractStore()
+
+const animatedArgent = ref(resourceStore.argent)
+const animatedScience = ref(resourceStore.science)
+
+let argentAnimationFrame: number | null = null
+let scienceAnimationFrame: number | null = null
+
+const animateValue = (
+  current: number,
+  target: number,
+  setter: (value: number) => void,
+  getFrame: () => number | null,
+  setFrame: (id: number | null) => void,
+) => {
+  const runningFrame = getFrame()
+  if (runningFrame !== null) {
+    window.cancelAnimationFrame(runningFrame)
+    setFrame(null)
+  }
+
+  const start = current
+  const delta = target - start
+  if (Math.abs(delta) < 0.01) {
+    setter(target)
+    return
+  }
+
+  const duration = Math.min(600, Math.max(300, 320 + Math.abs(delta) * 0.04))
+  const startTime = performance.now()
+
+  const step = (now: number) => {
+    const elapsed = now - startTime
+    const progress = Math.min(1, elapsed / duration)
+    const eased = 1 - Math.pow(1 - progress, 3)
+    setter(start + delta * eased)
+
+    if (progress < 1) {
+      const frame = window.requestAnimationFrame(step)
+      setFrame(frame)
+    } else {
+      setFrame(null)
+    }
+  }
+
+  const initialFrame = window.requestAnimationFrame(step)
+  setFrame(initialFrame)
+}
+
+watch(
+  () => resourceStore.argent,
+  (target) => {
+    animateValue(
+      animatedArgent.value,
+      target,
+      (value) => {
+        animatedArgent.value = value
+      },
+      () => argentAnimationFrame,
+      (id) => {
+        argentAnimationFrame = id
+      },
+    )
+  },
+)
+
+watch(
+  () => resourceStore.science,
+  (target) => {
+    animateValue(
+      animatedScience.value,
+      target,
+      (value) => {
+        animatedScience.value = value
+      },
+      () => scienceAnimationFrame,
+      (id) => {
+        scienceAnimationFrame = id
+      },
+    )
+  },
+)
+
+onUnmounted(() => {
+  if (argentAnimationFrame !== null) window.cancelAnimationFrame(argentAnimationFrame)
+  if (scienceAnimationFrame !== null) window.cancelAnimationFrame(scienceAnimationFrame)
+})
 </script>
 
 <style scoped>

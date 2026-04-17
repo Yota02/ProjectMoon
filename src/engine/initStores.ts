@@ -12,6 +12,7 @@ import { useSatelliteStore } from '@/stores/useSatelliteStore'
 import { useSolarSystemStore } from '@/stores/useSolarSystemStore'
 import { useEventStore } from '@/stores/useEventStore'
 import { useLogStore } from '@/stores/useLogStore'
+import { useLogisticsStore } from '@/stores/useLogisticsStore'
 
 /**
  * Bootstraps all stores so that their EventBus listeners are registered
@@ -44,6 +45,9 @@ export function initAllStores() {
 
     const logStore = useLogStore()
     logStore.setupListeners()
+
+    const logisticsStore = useLogisticsStore()
+    logisticsStore.setupLogisticsListeners()
   
   const gameStore = useGameStore()
   

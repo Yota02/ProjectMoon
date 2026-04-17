@@ -31,7 +31,7 @@
     </section>
 
     <!-- Available Missions Section -->
-    <section class="space-y-6">
+    <section id="mission-list" class="space-y-6">
       <div class="flex items-center justify-between border-b border-slate-700/50 pb-4">
         <div class="flex items-center gap-3">
           <div class="p-2 bg-slate-800 rounded-lg border border-slate-700">
@@ -138,8 +138,20 @@
                     <li
                       v-for="objective in step.objectives"
                       :key="`${step.id}-${objective.label}`"
-                      class="flex items-center gap-2 text-[11px]"
+                      class="relative flex items-center gap-2 text-[11px]"
                     >
+                      <div
+                        v-if="
+                          isObjectiveRecentlyCompleted(step.id, objective.label, objective.done)
+                        "
+                        class="milestone-burst"
+                      >
+                        <span
+                          v-for="particle in 8"
+                          :key="particle"
+                          class="milestone-particle"
+                        ></span>
+                      </div>
                       <BaseIcon
                         :name="objective.done ? 'check' : 'shield'"
                         :size="12"
@@ -228,25 +240,45 @@
                 </div>
 
                 <!-- Section Course à l'espace (pour missions principales) -->
-                <div v-if="mission.category === 'principale' && mission.status !== 'Succès'" 
-                     class="bg-slate-950/80 p-4 rounded-xl border border-amber-500/20 space-y-3">
+                <div
+                  v-if="mission.category === 'principale' && mission.status !== 'Succès'"
+                  class="bg-slate-950/80 p-4 rounded-xl border border-amber-500/20 space-y-3"
+                >
                   <div class="flex items-center justify-between">
-                    <span class="text-[9px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-1">
+                    <span
+                      class="text-[9px] font-black text-amber-500 uppercase tracking-widest flex items-center gap-1"
+                    >
                       <BaseIcon name="star" :size="10" /> Course à l'Espace
                     </span>
                     <span class="text-[9px] text-slate-500">Progression des Agences</span>
                   </div>
                   <div class="space-y-2">
-                    <div v-for="comp in competitorStore.competitors" :key="comp.name" class="space-y-1">
+                    <div
+                      v-for="comp in competitorStore.competitors"
+                      :key="comp.name"
+                      class="space-y-1"
+                    >
                       <div class="flex justify-between items-center text-[9px]">
                         <span class="text-slate-300 font-bold">{{ comp.name }}</span>
-                        <span class="font-mono" :class="(comp.progress[mission.id] || 0) > 80 ? 'text-red-400' : 'text-slate-400'">
+                        <span
+                          class="font-mono"
+                          :class="
+                            (comp.progress[mission.id] || 0) > 80
+                              ? 'text-red-400'
+                              : 'text-slate-400'
+                          "
+                        >
                           {{ Math.round(comp.progress[mission.id] || 0) }}%
                         </span>
                       </div>
                       <div class="h-1 w-full bg-slate-800 rounded-full overflow-hidden">
-                        <div class="h-full transition-all duration-1000"
-                             :style="{ width: (comp.progress[mission.id] || 0) + '%', backgroundColor: comp.color }"></div>
+                        <div
+                          class="h-full transition-all duration-1000"
+                          :style="{
+                            width: (comp.progress[mission.id] || 0) + '%',
+                            backgroundColor: comp.color,
+                          }"
+                        ></div>
                       </div>
                     </div>
                   </div>
@@ -424,7 +456,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useMissionStore, type Mission } from '../stores/useMissionStore'
 import { useResourceStore } from '../stores/useResourceStore'
 import { usePersonnelStore } from '../stores/usePersonnelStore'
@@ -454,6 +486,21 @@ interface MiniObjective {
   done: boolean
 }
 
+const objectiveCompletionMarks = ref<Record<string, number>>({})
+const recentCompletionWindowMs = 900
+
+const seedObjectiveMarks = () => {
+  campaignRoadmapSteps.value.forEach((step) => {
+    step.objectives.forEach((objective) => {
+      if (!objective.done) return
+      const key = `${step.id}:${objective.label}`
+      objectiveCompletionMarks.value[key] = 0
+    })
+  })
+}
+
+// seedObjectiveMarks() - Moved to onMounted
+
 const readyLaunchers = computed(() => {
   return fleetStore.items.filter((i) => i.status === 'Prêt')
 })
@@ -465,6 +512,16 @@ const activeMissions = computed(() => {
 const mainMissions = computed(() => {
   return missionStore.missions.filter((mission) => mission.category === 'principale')
 })
+
+const hasCompatibleReadyLauncherForMission = (mission: Mission) => {
+  return readyLaunchers.value.some((launcher) => {
+    const design = fleetStore.designs.find((d) => d.id === launcher.designId)
+    if (!design) return false
+    if (!design.supportedOrbits.includes(mission.requiredOrbit)) return false
+    if (mission.requiredOrbit === 'LUNAR' && !design.canReachMoon) return false
+    return true
+  })
+}
 
 const getFuelConsumptionForMission = (mission: any, launcherId: string) => {
   const launcher = fleetStore.items.find((i) => i.id === launcherId)
@@ -518,6 +575,45 @@ const campaignProgressPercent = computed(() => {
   return Math.round((completedMainMissionsCount.value / sortedMainMissions.value.length) * 100)
 })
 
+const getMissionMiniObjectives = (mission: Mission): MiniObjective[] => {
+  if (mission.status === 'Succès') {
+    return [
+      { label: 'Ingenieur operationnel', done: true },
+      { label: 'Lanceur compatible pret', done: true },
+      { label: 'Ressources de lancement', done: true },
+      { label: 'Objectif de mission valide', done: true },
+    ]
+  }
+
+  const fuelNeeded = selectedLaunchers.value[mission.id]
+    ? getFuelConsumptionForMission(mission, selectedLaunchers.value[mission.id]!)
+    : 0
+  const hasResources =
+    resourceStore.argent >= mission.cost.argent && resourceStore.carburant >= fuelNeeded
+
+  const objectives: MiniObjective[] = [
+    { label: 'Ingenieur operationnel', done: personnelStore.hasIngenieur },
+    {
+      label: mission.launcherRequirement ?? 'Lanceur compatible pret',
+      done: hasCompatibleReadyLauncherForMission(mission),
+    },
+    { label: 'Ressources de lancement', done: hasResources },
+  ]
+
+  if (mission.populationRequirement) {
+    const { type, count } = mission.populationRequirement
+    if (type === 'marsCivilian') {
+      objectives.push({
+        label: `Population civile sur Mars: ${stationStore.marsCivilianPopulation.toLocaleString()}/${count.toLocaleString()}`,
+        done: stationStore.marsCivilianPopulation >= count,
+      })
+    }
+  }
+
+  objectives.push({ label: 'Objectif de mission valide', done: false })
+  return objectives
+}
+
 const campaignRoadmapSteps = computed(() => {
   return visibleMainMissions.value.map((mission, index) => {
     let state: RoadmapStepState = 'locked'
@@ -542,6 +638,32 @@ const campaignRoadmapSteps = computed(() => {
     }
   })
 })
+
+watch(
+  campaignRoadmapSteps,
+  (steps) => {
+    const now = Date.now()
+    steps.forEach((step) => {
+      step.objectives.forEach((objective) => {
+        const key = `${step.id}:${objective.label}`
+        if (objective.done && objectiveCompletionMarks.value[key] === undefined) {
+          objectiveCompletionMarks.value[key] = now
+        }
+      })
+    })
+  },
+  { deep: true },
+)
+
+// seedObjectiveMarks() - second call removed
+
+const isObjectiveRecentlyCompleted = (stepId: number, label: string, done: boolean) => {
+  if (!done) return false
+  const key = `${stepId}:${label}`
+  const markedAt = objectiveCompletionMarks.value[key]
+  if (!markedAt) return false
+  return Date.now() - markedAt <= recentCompletionWindowMs
+}
 
 const standardMissions = computed(() => {
   return missionStore.missions.filter((mission) => mission.category !== 'principale')
@@ -585,56 +707,6 @@ const getTravelPhase = (travel: any) => {
   if (travel.progress < 0.1) return 'Injection orbitale'
   if (travel.progress < 0.9) return 'Transit interplanétaire'
   return 'Approche finale'
-}
-
-const hasCompatibleReadyLauncherForMission = (mission: Mission) => {
-  return readyLaunchers.value.some((launcher) => {
-    const design = fleetStore.designs.find((d) => d.id === launcher.designId)
-    if (!design) return false
-    if (!design.supportedOrbits.includes(mission.requiredOrbit)) return false
-    if (mission.requiredOrbit === 'LUNAR' && !design.canReachMoon) return false
-    return true
-  })
-}
-
-const getMissionMiniObjectives = (mission: Mission): MiniObjective[] => {
-  if (mission.status === 'Succès') {
-    return [
-      { label: 'Ingenieur operationnel', done: true },
-      { label: 'Lanceur compatible pret', done: true },
-      { label: 'Ressources de lancement', done: true },
-      { label: 'Objectif de mission valide', done: true },
-    ]
-  }
-
-  const fuelNeeded = selectedLaunchers[mission.id]
-    ? getFuelConsumptionForMission(mission, selectedLaunchers[mission.id])
-    : 0
-  const hasResources =
-    resourceStore.argent >= mission.cost.argent && resourceStore.carburant >= fuelNeeded
-
-  const objectives: MiniObjective[] = [
-    { label: 'Ingenieur operationnel', done: personnelStore.hasIngenieur },
-    {
-      label: mission.launcherRequirement ?? 'Lanceur compatible pret',
-      done: hasCompatibleReadyLauncherForMission(mission),
-    },
-    { label: 'Ressources de lancement', done: hasResources },
-  ]
-
-  if (mission.populationRequirement) {
-    const { type, count } = mission.populationRequirement
-    if (type === 'marsCivilian') {
-      objectives.push({
-        label: `Population civile sur Mars: ${stationStore.marsCivilianPopulation.toLocaleString()}/${count.toLocaleString()}`,
-        done: stationStore.marsCivilianPopulation >= count,
-      })
-    }
-  }
-
-  objectives.push({ label: 'Objectif de mission valide', done: mission.status === 'Succès' })
-
-  return objectives
 }
 
 const isLauncherCompatible = (launcher: any, mission: Mission) => {
@@ -697,9 +769,69 @@ const getRoadmapStepLabel = (state: RoadmapStepState) => {
   if (state === 'failed') return 'HS'
   return 'LOCK'
 }
+onMounted(() => {
+  seedObjectiveMarks()
+})
 </script>
 
 <style scoped>
+.milestone-burst {
+  position: absolute;
+  left: -6px;
+  top: 2px;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
+}
+
+.milestone-particle {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3px;
+  height: 3px;
+  border-radius: 9999px;
+  background: rgba(52, 211, 153, 0.9);
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.55);
+  animation: milestone-pop 0.65s ease-out forwards;
+}
+
+.milestone-particle:nth-child(1) {
+  --angle: 0deg;
+}
+.milestone-particle:nth-child(2) {
+  --angle: 45deg;
+}
+.milestone-particle:nth-child(3) {
+  --angle: 90deg;
+}
+.milestone-particle:nth-child(4) {
+  --angle: 135deg;
+}
+.milestone-particle:nth-child(5) {
+  --angle: 180deg;
+}
+.milestone-particle:nth-child(6) {
+  --angle: 225deg;
+}
+.milestone-particle:nth-child(7) {
+  --angle: 270deg;
+}
+.milestone-particle:nth-child(8) {
+  --angle: 315deg;
+}
+
+@keyframes milestone-pop {
+  0% {
+    opacity: 0.95;
+    transform: translate(-50%, -50%) rotate(var(--angle)) translateY(0) scale(0.8);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--angle)) translateY(-10px) scale(0.35);
+  }
+}
+
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
 }

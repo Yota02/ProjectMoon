@@ -5,6 +5,7 @@ import { useBaseStore } from './useBaseStore'
 
 export type FleetItemStatus = 'Prêt' | 'En maintenance' | 'En construction'
 export type OrbitType = 'LEO' | 'MEO' | 'GEO' | 'HEO' | 'LUNAR' | 'MARTIAN'
+export type FleetItemLocation = 'Earth' | 'Orbit'
 
 export interface FleetItem {
   id: string
@@ -14,6 +15,7 @@ export interface FleetItem {
   reliability: number
   constructionProgress: number
   constructionTime: number // en jours
+  location: FleetItemLocation // Nouveau
 }
 
 export interface FleetDesign {
@@ -21,6 +23,7 @@ export interface FleetDesign {
   name: string
   description: string
   cost: number
+  materiauxRaresCost?: number // Nouveau
   constructionTime: number // en jours
   baseReliability: number
   researchId: string
@@ -35,6 +38,7 @@ export interface FleetDesign {
   // Propriétés pour la consommation de carburant
   power: number // Puissance du moteur (en unités arbitraires)
   weight: number // Poids à vide (en tonnes)
+  requiresShipyard?: boolean // Nouveau
 }
 
 const isDebugMode = import.meta.env.VITE_DEBUG_MODE === 'test'
@@ -51,6 +55,7 @@ export const useFleetStore = defineStore('fleet', {
             reliability: 95,
             constructionProgress: 100,
             constructionTime: 30,
+            location: 'Earth',
           },
           {
             id: 'debug-launcher-2',
@@ -60,6 +65,7 @@ export const useFleetStore = defineStore('fleet', {
             reliability: 98,
             constructionProgress: 100,
             constructionTime: 120,
+            location: 'Earth',
           },
         ]
       : ([] as FleetItem[]),
@@ -123,6 +129,7 @@ export const useFleetStore = defineStore('fleet', {
         name: 'Lanceur Super-Lourd',
         description: 'Indispensable pour la colonisation.',
         cost: 1200000000,
+        materiauxRaresCost: 50,
         constructionTime: 240,
         baseReliability: 96,
         researchId: 'l-super-heavy',
@@ -139,8 +146,9 @@ export const useFleetStore = defineStore('fleet', {
       {
         id: 'd-starship',
         name: 'Vaisseau Interplanétaire',
-        description: "Le futur de l'exploration spatiale.",
+        description: "Le futur de l'exploration spatiale. Construction orbitale privilégiée.",
         cost: 2500000000,
+        materiauxRaresCost: 200,
         constructionTime: 480,
         baseReliability: 98,
         researchId: 'l-starship',
@@ -153,6 +161,7 @@ export const useFleetStore = defineStore('fleet', {
         isRefuelable: true,
         power: 600,
         weight: 120,
+        requiresShipyard: true,
       },
     ] as FleetDesign[],
   }),
@@ -190,9 +199,13 @@ export const useFleetStore = defineStore('fleet', {
         const design = state.designs.find((d) => d.id === launcher.designId)
         if (!design) return 0
 
+        // Si le vaisseau est déjà en orbite (Chantier Naval), la consommation de décollage (gravité) est nulle.
+        // On ne paye que pour la navigation orbitale (très réduite).
+        const gravityFactor = launcher.location === 'Orbit' ? 0.1 : 1
+
         // Formule: carburant nécessaire = (poids total / puissance) * facteur
         const totalWeight = design.weight + payloadWeight
-        let consumption = Math.ceil((totalWeight / design.power) * 10)
+        let consumption = Math.ceil((totalWeight / design.power) * 10 * gravityFactor)
 
         // Breakthrough: Propulsion Nucléaire Thermique
         const researchStore = useResearchStore()
@@ -238,14 +251,28 @@ export const useFleetStore = defineStore('fleet', {
 
       this.designs.push(newDesign)
     },
-    build(designId: string) {
+    async build(designId: string, buildLocation: FleetItemLocation = 'Earth') {
       const resourceStore = useResourceStore()
       const design = this.designs.find((d) => d.id === designId)
 
       if (!design) return
-      if (resourceStore.argent < design.cost) return
+      
+      const materiauxCost = design.materiauxRaresCost || 0
+      if (resourceStore.argent < design.cost || resourceStore.materiauxRares < materiauxCost) return
+
+      if (buildLocation === 'Orbit') {
+        const stationStore = (await import('./useStationStore')).useStationStore()
+        const hasShipyard = stationStore.stations.some(s => 
+          s.placedModules.some(m => m.moduleId === 'drydock_orbital')
+        )
+        if (!hasShipyard) return
+      } else if (design.requiresShipyard) {
+        // Enforce orbital construction for designs that require it
+        return 
+      }
 
       resourceStore.addArgent(-design.cost)
+      resourceStore.addMateriauxRares(-materiauxCost)
 
       const newItem: FleetItem = {
         id: Math.random().toString(36).substr(2, 9),
@@ -255,6 +282,7 @@ export const useFleetStore = defineStore('fleet', {
         reliability: design.baseReliability,
         constructionProgress: 0,
         constructionTime: design.constructionTime,
+        location: buildLocation,
       }
 
       this.items.push(newItem)

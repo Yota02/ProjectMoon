@@ -8,7 +8,7 @@ import { useGameStore } from './useGameStore'
 export interface GameEventChoice {
   id: string
   label: string
-  onSelect: () => void
+  onSelect: () => void | Promise<void>
 }
 
 export interface GameEventDef {
@@ -23,7 +23,8 @@ const EVENTS_LIBRARY: GameEventDef[] = [
   {
     id: 'oil-crisis',
     title: 'Crise Géopolitique Majeure',
-    description: "Des tensions extrêmes au Moyen-Orient ont provoqué un choc pétrolier. Le prix du carburant rocket a triplé sur les marchés mondiaux.",
+    description:
+      'Des tensions extrêmes au Moyen-Orient ont provoqué un choc pétrolier. Le prix du carburant rocket a triplé sur les marchés mondiaux.',
     type: 'crisis',
     choices: [
       {
@@ -47,7 +48,8 @@ const EVENTS_LIBRARY: GameEventDef[] = [
   {
     id: 'solar-flare',
     title: 'Éruption Solaire Massive',
-    description: "Une éjection de masse coronale a sévèrement irradié l'orbite terrestre. Nos systèmes de communication sont en danger critique. Faut-il mettre les satellites en veille pour protéger l'électronique ou risquer des dommages ?",
+    description:
+      "Une éjection de masse coronale a sévèrement irradié l'orbite terrestre. Nos systèmes de communication sont en danger critique. Faut-il mettre les satellites en veille pour protéger l'électronique ou risquer des dommages ?",
     type: 'crisis',
     choices: [
       {
@@ -60,14 +62,43 @@ const EVENTS_LIBRARY: GameEventDef[] = [
       {
         id: 'c2',
         label: 'Ignorer (Risque de dommages matériels)',
-        onSelect: () => {
+        onSelect: async () => {
           const satStore = useSatelliteStore()
+          const stationStore = (await import('./useStationStore')).useStationStore()
+          const { useLogStore } = await import('./useLogStore')
+          const logStore = useLogStore()
+
+          // Satellites
           satStore.activeSatellites.forEach((sat) => {
             if (sat.status === 'En Orbite') {
               sat.health = Math.max(0, sat.health - (10 + Math.random() * 20))
               if (sat.health <= 0) sat.status = 'Désactivé'
             }
           })
+
+          // Stations
+          stationStore.stations.forEach((station) => {
+            if (station.isShielded) {
+              logStore.addLog(
+                `[ÉVÉNEMENT] ${station.name} : Boucliers magnétiques activés. Radiations bloquées.`,
+                'success',
+              )
+            } else {
+              const damage = Math.max(5, 20 - station.moral / 10) // Le moral aide un peu à la réactivité
+              station.moral = Math.max(0, station.moral - 15)
+              if (station.resources) {
+                station.resources.piecesDetachees = Math.max(
+                  0,
+                  station.resources.piecesDetachees - 10,
+                )
+              }
+              logStore.addLog(
+                `[DÉGÂTS] ${station.name} : Systèmes grillés par l'éruption. -15 Moral, -10 Pièces détachées.`,
+                'error',
+              )
+            }
+          })
+
           useResourceStore().addScience(-50)
         },
       },
@@ -76,7 +107,8 @@ const EVENTS_LIBRARY: GameEventDef[] = [
   {
     id: 'sci-discovery',
     title: 'Découverte Exceptionnelle',
-    description: "Vos chercheurs isolés sur la station lunaire ont identifié une anomalie cristalline qui remet en question nos connaissances en supraconductivité.",
+    description:
+      'Vos chercheurs isolés sur la station lunaire ont identifié une anomalie cristalline qui remet en question nos connaissances en supraconductivité.',
     type: 'opportunity',
     choices: [
       {
@@ -98,7 +130,8 @@ const EVENTS_LIBRARY: GameEventDef[] = [
   {
     id: 'strike',
     title: 'Grève des Ingénieurs',
-    description: "Les conditions de travail et les heures supplémentaires non payées ont généré une fronde dans vos bases terrestres. Le personnel demande des primes immédiates.",
+    description:
+      'Les conditions de travail et les heures supplémentaires non payées ont généré une fronde dans vos bases terrestres. Le personnel demande des primes immédiates.',
     type: 'crisis',
     choices: [
       {
@@ -114,7 +147,10 @@ const EVENTS_LIBRARY: GameEventDef[] = [
         onSelect: () => {
           const contracts = useContractStore()
           contracts.factionsReputation.USA = Math.max(0, contracts.factionsReputation.USA - 15)
-          contracts.factionsReputation.Europe = Math.max(0, contracts.factionsReputation.Europe - 15)
+          contracts.factionsReputation.Europe = Math.max(
+            0,
+            contracts.factionsReputation.Europe - 15,
+          )
         },
       },
     ],
@@ -122,7 +158,8 @@ const EVENTS_LIBRARY: GameEventDef[] = [
   {
     id: 'crisis-o2-runout',
     title: 'CRISE : Asphyxie Orbitaire',
-    description: "CATASTROPHE ! Une de vos stations est tombée à cours d'Oxygène. La population a été exposée au vide. Les conséquences médiatiques et diplomatiques sont d'une brutalité inouïe.",
+    description:
+      "CATASTROPHE ! Une de vos stations est tombée à cours d'Oxygène. La population a été exposée au vide. Les conséquences médiatiques et diplomatiques sont d'une brutalité inouïe.",
     type: 'crisis',
     choices: [
       {
@@ -134,7 +171,7 @@ const EVENTS_LIBRARY: GameEventDef[] = [
       },
       {
         id: 'c2',
-        label: 'Camoufler la tragédie (Perte d\'alliés majeurs)',
+        label: "Camoufler la tragédie (Perte d'alliés majeurs)",
         onSelect: () => {
           const contracts = useContractStore()
           contracts.factionsReputation.USA = 0
@@ -161,12 +198,12 @@ export const useEventStore = defineStore('event', {
   },
   actions: {
     setupListeners() {
-      // Pour éviter les fuites ou doubles abonnements, on pourrait stocker la ref, 
+      // Pour éviter les fuites ou doubles abonnements, on pourrait stocker la ref,
       // mais le plus simple et sûr ici est l'arrow function.
       gameEvents.on('day-elapsed', (payload) => this._handleDayElapsed(payload))
     },
 
-    _handleDayElapsed() {
+    _handleDayElapsed(_payload?: unknown) {
       this.daysSinceLastEvent += 1
 
       // Tous les 100 jours min (~2.5 events par an), on a 2% de chance d'avoir un Event narratif
@@ -207,17 +244,16 @@ export const useEventStore = defineStore('event', {
       }
     },
 
-    resolveEvent(choiceId: string) {
+    async resolveEvent(choiceId: string) {
       const activeDef = this.activeEventDef
       if (!activeDef) return
 
       const choice = activeDef.choices.find((c) => c.id === choiceId)
       if (choice) {
-        choice.onSelect()
+        await choice.onSelect()
         this.eventHistory.push(activeDef.id)
         this.activeEventId = null
       }
     },
   },
-
 })

@@ -31,6 +31,7 @@ export interface ResearchNode {
   type?: ResearchType
   isPrototypeRequired?: boolean
   prototypeSuccess?: boolean // Flag to track if prototype mission was successful
+  materiauxRaresCost?: number // Nouveau
 }
 
 const TIER_YEARS: Record<number, number> = {
@@ -272,6 +273,7 @@ function createInitialResearches() {
       description: "Technologie théorique permettant d'atteindre des vitesses relativistes.",
       category: 'Moteur',
       cost: 5000,
+      materiauxRaresCost: 500,
       duration: 1000,
       progress: 0,
       status: isDebugMode ? 'completed' : 'locked',
@@ -339,6 +341,18 @@ function createInitialResearches() {
       progress: 0,
       status: isDebugMode ? 'completed' : 'locked',
       prerequisites: ['i-automation'],
+      tier: 3,
+    },
+    'i-shields': {
+      id: 'i-shields',
+      name: 'Boucliers Magnétiques',
+      description: "Protège les infrastructures spatiales des radiations solaires extrêmes.",
+      category: 'Informatique',
+      cost: 600,
+      duration: 180,
+      progress: 0,
+      status: isDebugMode ? 'completed' : 'locked',
+      prerequisites: ['i-ia'],
       tier: 3,
     },
     'i-quantum': {
@@ -641,6 +655,7 @@ function createInitialResearches() {
       description: "Modification de l'atmosphère planétaire pour la vie humaine.",
       category: 'Colonisation',
       cost: 10000,
+      materiauxRaresCost: 1000,
       duration: 2000,
       progress: 0,
       status: isDebugMode ? 'completed' : 'locked',
@@ -717,9 +732,11 @@ export const useResearchStore = defineStore('research', {
 
       const multiplier = this.getDifficultyMultiplier(id)
       const adjustedCost = Math.round(research.cost * multiplier)
+      const materiauxCost = research.materiauxRaresCost || 0
 
-      if (resourceStore.science >= adjustedCost) {
+      if (resourceStore.science >= adjustedCost && resourceStore.materiauxRares >= materiauxCost) {
         resourceStore.addScience(-adjustedCost)
+        resourceStore.addMateriauxRares(-materiauxCost)
         research.status = 'researching'
         this.activeResearchId = id
       }

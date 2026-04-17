@@ -2,7 +2,7 @@
   <div 
     :id="`research-${research.id}`"
     :class="[
-      'p-4 rounded-xl border transition-all duration-300 relative overflow-hidden',
+      'research-node p-4 rounded-xl border transition-all duration-300 relative overflow-hidden',
       statusClasses
     ]"
   >

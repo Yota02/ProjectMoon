@@ -144,6 +144,7 @@
         </div>
 
         <div
+          id="base-grid"
           ref="mapContainer"
           @scroll="updateViewBounds"
           class="overflow-auto max-h-[70vh] rounded-xl border border-slate-700 bg-slate-950 custom-scrollbar flex"
@@ -322,6 +323,7 @@
 
       <section class="space-y-6">
         <div
+          id="building-selector"
           v-if="activeTab === 'batiments'"
           class="bg-slate-900 border border-slate-700 rounded-2xl p-5"
         >

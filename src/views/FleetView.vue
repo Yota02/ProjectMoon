@@ -217,7 +217,7 @@
           Inventaire & État
         </h3>
 
-        <div class="space-y-2">
+        <div id="fleet-list" class="space-y-2">
           <div
             v-if="fleetStore.items.length === 0"
             class="text-center py-10 bg-slate-900/30 rounded-xl border border-slate-800/50"

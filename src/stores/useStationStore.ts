@@ -7,7 +7,7 @@ import { gameEvents } from '@/engine/EventBus'
 import { useEventStore } from './useEventStore'
 import { useTrainingStore } from './useTrainingStore'
 
-export type StationModuleType = 'housing' | 'science' | 'production' | 'storage' | 'command' | 'leisure'
+export type StationModuleType = 'housing' | 'science' | 'production' | 'storage' | 'command' | 'leisure' | 'shipyard' | 'mining'
 
 export interface StationModule {
   id: string
@@ -20,9 +20,12 @@ export interface StationModule {
     argentPerDay?: number
     sciencePerDay?: number
     carburantPerDay?: number
+    materiauxRaresPerDay?: number // Nouveau
     personnelCapacity?: number
     energiePerDay?: number
-    moralBoost?: number // Nouveau : bonus de moral passif
+    energyCapacity?: number // Capacité de stockage d'énergie
+    moralBoost?: number
+    shielding?: number // Niveau de protection anti-radiation
   }
   width: number
   height: number
@@ -36,6 +39,7 @@ export interface StationResources {
   o2: number
   piecesDetachees: number
   energie: number
+  materiauxRares?: number // Nouveau
 }
 
 export interface PlacedModule {
@@ -55,6 +59,7 @@ export interface Station {
   level: number
   constructionFinishedDay: number
   resources?: StationResources
+  maxEnergy: number
   mapWidth: number
   mapHeight: number
   mapOffsetX: number
@@ -62,6 +67,7 @@ export interface Station {
   civilianPopulation: number
   moral: number // 0 à 100
   isOnStrike: boolean
+  isShielded: boolean // Si la station est protégée par un bouclier global
   owner?: 'player' | 'external'
   lastCrisisDay?: number
 }
@@ -74,7 +80,7 @@ export const STATION_MODULES: StationModule[] = [
     type: 'housing',
     cost: { argent: 500, science: 50 },
     researchId: 'c-station-habitat',
-    bonuses: { personnelCapacity: 2, energiePerDay: -5 },
+    bonuses: { personnelCapacity: 2, energiePerDay: -5, shielding: 5 },
     width: 2,
     height: 1,
     symbol: 'HB',
@@ -87,7 +93,7 @@ export const STATION_MODULES: StationModule[] = [
     type: 'science',
     cost: { argent: 800, science: 100 },
     researchId: 'c-station-lab',
-    bonuses: { sciencePerDay: 5, energiePerDay: -10 },
+    bonuses: { sciencePerDay: 5, energiePerDay: -15, shielding: 2 },
     width: 2,
     height: 1,
     symbol: 'LB',
@@ -96,15 +102,54 @@ export const STATION_MODULES: StationModule[] = [
   {
     id: 'solar_panel_basic',
     name: 'Panneaux Solaires',
-    description: "Génère de l'énergie pour la station.",
+    description: "Génère de l'énergie pour la station (Uniquement le jour).",
     type: 'production',
     cost: { argent: 300, science: 30 },
     researchId: 'c-station-power',
-    bonuses: { energiePerDay: 30 },
+    bonuses: { energiePerDay: 40 },
     width: 1,
     height: 2,
     symbol: 'SN',
     colorClass: 'bg-amber-500/80 border-amber-300/80',
+  },
+  {
+    id: 'battery_park',
+    name: 'Parc de Batteries',
+    description: "Stocke l'énergie excédentaire pour la nuit.",
+    type: 'storage',
+    cost: { argent: 400, science: 20 },
+    researchId: 'c-station-power',
+    bonuses: { energyCapacity: 200 },
+    width: 1,
+    height: 1,
+    symbol: 'BT',
+    colorClass: 'bg-lime-500/80 border-lime-300/80',
+  },
+  {
+    id: 'rtg_nuclear',
+    name: 'Générateur RTG Nucléaire',
+    description: "Produit une énergie constante, jour et nuit.",
+    type: 'production',
+    cost: { argent: 2000, science: 400 },
+    researchId: 'm-nucleaire',
+    bonuses: { energiePerDay: 15, shielding: 0 },
+    width: 1,
+    height: 1,
+    symbol: 'NU',
+    colorClass: 'bg-yellow-600/80 border-yellow-400/80',
+  },
+  {
+    id: 'shield_generator',
+    name: 'Bouclier Magnétique',
+    description: "Protège la station contre les radiations solaires. Consomme de l'énergie.",
+    type: 'command',
+    cost: { argent: 3000, science: 600 },
+    researchId: 'i-shields',
+    bonuses: { energiePerDay: -25, shielding: 80 },
+    width: 2,
+    height: 2,
+    symbol: 'SH',
+    colorClass: 'bg-cyan-500/80 border-cyan-300/80',
   },
   {
     id: 'fuel_depot_basic',
@@ -113,11 +158,37 @@ export const STATION_MODULES: StationModule[] = [
     type: 'production',
     cost: { argent: 600, science: 80 },
     researchId: 'c-station-base',
-    bonuses: { carburantPerDay: 2, energiePerDay: -8 },
+    bonuses: { carburantPerDay: 2, energiePerDay: -12 },
     width: 2,
     height: 2,
     symbol: 'FD',
     colorClass: 'bg-rose-500/80 border-rose-300/80',
+  },
+  {
+    id: 'drydock_orbital',
+    name: 'Cale Sèche Orbitale',
+    description: "Permet la construction de vaisseaux lourds directement dans l'espace.",
+    type: 'shipyard',
+    cost: { argent: 8000, science: 1500 },
+    researchId: 'b-drydock',
+    bonuses: { energyCapacity: 500, energiePerDay: -50, shielding: 20 },
+    width: 4,
+    height: 4,
+    symbol: 'DD',
+    colorClass: 'bg-slate-700/80 border-slate-500/80',
+  },
+  {
+    id: 'mining_asteroid',
+    name: "Module d'Extraction Astéroïdale",
+    description: "Extrait des matériaux rares des astéroïdes capturés.",
+    type: 'mining',
+    cost: { argent: 5000, science: 800 },
+    researchId: 'e-asteroid',
+    bonuses: { materiauxRaresPerDay: 5, energiePerDay: -60 },
+    width: 3,
+    height: 3,
+    symbol: 'MN',
+    colorClass: 'bg-orange-800/80 border-orange-600/80',
   },
   {
     id: 'command_center_basic',
@@ -126,7 +197,7 @@ export const STATION_MODULES: StationModule[] = [
     type: 'command',
     cost: { argent: 1000, science: 200 },
     researchId: 'c-station-base',
-    bonuses: { sciencePerDay: 2, argentPerDay: 5, energiePerDay: -5 },
+    bonuses: { sciencePerDay: 2, argentPerDay: 5, energiePerDay: -10, shielding: 10 },
     width: 2,
     height: 2,
     symbol: 'HQ',
@@ -193,12 +264,16 @@ export const useStationStore = defineStore('station', () => {
             astronautIds: [999, 1000],
             level: 1,
             constructionFinishedDay: 0,
-            resources: { nourriture: 100, eau: 100, o2: 100, piecesDetachees: 50, energie: 100 },
+            resources: { nourriture: 100, eau: 100, o2: 100, piecesDetachees: 50, energie: 500 },
+            maxEnergy: 1000,
             mapWidth: 12,
             mapHeight: 12,
             mapOffsetX: 0,
             mapOffsetY: 0,
             civilianPopulation: 0,
+            moral: 100,
+            isOnStrike: false,
+            isShielded: false,
             owner: 'external',
           },
           {
@@ -214,12 +289,16 @@ export const useStationStore = defineStore('station', () => {
             astronautIds: [],
             level: 1,
             constructionFinishedDay: 0,
-            resources: { nourriture: 50, eau: 50, o2: 50, piecesDetachees: 25, energie: 50 },
+            resources: { nourriture: 50, eau: 50, o2: 50, piecesDetachees: 25, energie: 200 },
+            maxEnergy: 500,
             mapWidth: 12,
             mapHeight: 12,
             mapOffsetX: 0,
             mapOffsetY: 0,
             civilianPopulation: 0,
+            moral: 100,
+            isOnStrike: false,
+            isShielded: false,
             owner: 'external',
           },
         ]
@@ -231,11 +310,12 @@ export const useStationStore = defineStore('station', () => {
 
   gameEvents.on('day-elapsed', ({ daysPassed, currentDate }) => {
     if (daysPassed <= 0) return
-    const { argentPerDay, sciencePerDay, carburantPerDay } = stationBonuses.value
+    const { argentPerDay, sciencePerDay, carburantPerDay, materiauxRaresPerDay } = stationBonuses.value
 
     if (argentPerDay !== 0) resourceStore.addArgent(argentPerDay * daysPassed)
     if (sciencePerDay !== 0) resourceStore.addScience(sciencePerDay * daysPassed)
     if (carburantPerDay !== 0) resourceStore.addCarburant(carburantPerDay * daysPassed)
+    if (materiauxRaresPerDay !== 0) resourceStore.addMateriauxRares(materiauxRaresPerDay * daysPassed)
 
     const formattedDate = `${currentDate.getDate().toString().padStart(2, '0')}/${(currentDate.getMonth() + 1).toString().padStart(2, '0')}/${currentDate.getFullYear()}`
     consumeStationResources(daysPassed, formattedDate)
@@ -252,6 +332,11 @@ export const useStationStore = defineStore('station', () => {
 
   const isStationConstructionUnlocked = computed(() => {
     return researchStore.completedResearchIds.includes('c-station-base')
+  })
+
+  // Nouveau : Débloque la logistique automatisée (5 stations ou plus)
+  const isLogisticsUnlocked = computed(() => {
+    return stations.value.filter(s => s.owner === 'player').length >= 5
   })
 
   const unlockedModules = computed(() => {
@@ -280,10 +365,21 @@ export const useStationStore = defineStore('station', () => {
     let argentPerDay = 0
     let sciencePerDay = 0
     let carburantPerDay = 0
+    let materiauxRaresPerDay = 0
+    
+    // Stats d'énergie pour l'UI
+    const energyStats: Record<string, { prod: number, cons: number, storage: number, shielding: number }> = {}
 
     stations.value.forEach((station) => {
+      let sProd = 0
+      let sCons = 0
+      let sStorage = 50 // Base storage
+      let sShielding = 0
+
       if (gameStore.elapsedDays >= station.constructionFinishedDay) {
-        // Taxes civiles : 1$ par jour par colon, réduit si moral bas
+        const isDay = Math.floor(gameStore.elapsedDays) % 2 === 0
+        
+        // Taxes civiles
         const taxPerColon = station.moral > 50 ? 1 : 0.5
         argentPerDay += station.civilianPopulation * taxPerColon
 
@@ -291,17 +387,42 @@ export const useStationStore = defineStore('station', () => {
           const module = STATION_MODULES.find((m) => m.id === placed.moduleId)
           if (module) {
             argentPerDay += module.bonuses.argentPerDay || 0
-            // Si en grève, pas de production de science
-            if (!station.isOnStrike) {
+            
+            // Énergie
+            const eBonus = module.bonuses.energiePerDay || 0
+            if (eBonus > 0) {
+              // Production : Solaire uniquement le jour (sauf RTG)
+              if (module.id === 'solar_panel_basic') {
+                if (isDay) sProd += eBonus
+              } else {
+                sProd += eBonus
+              }
+            } else {
+              // Consommation (valeur négative)
+              sCons += Math.abs(eBonus)
+            }
+
+            sStorage += module.bonuses.energyCapacity || 0
+            sShielding += module.bonuses.shielding || 0
+
+            // Science (uniquement si pas en grève ET si station alimentée)
+            const hasEnergy = (station.resources?.energie || 0) > 0
+            if (!station.isOnStrike && hasEnergy) {
               sciencePerDay += module.bonuses.sciencePerDay || 0
+              materiauxRaresPerDay += module.bonuses.materiauxRaresPerDay || 0
             }
             carburantPerDay += module.bonuses.carburantPerDay || 0
           }
         })
       }
+      
+      energyStats[station.id] = { prod: sProd, cons: sCons, storage: sStorage, shielding: sShielding }
+      // Update maxEnergy and isShielded reactively
+      station.maxEnergy = sStorage
+      station.isShielded = sShielding >= 50
     })
 
-    return { argentPerDay, sciencePerDay, carburantPerDay }
+    return { argentPerDay, sciencePerDay, carburantPerDay, materiauxRaresPerDay, energyStats }
   })
 
   const stationConsumption = computed(() => {
@@ -358,8 +479,9 @@ export const useStationStore = defineStore('station', () => {
         eau: 50,
         o2: 50,
         piecesDetachees: 25,
-        energie: 50,
+        energie: 200,
       },
+      maxEnergy: 500,
       mapWidth: 12,
       mapHeight: 12,
       mapOffsetX: 0,
@@ -367,6 +489,7 @@ export const useStationStore = defineStore('station', () => {
       civilianPopulation: 0,
       moral: 100,
       isOnStrike: false,
+      isShielded: false,
       owner: 'player',
     }
 
@@ -420,6 +543,13 @@ export const useStationStore = defineStore('station', () => {
 
     if (resourceStore.argent < module.cost.argent || resourceStore.science < module.cost.science) {
       return { success: false, message: 'Ressources insuffisantes' }
+    }
+
+    // Restriction thématique : Module de minage uniquement en orbite lunaire ou haute
+    if (module.id === 'mining_asteroid') {
+       if (station.orbitBodyId !== 'moon' && station.orbitBodyId !== 'earth') {
+         return { success: false, message: 'Le minage nécessite une orbite stable (Terre/Lune)' }
+       }
     }
 
     // If x and y are provided, check placement. If not, it's a legacy call (not visual)
@@ -516,11 +646,26 @@ export const useStationStore = defineStore('station', () => {
       if (gameStore.elapsedDays >= station.constructionFinishedDay && station.resources) {
         const crewCount = station.astronautIds.length
         const civilianCount = station.civilianPopulation
+        const eStats = stationBonuses.value.energyStats[station.id]
 
-        // Consommation de ressources
+        // --- GESTION DE L'ÉNERGIE ---
+        if (eStats) {
+          const netEnergy = (eStats.prod - eStats.cons) * daysPassed
+          station.resources.energie = Math.max(
+            0,
+            Math.min(station.maxEnergy, station.resources.energie + netEnergy)
+          )
+        }
+
+        const isBlackout = (station.resources.energie || 0) <= 0
+
+        // Consommation de ressources de base
         if ((crewCount > 0 || civilianCount > 0) && station.resources) {
           // Les civils consomment 1.5x plus
-          const totalConsumptionFactor = (crewCount * 0.5) + (civilianCount * 0.75)
+          let totalConsumptionFactor = (crewCount * 0.5) + (civilianCount * 0.75)
+          
+          // En cas de blackout, le support vie est moins efficace (conso O2 x2)
+          const o2Factor = isBlackout ? 2 : 1
           
           station.resources.nourriture = Math.max(
             0,
@@ -534,7 +679,7 @@ export const useStationStore = defineStore('station', () => {
             station.resources.eau = Math.max(0, station.resources.eau - totalConsumptionFactor * daysPassed)
           }
           
-          station.resources.o2 = Math.max(0, station.resources.o2 - totalConsumptionFactor * daysPassed)
+          station.resources.o2 = Math.max(0, station.resources.o2 - (totalConsumptionFactor * o2Factor) * daysPassed)
         }
         station.resources.piecesDetachees = Math.max(
           0,
@@ -556,6 +701,12 @@ export const useStationStore = defineStore('station', () => {
         if (station.resources.o2 < 5) moralChange -= 2 * daysPassed
         if (station.resources.nourriture < 5) moralChange -= 1 * daysPassed
         if (station.resources.eau < 5) moralChange -= 1 * daysPassed
+        if (isBlackout) {
+          moralChange -= 5 * daysPassed
+          if (Math.random() < 0.1 * daysPassed) {
+             trainingStore.log(`[ALERTE] Blackout total sur ${station.name} ! Le moral s'effondre.`)
+          }
+        }
         
         // Malus de surpopulation (si pop > capacity)
         const capacity = station.placedModules.reduce((subTotal, placed) => {
@@ -725,6 +876,7 @@ export const useStationStore = defineStore('station', () => {
     unlockedModules,
     isModuleUnlocked,
     isStationConstructionUnlocked,
+    isLogisticsUnlocked,
     totalPersonnelCapacity,
     marsCivilianPopulation,
     stationBonuses,

@@ -11,6 +11,7 @@ export const useResourceStore = defineStore('resource', {
     eau: 50,
     o2: 50,
     piecesDetachees: 10,
+    materiauxRares: 0,
     carburantPriceBase: 100,
     carburantPriceMultiplier: 1,
     carburantPriceMultiplierDuration: 0, // en jours
@@ -23,6 +24,7 @@ export const useResourceStore = defineStore('resource', {
       eau: 0,
       o2: 0,
       piecesDetachees: 0,
+      materiauxRares: 0,
     },
   }),
   getters: {
@@ -49,6 +51,9 @@ export const useResourceStore = defineStore('resource', {
     },
     addPiecesDetachees(amount: number) {
       this.piecesDetachees += amount
+    },
+    addMateriauxRares(amount: number) {
+      this.materiauxRares += amount
     },
     setCarburantPriceMultiplier(multiplier: number, duration: number) {
       this.carburantPriceMultiplier = multiplier
@@ -86,6 +91,7 @@ export const useResourceStore = defineStore('resource', {
       this.eau += this.production.eau * daysPassed
       this.o2 += this.production.o2 * daysPassed
       this.piecesDetachees += this.production.piecesDetachees * daysPassed
+      this.materiauxRares += this.production.materiauxRares * daysPassed
     },
   },
 
