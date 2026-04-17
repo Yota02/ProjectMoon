@@ -36,6 +36,11 @@ export const useTutorialStore = defineStore('tutorial', {
         this.completeTutorial()
       }
     },
+    prevStep() {
+      if (this.currentStepIndex > 0) {
+        this.currentStepIndex--
+      }
+    },
     completeTutorial() {
       if (this.activeTutorial) {
         this.completedTutorials.push(this.activeTutorial.id)

@@ -2,7 +2,7 @@
   <div>
     <div class="p-6 lg:p-10 space-y-8 max-w-7xl mx-auto text-slate-200">
       <!-- Header with stats -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div id="stations-stats" class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <StatCard
           title="Stations Actives"
           :value="stationStore.stations.length"
@@ -35,6 +35,7 @@
         <button
           v-if="stationStore.isStationConstructionUnlocked"
           @click="showCreateModal = true"
+          id="create-station-btn"
           class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-sm font-bold transition-colors flex items-center gap-2"
         >
           <BaseIcon name="plus" :size="18" />
@@ -88,8 +89,9 @@
 
       <div v-else class="grid grid-cols-1 gap-8">
         <div
-          v-for="station in stationStore.stations"
+          v-for="(station, idx) in stationStore.stations"
           :key="station.id"
+          :id="'station-card-' + idx"
           class="bg-slate-900/40 backdrop-blur-xl border border-slate-700/50 rounded-[2rem] overflow-hidden shadow-2xl relative group/card"
         >
           <!-- Ambient Glow -->
@@ -192,6 +194,7 @@
             <div class="flex flex-wrap gap-2">
               <button
                 @click="activeVisualizerId = station.id"
+                id="station-visualizer-btn"
                 class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black transition-all flex items-center gap-2 shadow-lg shadow-blue-600/20 active:scale-95"
               >
                 <BaseIcon name="chart" :size="14" />
@@ -245,6 +248,7 @@
               <button
                 v-if="stationStore.isLogisticsUnlocked"
                 @click="openLogisticsModal(station.id)"
+                id="logistics-btn"
                 :disabled="gameStore.elapsedDays < station.constructionFinishedDay"
                 class="px-3 py-2 bg-blue-600/20 hover:bg-blue-600 text-blue-400 hover:text-white rounded-xl text-xs font-black transition-all border border-blue-500/30 flex items-center gap-2 active:scale-95 disabled:opacity-30 shadow-lg shadow-blue-900/10"
               >
@@ -301,6 +305,7 @@
             <!-- Stockage Section -->
             <div
               v-if="station.resources"
+              id="station-storage-0"
               class="bg-slate-950/40 p-6 rounded-3xl border border-slate-800/50 backdrop-blur-sm shadow-inner group/stockage transition-all duration-500 hover:border-blue-500/20"
             >
               <div class="flex items-center justify-between mb-6">

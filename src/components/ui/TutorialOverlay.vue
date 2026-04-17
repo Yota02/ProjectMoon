@@ -150,12 +150,21 @@ watch(() => currentStep.value, () => {
         >
           Passer
         </button>
-        <button 
-          @click="tutorialStore.nextStep" 
-          class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg font-bold transition-all transform hover:scale-105"
-        >
-          {{ tutorialStore.currentStepIndex === tutorialStore.activeTutorial!.steps.length - 1 ? 'Terminer' : 'Suivant' }}
-        </button>
+        <div class="flex gap-2">
+          <button 
+            v-if="tutorialStore.currentStepIndex > 0"
+            @click="tutorialStore.prevStep" 
+            class="bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg font-bold transition-all"
+          >
+            Précédent
+          </button>
+          <button 
+            @click="tutorialStore.nextStep" 
+            class="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-lg font-bold transition-all transform hover:scale-105"
+          >
+            {{ tutorialStore.currentStepIndex === tutorialStore.activeTutorial!.steps.length - 1 ? 'Terminer' : 'Suivant' }}
+          </button>
+        </div>
       </div>
 
       <!-- Indicateur de progression -->

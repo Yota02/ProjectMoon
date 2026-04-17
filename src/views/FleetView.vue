@@ -1,7 +1,7 @@
 <template>
   <div class="p-6 lg:p-10 space-y-8 max-w-7xl mx-auto">
     <!-- En-tête avec statistiques -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div id="fleet-stats" class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <StatCard
         title="Lanceurs Prêts"
         :value="fleetStore.readyLaunchers.length"
@@ -30,6 +30,7 @@
       <div class="lg:col-span-2 space-y-6">
         <!-- Bureau d'Études : Création de nouveaux designs -->
         <div
+          id="design-bureau"
           class="bg-gradient-to-br from-slate-900 to-indigo-950/30 border border-blue-500/20 p-6 rounded-2xl shadow-xl"
         >
           <div class="flex items-center gap-3 mb-6">
@@ -102,6 +103,7 @@
         </div>
 
         <div
+          id="assembly-center"
           v-if="fleetStore.availableDesigns.length === 0"
           class="bg-slate-900/50 border border-dashed border-slate-800 p-12 rounded-2xl text-center"
         >
@@ -122,7 +124,7 @@
           >
         </div>
 
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div id="assembly-center" v-else class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div
             v-for="design in fleetStore.availableDesigns"
             :key="design.id"

@@ -224,7 +224,8 @@ const currentViewTutorial = computed(() => {
     'base': 'base',
     'personnel': 'personnel',
     'fleet': 'fleet',
-    'missions': 'missions'
+    'missions': 'missions',
+    'stations': 'stations'
   }
   const tutorialId = mapping[routeName]
   return tutorialId ? allTutorials[tutorialId] : null
