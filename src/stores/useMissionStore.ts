@@ -664,12 +664,7 @@ export const useMissionStore = defineStore('mission', {
         if (mission.status !== 'En attente') return false
         if (mission.unlockAfterMissionId !== completedMissionId) return false
 
-        if (mission.populationRequirement) {
-          const { type, count } = mission.populationRequirement
-          if (type === 'marsCivilian') {
-            if (stationStore.marsCivilianPopulation < count) return false
-          }
-        }
+
 
         return true
       })
@@ -735,10 +730,6 @@ export const useMissionStore = defineStore('mission', {
         }
       }
 
-      if (!personnelStore.hasIngenieur) {
-        this.log(`[ERREUR] Un Ingenieur est requis pour lancer "${mission.name}".`)
-        return
-      }
 
       // Calculer la consommation de carburant basée sur le lanceur et la charge utile
       const payloadWeight =
@@ -958,7 +949,7 @@ export const useMissionStore = defineStore('mission', {
           }
         } else {
           const isRecurringMission = Boolean(mission.recurrenceDays)
-          mission.status = isRecurringMission ? 'En attente' : 'Échec'
+          mission.status = isRecurringMission ? 'En attente' : 'Disponible'
 
           if (mission.isPrototype) {
             const failScience = 500

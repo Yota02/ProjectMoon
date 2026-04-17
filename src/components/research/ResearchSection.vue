@@ -32,7 +32,6 @@
             v-for="research in researchesByTier(tier - 1)" 
             :key="research.id"
             :research="research"
-            :has-active-research="hasActiveResearch"
             @start="$emit('start', $event)"
             @navigate-to="$emit('navigate-to', $event)"
           />
@@ -52,7 +51,6 @@ const props = defineProps<{
   title: string
   description: string
   researches: ResearchNodeType[]
-  hasActiveResearch: boolean
 }>()
 
 defineEmits(['start', 'navigate-to'])

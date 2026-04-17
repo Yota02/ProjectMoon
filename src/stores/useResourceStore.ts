@@ -26,6 +26,7 @@ export const useResourceStore = defineStore('resource', {
       piecesDetachees: 0,
       materiauxRares: 0,
     },
+    scienceBuffer: 0,
   }),
   getters: {
     currentCarburantPrice: (state) => Math.round(state.carburantPriceBase * state.carburantPriceMultiplier),
@@ -35,7 +36,12 @@ export const useResourceStore = defineStore('resource', {
       this.argent += amount
     },
     addScience(amount: number) {
-      this.science += amount
+      this.scienceBuffer += amount
+      const intPart = Math.floor(this.scienceBuffer)
+      if (intPart > 0) {
+        this.science += intPart
+        this.scienceBuffer -= intPart
+      }
     },
     addCarburant(amount: number) {
       this.carburant += amount
@@ -85,7 +91,7 @@ export const useResourceStore = defineStore('resource', {
         }
       }
 
-      this.science += this.production.science * daysPassed
+      this.addScience(this.production.science * daysPassed)
       this.carburant += this.production.carburant * daysPassed
       this.nourriture += this.production.nourriture * daysPassed
       this.eau += this.production.eau * daysPassed

@@ -459,18 +459,6 @@ watch(
   },
 )
 
-watch(
-  () => currentViewTutorial.value,
-  (newTutorial) => {
-    if (newTutorial && !tutorialStore.completedTutorials.includes(newTutorial.id)) {
-      // Small delay to let the page transition and render
-      setTimeout(() => {
-        tutorialStore.startTutorial(newTutorial)
-      }, 800)
-    }
-  },
-  { immediate: true }
-)
 
 onMounted(() => {
   gameLoop.addTickHandler((deltaTime: number) => {

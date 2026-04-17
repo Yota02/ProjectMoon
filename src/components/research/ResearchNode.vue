@@ -12,6 +12,10 @@
       class="absolute bottom-0 left-0 h-1 bg-blue-500 transition-all duration-500 ease-linear"
       :style="{ width: `${research.progress}%` }"
     ></div>
+    <div 
+      v-else-if="research.status === 'queued'" 
+      class="absolute bottom-0 left-0 h-1 bg-amber-500/50 w-full"
+    ></div>
 
     <div class="flex justify-between items-start mb-2">
       <div 
@@ -29,6 +33,9 @@
         </span>
         <span v-else-if="research.status === 'researching'" class="text-[10px] font-bold uppercase tracking-widest text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded border border-blue-400/20 animate-pulse">
           En cours
+        </span>
+        <span v-else-if="research.status === 'queued'" class="text-[10px] font-bold uppercase tracking-widest text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded border border-amber-400/20">
+          En attente
         </span>
         <span v-else class="text-[10px] font-mono text-slate-500">
           {{ adjustedCost }} 🧪
@@ -77,19 +84,23 @@
     <button
       v-if="research.status === 'available'"
       @click="$emit('start', research.id)"
-      :disabled="hasActiveResearch || !canAfford"
+      :disabled="!canAfford"
       :class="[
         'w-full py-2 rounded-lg text-xs font-bold transition-all',
-        canAfford && !hasActiveResearch
+        canAfford
           ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20'
           : 'bg-slate-800 text-slate-500 cursor-not-allowed'
       ]"
     >
-      {{ hasActiveResearch ? 'Déjà occupé' : (canAfford ? 'Rechercher' : 'Science insuffisante') }}
+      {{ canAfford ? (isQueueFull ? 'File pleine' : (hasActiveSlot ? 'Rechercher' : 'Ajouter à la file')) : 'Science insuffisante' }}
     </button>
     
     <div v-else-if="research.status === 'researching'" class="w-full py-2 bg-blue-900/20 text-blue-400 rounded-lg text-center text-xs font-bold border border-blue-500/20">
       {{ Math.round(research.progress) }}%
+    </div>
+
+    <div v-else-if="research.status === 'queued'" class="w-full py-2 bg-amber-900/20 text-amber-400 rounded-lg text-center text-xs font-bold border border-amber-500/20">
+      En file d'attente
     </div>
 
     <div v-else-if="research.status === 'locked'" class="w-full py-2 bg-slate-900/50 text-slate-600 rounded-lg text-center text-xs font-medium border border-slate-800/50 flex items-center justify-center gap-2">
@@ -146,6 +157,10 @@ const difficultyLabel = computed(() => {
   return 'Époque idéale'
 })
 
+const hasActiveSlot = computed(() => researchStore.activeResearchIds.length < researchStore.maxResearchSlots)
+const isQueueFull = computed(() => researchStore.researchQueue.length >= 5) // Limite arbitraire de file d'attente ? 
+
+
 const difficultyClasses = computed(() => {
   if (multiplier.value > 1.2) return 'bg-amber-500/10 border-amber-500/30 text-amber-500'
   if (multiplier.value > 1) return 'bg-blue-500/10 border-blue-500/30 text-blue-400'
@@ -168,6 +183,8 @@ const statusClasses = computed(() => {
       return 'bg-emerald-500/5 border-emerald-500/20'
     case 'researching':
       return 'bg-blue-500/10 border-blue-500/30'
+    case 'queued':
+      return 'bg-amber-500/5 border-amber-500/20'
     case 'available':
       return 'bg-slate-800/40 border-slate-700/50 hover:border-blue-500/50 cursor-default'
     case 'locked':
@@ -181,6 +198,7 @@ const iconContainerClasses = computed(() => {
   switch (props.research.status) {
     case 'completed': return 'bg-emerald-500/20 text-emerald-400'
     case 'researching': return 'bg-blue-500/20 text-blue-400'
+    case 'queued': return 'bg-amber-500/20 text-amber-400'
     case 'available': return 'bg-slate-700/50 text-slate-300'
     case 'locked': return 'bg-slate-900 text-slate-600'
     default: return 'bg-slate-800 text-slate-400'

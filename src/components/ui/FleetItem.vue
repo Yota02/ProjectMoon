@@ -27,21 +27,37 @@
             {{ Math.floor(status === 'En maintenance' ? 100 - progress : progress || 0) }}%
           </span>
         </div>
-        <div v-else class="flex items-center gap-2 mt-1">
-          <span class="text-xs text-slate-400">Fiabilité:</span>
-          <div class="w-16 h-1.5 bg-slate-700 rounded-full">
+          <div class="w-16 h-1.5 bg-slate-700 rounded-full overflow-hidden">
             <div
-              class="bg-emerald-500 h-1.5 rounded-full"
+              class="h-full transition-all duration-500"
+              :class="isStalled ? 'bg-orange-500/40 animate-pulse' : 'bg-emerald-500'"
               :style="{ width: `${reliability}%` }"
             ></div>
           </div>
-          <span class="text-xs font-mono text-slate-400">{{ reliability }}%</span>
+          <span
+            class="text-[10px] font-mono"
+            :class="isStalled ? 'text-orange-400 animate-pulse' : 'text-slate-400'"
+            >{{ reliability }}%</span
+          >
+          <div
+            v-if="isStalled"
+            class="flex items-center gap-1.5 px-2 py-0.5 bg-orange-500/10 border border-orange-500/20 rounded-md ml-2"
+          >
+            <div class="w-1 h-1 bg-orange-500 rounded-full animate-ping"></div>
+            <span class="text-[9px] font-black text-orange-400 uppercase tracking-tighter"
+              >Simulation Stoppée</span
+            >
+          </div>
         </div>
       </div>
+    <div class="flex flex-col items-end gap-1">
+      <span :class="[`text-xs font-bold px-3 py-1 rounded-full border`, statusClasses]">
+        {{ status }}
+      </span>
+      <span v-if="isStalled" class="text-[8px] text-orange-500 uppercase font-black tracking-widest mr-1">
+        Installations Manquantes
+      </span>
     </div>
-    <span :class="[`text-xs font-bold px-3 py-1 rounded-full border`, statusClasses]">
-      {{ status }}
-    </span>
   </div>
 </template>
 
@@ -64,6 +80,10 @@ const props = defineProps({
   icon: {
     type: String,
     default: 'rocket',
+  },
+  isStalled: {
+    type: Boolean,
+    default: false,
   },
 })
 

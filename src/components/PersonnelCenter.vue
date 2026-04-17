@@ -102,13 +102,8 @@
         </div>
         <button
           @click="personnelStore.runResearchProtocol()"
-          :disabled="!personnelStore.hasScientifique"
-          class="w-full py-4 rounded-xl border-2 transition-all font-black text-xs tracking-[0.2em] uppercase"
-          :class="
-            personnelStore.hasScientifique
-              ? 'border-purple-500/50 text-purple-400 hover:bg-purple-500/10'
-              : 'border-slate-800 text-slate-600 cursor-not-allowed'
-          "
+          :disabled="false"
+          class="w-full py-4 rounded-xl border-2 transition-all font-black text-xs tracking-[0.2em] uppercase border-purple-500/50 text-purple-400 hover:bg-purple-500/10"
         >
           Lancer le Protocole de Recherche
         </button>
@@ -139,10 +134,10 @@
         </div>
         <button
           @click="personnelStore.buildRefinery()"
-          :disabled="!personnelStore.hasConstructeur || !canBuildRefinery"
+          :disabled="!canBuildRefinery"
           class="w-full py-4 rounded-xl border-2 transition-all font-black text-xs tracking-[0.2em] uppercase"
           :class="
-            personnelStore.hasConstructeur && canBuildRefinery
+            canBuildRefinery
               ? 'border-orange-500/50 text-orange-400 hover:bg-orange-500/10'
               : 'border-slate-800 text-slate-600 cursor-not-allowed'
           "

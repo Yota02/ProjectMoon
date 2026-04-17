@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { useResourceStore } from './useResourceStore'
 import { useResearchStore } from './useResearchStore'
 import { useBaseStore } from './useBaseStore'
+import { useStationStore } from './useStationStore'
 
 export type FleetItemStatus = 'Prêt' | 'En maintenance' | 'En construction'
 export type OrbitType = 'LEO' | 'MEO' | 'GEO' | 'HEO' | 'LUNAR' | 'MARTIAN'
@@ -191,6 +192,24 @@ export const useFleetStore = defineStore('fleet', {
         return state.designs.find((design) => design.id === launcher.designId)?.cargoCapacity ?? 0
       }
     },
+    isItemStalled: (state) => {
+      return (itemId: string) => {
+        const item = state.items.find((i) => i.id === itemId)
+        if (!item || item.status === 'Prêt') return false
+
+        const baseStore = useBaseStore()
+        const stationStore = useStationStore()
+
+        if (item.location === 'Earth') {
+          return !baseStore.isAnyBuildingConnected('launch_pad')
+        } else if (item.location === 'Orbit') {
+          return !stationStore.stations.some((s) =>
+            s.placedModules.some((m) => m.moduleId === 'drydock_orbital'),
+          )
+        }
+        return false
+      }
+    },
     // Calcule la consommation de carburant pour un lancement
     calculateFuelConsumption: (state) => {
       return (launcherId: string, payloadWeight: number = 0) => {
@@ -290,17 +309,30 @@ export const useFleetStore = defineStore('fleet', {
     tick(deltaTime: number) {
       // 500ms = 1 jour
       const daysPassed = deltaTime / 500
-
       const baseStore = useBaseStore()
-      const hasConnectedPad = baseStore.placedBuildings.some(
-        (b) => b.buildingId === 'launch_pad' && baseStore.isBuildingConnected(b),
-      )
+      const stationStore = useStationStore()
 
-      if (!hasConnectedPad) return
+      // On vérifie le statut global des installations pour optimiser les performances
+      const hasAnyConnectedPad = baseStore.isAnyBuildingConnected('launch_pad')
+      const hasAnyShipyard = stationStore.stations.some((s) =>
+        s.placedModules.some((m) => m.moduleId === 'drydock_orbital'),
+      )
 
       this.items.forEach((item) => {
         const design = this.designs.find((d) => d.id === item.designId)
         if (!design) return
+
+        // Vérification de l'éligibilité à la progression
+        let canProgress = false
+        if (item.location === 'Earth') {
+          // Sur Terre, on a besoin d'un pas de tir connecté (sur n'importe quelle base terrestre)
+          canProgress = hasAnyConnectedPad
+        } else if (item.location === 'Orbit') {
+          // En orbite, on a besoin d'un chantier naval (drydock)
+          canProgress = hasAnyShipyard
+        }
+
+        if (!canProgress) return
 
         if (item.status === 'En construction') {
           item.constructionProgress += (daysPassed / item.constructionTime) * 100

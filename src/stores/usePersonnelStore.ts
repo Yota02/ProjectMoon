@@ -77,10 +77,7 @@ export const usePersonnelStore = defineStore('personnel', {
     runResearchProtocol() {
       const resourceStore = useResourceStore()
 
-      if (!this.hasScientifique) {
-        this.log("[ERREUR] Vous avez besoin d'au moins un Scientifique.")
-        return false
-      }
+
 
       const cost = { argent: 80, carburant: 15 }
       if (resourceStore.argent < cost.argent || resourceStore.carburant < cost.carburant) {
@@ -100,10 +97,7 @@ export const usePersonnelStore = defineStore('personnel', {
     buildRefinery() {
       const resourceStore = useResourceStore()
 
-      if (!this.hasConstructeur) {
-        this.log('[ERREUR] Un Constructeur est requis pour construire une raffinerie.')
-        return false
-      }
+
 
       const cost = this.refineryCost
       if (resourceStore.argent < cost.argent || resourceStore.carburant < cost.carburant) {

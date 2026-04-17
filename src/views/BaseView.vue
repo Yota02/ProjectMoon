@@ -1,7 +1,10 @@
 <template>
   <div class="p-6 lg:p-10 max-w-7xl mx-auto w-full space-y-6">
     <!-- Zone Header -->
-    <header v-if="currentZone" class="bg-slate-900 border border-slate-700 rounded-2xl p-6 flex flex-col md:flex-row justify-between items-center gap-6">
+    <header
+      v-if="currentZone"
+      class="bg-slate-900 border border-slate-700 rounded-2xl p-6 flex flex-col md:flex-row justify-between items-center gap-6"
+    >
       <div class="flex items-center gap-4">
         <div class="p-4 bg-blue-600/20 rounded-xl border border-blue-500/30">
           <BaseIcon name="globe" :size="32" class="text-blue-400" />
@@ -10,34 +13,55 @@
           <h1 class="text-2xl font-black text-white leading-tight">
             Base de {{ currentZone.name }}
           </h1>
-          <p class="text-slate-400 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2">
+          <p
+            class="text-slate-400 font-bold uppercase tracking-widest text-[10px] flex items-center gap-2"
+          >
             {{ currentZone.planetName }} • {{ currentZone.description }}
             <span v-if="activeHazards.length > 0" class="flex gap-1">
-               <span v-for="h in activeHazards" :key="h.id" 
-                     class="bg-red-600 text-white px-2 py-0.5 rounded text-[8px] animate-pulse">
-                 ⚠️ {{ h.name }} (-{{ (h.severity * 100).toFixed(0) }}% Energie)
-               </span>
+              <span
+                v-for="h in activeHazards"
+                :key="h.id"
+                class="bg-red-600 text-white px-2 py-0.5 rounded text-[8px] animate-pulse"
+              >
+                ⚠️ {{ h.name }} (-{{ (h.severity * 100).toFixed(0) }}% Energie)
+              </span>
             </span>
           </p>
         </div>
       </div>
 
       <div class="grid grid-cols-4 gap-4 w-full md:w-auto">
-        <div class="bg-slate-950/50 p-2 rounded-lg border border-slate-800/50 text-center min-w-[80px]">
+        <div
+          class="bg-slate-950/50 p-2 rounded-lg border border-slate-800/50 text-center min-w-[80px]"
+        >
           <p class="text-[8px] text-slate-500 uppercase font-black">Minéraux</p>
-          <p class="text-xs font-bold text-emerald-400">{{ (currentZone.resources.minerals * 100).toFixed(0) }}%</p>
+          <p class="text-xs font-bold text-emerald-400">
+            {{ (currentZone.resources.minerals * 100).toFixed(0) }}%
+          </p>
         </div>
-        <div class="bg-slate-950/50 p-2 rounded-lg border border-slate-800/50 text-center min-w-[80px]">
+        <div
+          class="bg-slate-950/50 p-2 rounded-lg border border-slate-800/50 text-center min-w-[80px]"
+        >
           <p class="text-[8px] text-slate-500 uppercase font-black">Eau</p>
-          <p class="text-xs font-bold text-blue-400">{{ (currentZone.resources.water * 100).toFixed(0) }}%</p>
+          <p class="text-xs font-bold text-blue-400">
+            {{ (currentZone.resources.water * 100).toFixed(0) }}%
+          </p>
         </div>
-        <div class="bg-slate-950/50 p-2 rounded-lg border border-slate-800/50 text-center min-w-[80px]">
+        <div
+          class="bg-slate-950/50 p-2 rounded-lg border border-slate-800/50 text-center min-w-[80px]"
+        >
           <p class="text-[8px] text-slate-500 uppercase font-black">Énergie</p>
-          <p class="text-xs font-bold text-yellow-400">{{ (currentZone.resources.energy * 100).toFixed(0) }}%</p>
+          <p class="text-xs font-bold text-yellow-400">
+            {{ (currentZone.resources.energy * 100).toFixed(0) }}%
+          </p>
         </div>
-        <div class="bg-slate-950/50 p-2 rounded-lg border border-slate-800/50 text-center min-w-[80px]">
+        <div
+          class="bg-slate-950/50 p-2 rounded-lg border border-slate-800/50 text-center min-w-[80px]"
+        >
           <p class="text-[8px] text-slate-500 uppercase font-black">Science</p>
-          <p class="text-xs font-bold text-purple-400">{{ (currentZone.resources.science * 100).toFixed(0) }}%</p>
+          <p class="text-xs font-bold text-purple-400">
+            {{ (currentZone.resources.science * 100).toFixed(0) }}%
+          </p>
         </div>
       </div>
     </header>
@@ -195,7 +219,9 @@
                 class="z-30 flex p-[2px] pointer-events-none"
                 :style="getBuildingPreviewStyle()"
               >
-                <div class="w-full h-full rounded border-2 border-blue-400 bg-blue-400/20 relative overflow-hidden flex items-center justify-center">
+                <div
+                  class="w-full h-full rounded border-2 border-blue-400 bg-blue-400/20 relative overflow-hidden flex items-center justify-center"
+                >
                   <img
                     v-if="getBuildingDef(selectedBuildingId)?.image"
                     :src="getBuildingDef(selectedBuildingId)?.image"
@@ -276,7 +302,9 @@
                     !baseStore.isBuildingConnected(b)
                       ? 'grayscale opacity-70 border-red-500/50'
                       : '',
-                    getBuildingDef(b.buildingId)?.image ? 'bg-slate-800/20 border-slate-700/50' : ''
+                    getBuildingDef(b.buildingId)?.image
+                      ? 'bg-slate-800/20 border-slate-700/50'
+                      : '',
                   ]"
                 >
                   <img
@@ -352,8 +380,11 @@
               @click="selectedBuildingId = building.id"
             >
               <div class="flex items-center gap-3">
-                <div v-if="building.image" class="w-12 h-12 bg-slate-700 rounded border border-slate-600 p-1 flex-shrink-0">
-                   <img :src="building.image" class="w-full h-full object-contain pixelated" />
+                <div
+                  v-if="building.image"
+                  class="w-12 h-12 bg-slate-700 rounded border border-slate-600 p-1 flex-shrink-0"
+                >
+                  <img :src="building.image" class="w-full h-full object-contain pixelated" />
                 </div>
                 <div class="flex-grow">
                   <div class="flex items-center justify-between">
@@ -361,7 +392,9 @@
                     <span
                       class="text-xs font-mono"
                       :class="
-                        baseStore.canBuildBuilding(building.id) ? 'text-emerald-400' : 'text-red-400'
+                        baseStore.canBuildBuilding(building.id)
+                          ? 'text-emerald-400'
+                          : 'text-red-400'
                       "
                     >
                       {{ baseStore.isBuildingUnlocked(building.id) ? 'OK' : 'Bloque' }}
@@ -369,8 +402,19 @@
                   </div>
                   <p class="text-xs text-slate-400 mt-1">
                     Taille: {{ building.width }}x{{ building.height }} | Cout:
-                    {{ building.cost.argent }} ME / {{ building.cost.science }} science
+                    {{ building.cost.argent }} ME
                   </p>
+                  <div class="flex gap-2 mt-1">
+                    <span v-if="building.sciencePerDay" class="text-[10px] bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded font-black">
+                      +{{ building.sciencePerDay }} Science/j
+                    </span>
+                    <span v-if="building.argentPerDay" class="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-black">
+                      +{{ building.argentPerDay }} ME/j
+                    </span>
+                    <span v-if="building.carburantPerDay" class="text-[10px] bg-orange-500/20 text-orange-400 px-1.5 py-0.5 rounded font-black">
+                      +{{ building.carburantPerDay }} Carb./j
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -547,44 +591,47 @@ const route = useRoute()
 
 const activeHazards = computed(() => {
   if (!currentZone.value) return []
-  const planet = solarStore.planets.find(p => p.name === currentZone.value?.planetName)
+  const planet = solarStore.planets.find((p) => p.name === currentZone.value?.planetName)
   return planet?.hazards || []
 })
 
 const currentZone = computed(() => {
-  const zoneId = route.query.zoneId as string || 'earth-kourou'
+  const zoneId = (route.query.zoneId as string) || 'earth-kourou'
   for (const planet of solarStore.planets) {
-    const zone = planet.zones?.find(z => z.id === zoneId)
+    const zone = planet.zones?.find((z) => z.id === zoneId)
     if (zone) return { ...zone, planetName: planet.name }
   }
   return null
 })
 
 onMounted(() => {
-  const zoneId = route.query.zoneId as string || 'earth-kourou'
+  const zoneId = (route.query.zoneId as string) || 'earth-kourou'
   if (currentZone.value) {
     baseStore.setActiveBase(zoneId, currentZone.value.resources)
   } else {
     baseStore.setActiveBase(zoneId)
   }
-  
+
   if (currentZone.value && !currentZone.value.baseId) {
     solarStore.establishBase(zoneId, `base-${zoneId}`)
   }
 })
 
-watch(() => route.query.zoneId, (newZoneId) => {
-  const id = newZoneId as string || 'earth-kourou'
-  if (currentZone.value) {
-    baseStore.setActiveBase(id, currentZone.value.resources)
-  } else {
-    baseStore.setActiveBase(id)
-  }
-  
-  if (currentZone.value && !currentZone.value.baseId) {
-    solarStore.establishBase(id, `base-${id}`)
-  }
-})
+watch(
+  () => route.query.zoneId,
+  (newZoneId) => {
+    const id = (newZoneId as string) || 'earth-kourou'
+    if (currentZone.value) {
+      baseStore.setActiveBase(id, currentZone.value.resources)
+    } else {
+      baseStore.setActiveBase(id)
+    }
+
+    if (currentZone.value && !currentZone.value.baseId) {
+      solarStore.establishBase(id, `base-${id}`)
+    }
+  },
+)
 
 const activeTab = ref<'batiments' | 'routes' | 'pipelines' | 'parcelles'>('batiments')
 const selectedBuildingId = ref(baseStore.buildings[0]?.id ?? '')

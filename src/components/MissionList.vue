@@ -45,17 +45,7 @@
           </div>
         </div>
 
-        <div
-          class="flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold"
-          :class="
-            personnelStore.hasIngenieur
-              ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-              : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
-          "
-        >
-          <BaseIcon :name="personnelStore.hasIngenieur ? 'check' : 'shield'" :size="14" />
-          {{ personnelStore.hasIngenieur ? 'INGÉNIEURS PRÊTS' : 'INGÉNIEURS REQUIS' }}
-        </div>
+
       </div>
 
       <div class="space-y-10">
@@ -592,7 +582,7 @@ const getMissionMiniObjectives = (mission: Mission): MiniObjective[] => {
     resourceStore.argent >= mission.cost.argent && resourceStore.carburant >= fuelNeeded
 
   const objectives: MiniObjective[] = [
-    { label: 'Ingenieur operationnel', done: personnelStore.hasIngenieur },
+    { label: 'Ingenieur operationnel', done: true },
     {
       label: mission.launcherRequirement ?? 'Lanceur compatible pret',
       done: hasCompatibleReadyLauncherForMission(mission),
@@ -720,7 +710,7 @@ const getLaunchButtonText = (mission: Mission) => {
   const launcher = fleetStore.items.find((i) => i.id === launcherId)
 
   if (mission.status !== 'Disponible') return 'MISSION INDISPONIBLE'
-  if (!personnelStore.hasIngenieur) return 'INGÉNIEUR REQUIS'
+
   if (!launcherId) return 'SÉLECTIONNER LANCEUR'
   if (!launcher) return 'LANCEUR INVALIDE'
   if (!isLauncherCompatible(launcher, mission)) return 'LANCEUR INCOMPATIBLE'

@@ -84,10 +84,10 @@ export const useCompetitorStore = defineStore('competitor', () => {
         const playerFinished = missionStore.successfulMissions.some(m => m.id === nextMission.id)
 
         // Advance progress
-        // Base rate: 100% in ~15 to 60 days depending on mission difficulty (cost/successChance)
-        // Simplified: 1% to 3% per day, scaled by speedMultiplier
-        const baseDailyProgress = (Math.random() * 1.5 + 0.5) * comp.speedMultiplier
-        const difficultyFactor = Math.max(0.2, 1 - (nextMission.id * 0.05)) // Later missions are slower
+        // Target: 100% in ~365 days (1 year) for mission 1
+        // Base rate: ~0.27% per day, scaled by speedMultiplier and difficulty
+        const baseDailyProgress = (Math.random() * 0.15 + 0.12) * comp.speedMultiplier
+        const difficultyFactor = Math.max(0.3, 1 - (nextMission.id * 0.03)) // Later missions are slower
         
         comp.progress[nextMission.id] += baseDailyProgress * difficultyFactor * daysPassed
 

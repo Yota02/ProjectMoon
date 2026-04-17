@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { useResourceStore } from './useResourceStore'
 import { useGameStore } from './useGameStore'
+import { useLogStore } from './useLogStore'
 import { gameEvents } from '@/engine/EventBus'
 
 export type Faction = 'USA' | 'Europe' | 'Chine' | 'Asie_Est' | 'Privé' | 'Indépendant'
@@ -208,7 +209,6 @@ export const useContractStore = defineStore('contract', {
       
       if (annualAmount > 0) {
         resourceStore.addArgent(annualAmount)
-        const { useLogStore } = require('./useLogStore')
         const logStore = useLogStore()
         logStore.addLog(`[FINANCE] Subvention annuelle reçue : +${Math.round(annualAmount).toLocaleString()} € (Basée sur une réputation moyenne de ${Math.round(avgRep)}% et une hype de ${Math.round(gameStore.hype)}%)`, 'success')
       }
@@ -223,7 +223,6 @@ export const useContractStore = defineStore('contract', {
         this.factionsReputation[faction as keyof typeof this.factionsReputation] += repGain
         this.factionsReputation[faction as keyof typeof this.factionsReputation] = Math.min(100, this.factionsReputation[faction as keyof typeof this.factionsReputation])
         
-        const { useLogStore } = require('./useLogStore')
         const logStore = useLogStore()
         logStore.addLog(`[LOBBYING] Influence exercée sur ${faction} : +${repGain} Réputation.`, 'info')
         return true

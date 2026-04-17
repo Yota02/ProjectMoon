@@ -1101,7 +1101,7 @@
             class="w-full py-2 bg-slate-800 hover:bg-blue-600 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition-all flex justify-between px-3"
           >
             <span>Installer</span>
-            <span class="font-mono">{{ module.cost.argent }}€ / {{ module.cost.science }}sc</span>
+            <span class="font-mono">{{ module.cost.argent }}€</span>
           </button>
         </div>
       </div>
@@ -1275,60 +1275,113 @@
       @close="showLogisticsModal = false"
     >
       <div v-if="selectedStationId" class="space-y-6 text-slate-200">
-        <div class="p-4 bg-blue-600/10 border border-blue-500/20 rounded-2xl flex items-center gap-4">
+        <div
+          class="p-4 bg-blue-600/10 border border-blue-500/20 rounded-2xl flex items-center gap-4"
+        >
           <div class="p-3 bg-blue-600/20 rounded-xl text-blue-400">
             <BaseIcon name="rocket" :size="32" />
           </div>
           <div>
-            <h4 class="text-sm font-black uppercase tracking-widest text-blue-300">Route Commerciale Automatisée</h4>
-            <p class="text-[10px] text-slate-400 mt-1">Le vaisseau décollera de la Terre dès que les stocks tombent sous {{ logisticDraft.threshold }}%.</p>
+            <h4 class="text-sm font-black uppercase tracking-widest text-blue-300">
+              Route Commerciale Automatisée
+            </h4>
+            <p class="text-[10px] text-slate-400 mt-1">
+              Le vaisseau décollera de la Terre dès que les stocks tombent sous
+              {{ logisticDraft.threshold }}%.
+            </p>
           </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div class="space-y-4">
             <div>
-              <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Nom de la Route</label>
-              <input v-model="logisticDraft.name" type="text" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:border-blue-500 transition-colors outline-none" />
+              <label
+                class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2"
+                >Nom de la Route</label
+              >
+              <input
+                v-model="logisticDraft.name"
+                type="text"
+                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:border-blue-500 transition-colors outline-none"
+              />
             </div>
 
             <div>
-              <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Vaisseau Réutilisable Assigné</label>
-              <select v-model="logisticDraft.shipDesignId" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:border-blue-500 transition-colors outline-none">
+              <label
+                class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2"
+                >Vaisseau Réutilisable Assigné</label
+              >
+              <select
+                v-model="logisticDraft.shipDesignId"
+                class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:border-blue-500 transition-colors outline-none"
+              >
                 <option value="" disabled>Choisir un modèle...</option>
-                <option v-for="design in fleetStore.designs.filter(d => d.isReusable)" :key="design.id" :value="design.id">
+                <option
+                  v-for="design in fleetStore.designs.filter((d) => d.isReusable)"
+                  :key="design.id"
+                  :value="design.id"
+                >
                   {{ design.name }} (Cap. {{ design.cargoCapacity }})
                 </option>
               </select>
-              <p class="text-[9px] text-slate-500 mt-1.5 px-1 italic">Note: Le système utilisera n'importe quel vaisseau "Prêt" de ce modèle.</p>
+              <p class="text-[9px] text-slate-500 mt-1.5 px-1 italic">
+                Note: Le système utilisera n'importe quel vaisseau "Prêt" de ce modèle.
+              </p>
             </div>
 
             <div>
               <div class="flex justify-between items-center mb-2">
-                <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Seuil de Ravitaillement ({{ logisticDraft.threshold }}%)</label>
+                <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest"
+                  >Seuil de Ravitaillement ({{ logisticDraft.threshold }}%)</label
+                >
               </div>
-              <input type="range" v-model.number="logisticDraft.threshold" min="5" max="50" step="5" class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500" />
+              <input
+                type="range"
+                v-model.number="logisticDraft.threshold"
+                min="5"
+                max="50"
+                step="5"
+                class="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
+              />
             </div>
           </div>
 
           <div class="space-y-4">
-            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Charge Utile par Vol</label>
+            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest"
+              >Charge Utile par Vol</label
+            >
             <div class="grid grid-cols-2 gap-3">
               <div class="space-y-1">
                 <span class="text-[9px] font-bold text-amber-500/80 uppercase">Nourriture</span>
-                <input v-model.number="logisticDraft.payload.nourriture" type="number" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:border-amber-500 transition-colors outline-none" />
+                <input
+                  v-model.number="logisticDraft.payload.nourriture"
+                  type="number"
+                  class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:border-amber-500 transition-colors outline-none"
+                />
               </div>
               <div class="space-y-1">
                 <span class="text-[9px] font-bold text-cyan-500/80 uppercase">Eau</span>
-                <input v-model.number="logisticDraft.payload.eau" type="number" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:border-cyan-500 transition-colors outline-none" />
+                <input
+                  v-model.number="logisticDraft.payload.eau"
+                  type="number"
+                  class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:border-cyan-500 transition-colors outline-none"
+                />
               </div>
               <div class="space-y-1">
                 <span class="text-[9px] font-bold text-emerald-500/80 uppercase">Oxygène</span>
-                <input v-model.number="logisticDraft.payload.o2" type="number" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:border-emerald-500 transition-colors outline-none" />
+                <input
+                  v-model.number="logisticDraft.payload.o2"
+                  type="number"
+                  class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:border-emerald-500 transition-colors outline-none"
+                />
               </div>
               <div class="space-y-1">
                 <span class="text-[9px] font-bold text-orange-500/80 uppercase">Pièces</span>
-                <input v-model.number="logisticDraft.payload.piecesDetachees" type="number" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:border-orange-500 transition-colors outline-none" />
+                <input
+                  v-model.number="logisticDraft.payload.piecesDetachees"
+                  type="number"
+                  class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 focus:border-orange-500 transition-colors outline-none"
+                />
               </div>
             </div>
           </div>
@@ -1336,29 +1389,58 @@
 
         <!-- Active Routes for this station -->
         <div class="mt-8 border-t border-slate-800 pt-6">
-          <h5 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+          <h5
+            class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2"
+          >
             <BaseIcon name="history" :size="14" class="text-blue-500" />
             Routes Actives pour cette Station
           </h5>
-          <div v-if="logisticsStore.routes.filter(r => r.stationId === selectedStationId).length === 0" class="py-12 bg-slate-950/30 rounded-2xl border border-dashed border-slate-800 text-center">
+          <div
+            v-if="
+              logisticsStore.routes.filter((r) => r.stationId === selectedStationId).length === 0
+            "
+            class="py-12 bg-slate-950/30 rounded-2xl border border-dashed border-slate-800 text-center"
+          >
             <p class="text-[10px] text-slate-600 italic">Aucune route automatisée active.</p>
           </div>
           <div v-else class="space-y-3">
-            <div v-for="route in logisticsStore.routes.filter(r => r.stationId === selectedStationId)" :key="route.id" class="p-4 bg-slate-950 border border-slate-800 rounded-2xl flex items-center justify-between group">
+            <div
+              v-for="route in logisticsStore.routes.filter(
+                (r) => r.stationId === selectedStationId,
+              )"
+              :key="route.id"
+              class="p-4 bg-slate-950 border border-slate-800 rounded-2xl flex items-center justify-between group"
+            >
               <div class="flex items-center gap-4">
-                <div class="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-500 border border-blue-500/20">
+                <div
+                  class="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center text-blue-500 border border-blue-500/20"
+                >
                   <BaseIcon name="rocket" :size="20" />
                 </div>
                 <div>
                   <h6 class="text-sm font-bold text-slate-200">{{ route.name }}</h6>
-                  <p class="text-[10px] text-slate-500 font-medium">Seuil: {{ route.threshold }}% • Vaisseau: {{ fleetStore.designs.find(d => d.id === route.shipDesignId)?.name }}</p>
+                  <p class="text-[10px] text-slate-500 font-medium">
+                    Seuil: {{ route.threshold }}% • Vaisseau:
+                    {{ fleetStore.designs.find((d) => d.id === route.shipDesignId)?.name }}
+                  </p>
                 </div>
               </div>
               <div class="flex items-center gap-4">
-                <button @click="logisticsStore.toggleRoute(route.id)" :class="route.active ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' : 'bg-slate-800 text-slate-500 border-slate-700'" class="px-3 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-widest transition-all">
+                <button
+                  @click="logisticsStore.toggleRoute(route.id)"
+                  :class="
+                    route.active
+                      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                      : 'bg-slate-800 text-slate-500 border-slate-700'
+                  "
+                  class="px-3 py-1.5 rounded-lg border text-[10px] font-black uppercase tracking-widest transition-all"
+                >
                   {{ route.active ? 'Active' : 'Mise en pause' }}
                 </button>
-                <button @click="logisticsStore.removeRoute(route.id)" class="p-2 text-slate-600 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100">
+                <button
+                  @click="logisticsStore.removeRoute(route.id)"
+                  class="p-2 text-slate-600 hover:text-rose-500 transition-colors opacity-0 group-hover:opacity-100"
+                >
                   <BaseIcon name="plus" :size="20" class="rotate-45" />
                 </button>
               </div>
@@ -1428,7 +1510,7 @@ const logisticDraft = ref({
   name: '',
   shipDesignId: '',
   threshold: 20,
-  payload: { nourriture: 50, eau: 50, o2: 50, piecesDetachees: 20 }
+  payload: { nourriture: 50, eau: 50, o2: 50, piecesDetachees: 20 },
 })
 const resupplyDrafts = ref<
   Record<string, { nourriture: number; eau: number; o2: number; piecesDetachees: number }>
@@ -1465,7 +1547,7 @@ const openModuleModal = (stationId: string) => {
 }
 
 const openLogisticsModal = (stationId: string) => {
-  const station = stationStore.stations.find(s => s.id === stationId)
+  const station = stationStore.stations.find((s) => s.id === stationId)
   selectedStationId.value = stationId
   logisticDraft.value.name = `Route ${station?.name || ''}`
   showLogisticsModal.value = true
@@ -1534,16 +1616,16 @@ const handleAssignAstronaut = (astronautId: number) => {
 
 const handleAddRoute = () => {
   if (!selectedStationId.value || !logisticDraft.value.shipDesignId) return
-  
+
   logisticsStore.addRoute({
     name: logisticDraft.value.name,
     stationId: selectedStationId.value,
     shipDesignId: logisticDraft.value.shipDesignId,
     active: true,
     threshold: logisticDraft.value.threshold,
-    payload: { ...logisticDraft.value.payload }
+    payload: { ...logisticDraft.value.payload },
   })
-  
+
   showLogisticsModal.value = false
 }
 

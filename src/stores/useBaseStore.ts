@@ -14,10 +14,13 @@ export interface BuildingDefinition {
   height: number
   cost: {
     argent: number
-    science: number
+    science?: number
   }
   entranceOffset: { x: number; y: number } // relative to top-left
   image?: string
+  sciencePerDay?: number
+  argentPerDay?: number
+  carburantPerDay?: number
 }
 
 export interface RouteDefinition {
@@ -104,7 +107,7 @@ const PARCELS: ParcelDefinition[] = [
     direction: 'top',
     parcelX: 0,
     parcelY: -1,
-    cost: { argent: 1000, science: 50 },
+    cost: { argent: 1000, science: 0 },
     owned: false,
   },
   {
@@ -113,7 +116,7 @@ const PARCELS: ParcelDefinition[] = [
     direction: 'bottom',
     parcelX: 0,
     parcelY: 1,
-    cost: { argent: 1000, science: 50 },
+    cost: { argent: 1000, science: 0 },
     owned: false,
   },
   {
@@ -122,7 +125,7 @@ const PARCELS: ParcelDefinition[] = [
     direction: 'left',
     parcelX: -1,
     parcelY: 0,
-    cost: { argent: 1000, science: 50 },
+    cost: { argent: 1000, science: 0 },
     owned: false,
   },
   {
@@ -131,7 +134,7 @@ const PARCELS: ParcelDefinition[] = [
     direction: 'right',
     parcelX: 1,
     parcelY: 0,
-    cost: { argent: 1000, science: 50 },
+    cost: { argent: 1000, science: 0 },
     owned: false,
   },
 ]
@@ -144,7 +147,7 @@ const BUILDINGS: BuildingDefinition[] = [
     colorClass: 'bg-blue-500/80 border-blue-300/80',
     width: 2,
     height: 2,
-    cost: { argent: 180, science: 30 },
+    cost: { argent: 180 },
     entranceOffset: { x: 1, y: 1 },
     image: '/ProjectMoon/assets/images/buildings/hq.png',
   },
@@ -155,9 +158,10 @@ const BUILDINGS: BuildingDefinition[] = [
     colorClass: 'bg-violet-500/80 border-violet-300/80',
     width: 2,
     height: 1,
-    cost: { argent: 120, science: 70 },
+    cost: { argent: 120 },
     entranceOffset: { x: 0, y: 0 },
     image: '/ProjectMoon/assets/images/buildings/lab.png',
+    sciencePerDay: 4,
   },
   {
     id: 'power',
@@ -166,7 +170,7 @@ const BUILDINGS: BuildingDefinition[] = [
     colorClass: 'bg-amber-500/80 border-amber-300/80',
     width: 1,
     height: 2,
-    cost: { argent: 90, science: 20 },
+    cost: { argent: 90 },
     entranceOffset: { x: 0, y: 1 },
     image: '/ProjectMoon/assets/images/buildings/power.png',
   },
@@ -177,7 +181,7 @@ const BUILDINGS: BuildingDefinition[] = [
     colorClass: 'bg-emerald-500/80 border-emerald-300/80',
     width: 3,
     height: 3,
-    cost: { argent: 220, science: 45 },
+    cost: { argent: 220 },
     entranceOffset: { x: 1, y: 2 },
     image: '/ProjectMoon/assets/images/buildings/hangar.png',
   },
@@ -188,7 +192,7 @@ const BUILDINGS: BuildingDefinition[] = [
     colorClass: 'bg-orange-500/80 border-orange-300/80',
     width: 2,
     height: 2,
-    cost: { argent: 150, science: 60 },
+    cost: { argent: 150 },
     entranceOffset: { x: 1, y: 1 },
     image: '/ProjectMoon/assets/images/buildings/training_center.png',
   },
@@ -199,7 +203,7 @@ const BUILDINGS: BuildingDefinition[] = [
     colorClass: 'bg-red-500/80 border-red-300/80',
     width: 3,
     height: 2,
-    cost: { argent: 300, science: 80 },
+    cost: { argent: 300 },
     entranceOffset: { x: 1, y: 1 },
     image: '/ProjectMoon/assets/images/buildings/launch_pad.png',
   },
@@ -210,7 +214,7 @@ const BUILDINGS: BuildingDefinition[] = [
     colorClass: 'bg-yellow-500/80 border-yellow-300/80',
     width: 3,
     height: 2,
-    cost: { argent: 200, science: 30 },
+    cost: { argent: 200 },
     entranceOffset: { x: 1, y: 1 },
     image: '/ProjectMoon/assets/images/buildings/warehouse.png',
   },
@@ -221,7 +225,7 @@ const BUILDINGS: BuildingDefinition[] = [
     colorClass: 'bg-stone-500/80 border-stone-300/80',
     width: 3,
     height: 3,
-    cost: { argent: 250, science: 50 },
+    cost: { argent: 250 },
     entranceOffset: { x: 1, y: 2 },
     image: '/ProjectMoon/assets/images/buildings/factory.png',
   },
@@ -232,7 +236,7 @@ const BUILDINGS: BuildingDefinition[] = [
     colorClass: 'bg-indigo-500/80 border-indigo-300/80',
     width: 2,
     height: 2,
-    cost: { argent: 180, science: 70 },
+    cost: { argent: 180 },
     entranceOffset: { x: 1, y: 1 },
     image: '/ProjectMoon/assets/images/buildings/radar.png',
   },
@@ -243,7 +247,7 @@ const BUILDINGS: BuildingDefinition[] = [
     colorClass: 'bg-rose-500/80 border-rose-300/80',
     width: 2,
     height: 2,
-    cost: { argent: 280, science: 90 },
+    cost: { argent: 280 },
     entranceOffset: { x: 1, y: 1 },
     image: '/ProjectMoon/assets/images/buildings/refinery.png',
   },
@@ -254,7 +258,7 @@ const BUILDINGS: BuildingDefinition[] = [
     colorClass: 'bg-red-400/80 border-red-200/80',
     width: 2,
     height: 2,
-    cost: { argent: 160, science: 80 },
+    cost: { argent: 160 },
     entranceOffset: { x: 1, y: 1 },
     image: '/ProjectMoon/assets/images/buildings/medical.png',
   },
@@ -265,7 +269,7 @@ const BUILDINGS: BuildingDefinition[] = [
     colorClass: 'bg-orange-400/80 border-orange-200/80',
     width: 2,
     height: 2,
-    cost: { argent: 240, science: 60 },
+    cost: { argent: 240 },
     entranceOffset: { x: 1, y: 1 },
     image: '/ProjectMoon/assets/images/buildings/generator.png',
   },
@@ -276,7 +280,7 @@ const BUILDINGS: BuildingDefinition[] = [
     colorClass: 'bg-slate-500/80 border-slate-300/80',
     width: 3,
     height: 3,
-    cost: { argent: 350, science: 100 },
+    cost: { argent: 350 },
     entranceOffset: { x: 1, y: 2 },
     image: '/ProjectMoon/assets/images/buildings/mine.png',
   },
@@ -287,7 +291,7 @@ const BUILDINGS: BuildingDefinition[] = [
     colorClass: 'bg-emerald-400/80 border-emerald-200/80',
     width: 3,
     height: 2,
-    cost: { argent: 140, science: 40 },
+    cost: { argent: 140 },
     entranceOffset: { x: 1, y: 1 },
     image: '/ProjectMoon/assets/images/buildings/farm.png',
   },
@@ -298,7 +302,7 @@ const BUILDINGS: BuildingDefinition[] = [
     colorClass: 'bg-orange-600/80 border-orange-400/80',
     width: 2,
     height: 2,
-    cost: { argent: 180, science: 25 },
+    cost: { argent: 180 },
     entranceOffset: { x: 1, y: 1 },
     image: '/ProjectMoon/assets/images/buildings/fuel_storage.png',
   },
@@ -309,7 +313,7 @@ const BUILDINGS: BuildingDefinition[] = [
     colorClass: 'bg-slate-400/80 border-slate-200/80',
     width: 2,
     height: 2,
-    cost: { argent: 160, science: 45 },
+    cost: { argent: 160 },
     entranceOffset: { x: 1, y: 1 },
     image: '/ProjectMoon/assets/images/buildings/workshop.png',
   },
@@ -320,7 +324,7 @@ const BUILDINGS: BuildingDefinition[] = [
     colorClass: 'bg-blue-400/80 border-blue-200/80',
     width: 3,
     height: 2,
-    cost: { argent: 100, science: 15 },
+    cost: { argent: 100 },
     entranceOffset: { x: 1, y: 1 },
     image: '/ProjectMoon/assets/images/buildings/dormitory.png',
   },
@@ -331,7 +335,7 @@ const BUILDINGS: BuildingDefinition[] = [
     colorClass: 'bg-purple-400/80 border-purple-200/80',
     width: 2,
     height: 3,
-    cost: { argent: 200, science: 55 },
+    cost: { argent: 200 },
     entranceOffset: { x: 1, y: 2 },
     image: '/ProjectMoon/assets/images/buildings/control_room.png',
   },
@@ -353,7 +357,7 @@ const ROUTES: RouteDefinition[] = [
     symbol: '=',
     colorClass: 'bg-slate-500/80 border-slate-300/80',
     width: 1,
-    cost: { argent: 25, science: 5 },
+    cost: { argent: 25, science: 0 },
     minLauncherWidth: 1, // Petits lanceurs (1 case)
   },
   {
@@ -362,7 +366,7 @@ const ROUTES: RouteDefinition[] = [
     symbol: '==',
     colorClass: 'bg-slate-400/80 border-slate-200/80',
     width: 2,
-    cost: { argent: 50, science: 10 },
+    cost: { argent: 50, science: 0 },
     minLauncherWidth: 2, // Lanceurs medium (2 cases)
   },
   {
@@ -371,7 +375,7 @@ const ROUTES: RouteDefinition[] = [
     symbol: '===',
     colorClass: 'bg-slate-300/80 border-white/80',
     width: 3,
-    cost: { argent: 100, science: 20 },
+    cost: { argent: 100, science: 0 },
     minLauncherWidth: 3, // Gros lanceurs (3 cases)
   },
 ]
@@ -382,14 +386,14 @@ const PIPELINES: PipelineDefinition[] = [
     name: 'Pipeline standard',
     symbol: 'O',
     colorClass: 'bg-cyan-600/80 border-cyan-400/80',
-    cost: { argent: 15, science: 2 },
+    cost: { argent: 15, science: 0 },
   },
   {
     id: 'pipe_reinforced',
     name: 'Pipeline renforce',
     symbol: 'OO',
     colorClass: 'bg-cyan-400/80 border-cyan-200/80',
-    cost: { argent: 40, science: 15 },
+    cost: { argent: 40, science: 0 },
   },
 ]
 
@@ -760,7 +764,7 @@ export const useBaseStore = defineStore(
     const allBasesAdjacencyBonuses = computed(() => {
       const solarStore = useSolarSystemStore()
       const explorationStore = useExplorationStore()
-      
+
       let totalArgentPerDay = 0
       let totalSciencePerDay = 0
       let totalCarburantPerDay = 0
@@ -768,18 +772,21 @@ export const useBaseStore = defineStore(
       for (const baseId in bases.value) {
         const base = bases.value[baseId]
         if (!base) continue
-        
+
         // Find planet for hazards
-        const planet = solarStore.planets.find(p => p.zones?.some(z => z.id === base.zoneId))
-        const hazardEnergyMult = planet?.hazards?.filter(h => h.type === 'tempête').reduce((acc, h) => acc * (1 - h.severity), 1) || 1
-        
+        const planet = solarStore.planets.find((p) => p.zones?.some((z) => z.id === base.zoneId))
+        const hazardEnergyMult =
+          planet?.hazards
+            ?.filter((h) => h.type === 'tempête')
+            .reduce((acc, h) => acc * (1 - h.severity), 1) || 1
+
         // Find prospection bonus
         const prosp = explorationStore.getProspectionResult(base.zoneId)
         const pMult = {
           minerals: prosp?.mineralQuality || 1,
           water: prosp?.waterQuality || 1,
           energy: prosp?.energyQuality || 1,
-          science: prosp?.scienceQuality || 1
+          science: prosp?.scienceQuality || 1,
         }
 
         const zoneMult = base.resources
@@ -788,14 +795,35 @@ export const useBaseStore = defineStore(
           const triggerCount = countRuleTriggersForBase(rule, base)
           if (triggerCount <= 0) continue
 
-          totalArgentPerDay += rule.argentPerDay * triggerCount * (0.5 + zoneMult.minerals) * pMult.minerals
-          totalSciencePerDay += rule.sciencePerDay * triggerCount * (0.5 + zoneMult.science) * pMult.science
-          
-          let energyFactor = (0.5 + (zoneMult.energy + zoneMult.water) / 2)
+          totalArgentPerDay +=
+            rule.argentPerDay * triggerCount * (0.5 + zoneMult.minerals) * pMult.minerals
+          totalSciencePerDay +=
+            rule.sciencePerDay * triggerCount * (0.5 + zoneMult.science) * pMult.science
+
+          let energyFactor = 0.5 + (zoneMult.energy + zoneMult.water) / 2
           energyFactor *= hazardEnergyMult // Apply storm penalty
           energyFactor *= (pMult.energy + pMult.water) / 2 // Apply prospection results
 
           totalCarburantPerDay += rule.carburantPerDay * triggerCount * energyFactor
+        }
+
+        // --- Base Production from buildings ---
+        for (const placed of base.placedBuildings) {
+          const def = BUILDINGS.find((b) => b.id === placed.buildingId)
+          if (!def) continue
+
+          if (def.argentPerDay) {
+            totalArgentPerDay += def.argentPerDay * (0.5 + zoneMult.minerals) * pMult.minerals
+          }
+          if (def.sciencePerDay) {
+            totalSciencePerDay += def.sciencePerDay * (0.5 + zoneMult.science) * pMult.science
+          }
+          if (def.carburantPerDay) {
+            let energyFactor = 0.5 + (zoneMult.energy + zoneMult.water) / 2
+            energyFactor *= hazardEnergyMult
+            energyFactor *= (pMult.energy + pMult.water) / 2
+            totalCarburantPerDay += def.carburantPerDay * energyFactor
+          }
         }
       }
 
@@ -805,6 +833,21 @@ export const useBaseStore = defineStore(
         totalCarburantPerDay,
       }
     })
+
+    const isAnyBuildingConnected = (buildingId: string): boolean => {
+      for (const baseId in bases.value) {
+        if (isAnyBuildingConnectedInZone(buildingId, baseId)) return true
+      }
+      return false
+    }
+
+    const isAnyBuildingConnectedInZone = (buildingId: string, zoneId: string): boolean => {
+      const base = bases.value[zoneId]
+      if (!base) return false
+      return base.placedBuildings.some(
+        (b) => b.buildingId === buildingId && isBuildingConnectedInBase(b, base),
+      )
+    }
 
     const adjacencyBonuses = computed(() => {
       if (!currentBase.value)
@@ -843,6 +886,23 @@ export const useBaseStore = defineStore(
           sciencePerDay,
           carburantPerDay,
         })
+      }
+
+      // Base Production
+      for (const placed of currentBase.value.placedBuildings) {
+        const def = BUILDINGS.find((b) => b.id === placed.buildingId)
+        if (!def) continue
+
+        if (def.argentPerDay) {
+          totalArgentPerDay += def.argentPerDay * (0.5 + zoneMult.minerals)
+        }
+        if (def.sciencePerDay) {
+          totalSciencePerDay += def.sciencePerDay * (0.5 + zoneMult.science)
+        }
+        if (def.carburantPerDay) {
+          totalCarburantPerDay +=
+            def.carburantPerDay * (0.5 + (zoneMult.energy + zoneMult.water) / 2)
+        }
       }
 
       return {
@@ -896,10 +956,7 @@ export const useBaseStore = defineStore(
       const building = buildings.value.find((item) => item.id === buildingId)
       if (!building) return false
       const resourceStore = useResourceStore()
-      return (
-        resourceStore.argent >= building.cost.argent &&
-        resourceStore.science >= building.cost.science
-      )
+      return resourceStore.argent >= building.cost.argent
     }
 
     const canBuildRoute = (routeId: string): boolean => {
@@ -907,9 +964,7 @@ export const useBaseStore = defineStore(
       const route = routes.value.find((item) => item.id === routeId)
       if (!route) return false
       const resourceStore = useResourceStore()
-      return (
-        resourceStore.argent >= route.cost.argent && resourceStore.science >= route.cost.science
-      )
+      return resourceStore.argent >= route.cost.argent
     }
 
     const canBuildPipeline = (pipelineId: string): boolean => {
@@ -917,7 +972,7 @@ export const useBaseStore = defineStore(
       const pipe = pipelines.value.find((item) => item.id === pipelineId)
       if (!pipe) return false
       const resourceStore = useResourceStore()
-      return resourceStore.argent >= pipe.cost.argent && resourceStore.science >= pipe.cost.science
+      return resourceStore.argent >= pipe.cost.argent
     }
 
     const buildAndPlaceBuilding = (
@@ -939,10 +994,7 @@ export const useBaseStore = defineStore(
       }
 
       const resourceStore = useResourceStore()
-      if (
-        resourceStore.argent < building.cost.argent ||
-        resourceStore.science < building.cost.science
-      ) {
+      if (resourceStore.argent < building.cost.argent) {
         lastMessage.value = `Ressources insuffisantes pour ${building.name}.`
         return false
       }
@@ -1017,7 +1069,6 @@ export const useBaseStore = defineStore(
 
       // Consommer ressources et placer
       resourceStore.addArgent(-building.cost.argent)
-      resourceStore.addScience(-building.cost.science)
       currentBase.value.placedBuildings.push({ x, y, buildingId, rotation })
       lastMessage.value = `${building.name} place en (${x + 1}, ${y + 1}).`
       return true
@@ -1042,7 +1093,7 @@ export const useBaseStore = defineStore(
       }
 
       const resourceStore = useResourceStore()
-      if (resourceStore.argent < route.cost.argent || resourceStore.science < route.cost.science) {
+      if (resourceStore.argent < route.cost.argent) {
         lastMessage.value = `Ressources insuffisantes pour ${route.name}.`
         return false
       }
@@ -1115,7 +1166,6 @@ export const useBaseStore = defineStore(
 
       // Consommer ressources et placer
       resourceStore.addArgent(-route.cost.argent)
-      resourceStore.addScience(-route.cost.science)
       currentBase.value.placedRoutes.push({ x, y, routeId, direction })
       lastMessage.value = `${route.name} placee en (${x + 1}, ${y + 1}).`
       return true
@@ -1140,7 +1190,7 @@ export const useBaseStore = defineStore(
       }
 
       const resourceStore = useResourceStore()
-      if (resourceStore.argent < pipe.cost.argent || resourceStore.science < pipe.cost.science) {
+      if (resourceStore.argent < pipe.cost.argent) {
         lastMessage.value = `Ressources insuffisantes pour ${pipe.name}.`
         return false
       }
@@ -1168,7 +1218,6 @@ export const useBaseStore = defineStore(
 
       // Consommer ressources et placer
       resourceStore.addArgent(-pipe.cost.argent)
-      resourceStore.addScience(-pipe.cost.science)
       currentBase.value.placedPipelines.push({ x, y, pipelineId, direction })
       lastMessage.value = `${pipe.name} placee en (${x + 1}, ${y + 1}).`
       return true
@@ -1263,9 +1312,7 @@ export const useBaseStore = defineStore(
       const parcel = parcels.value.find((p) => p.id === parcelId)
       if (!parcel || currentBase.value.ownedParcels.has(parcelId)) return false
       const resourceStore = useResourceStore()
-      return (
-        resourceStore.argent >= parcel.cost.argent && resourceStore.science >= parcel.cost.science
-      )
+      return resourceStore.argent >= parcel.cost.argent
     }
 
     const buyParcel = (parcelId: string): boolean => {
@@ -1281,16 +1328,12 @@ export const useBaseStore = defineStore(
       }
 
       const resourceStore = useResourceStore()
-      if (
-        resourceStore.argent < parcel.cost.argent ||
-        resourceStore.science < parcel.cost.science
-      ) {
+      if (resourceStore.argent < parcel.cost.argent) {
         lastMessage.value = `Ressources insuffisantes pour ${parcel.name}.`
         return false
       }
 
       resourceStore.addArgent(-parcel.cost.argent)
-      resourceStore.addScience(-parcel.cost.science)
       currentBase.value.ownedParcels.add(parcelId)
       calculateMapDimensions()
       lastMessage.value = `${parcel.name} achetee!Taille: ${mapWidth.value}x${mapHeight.value}`
@@ -1298,6 +1341,8 @@ export const useBaseStore = defineStore(
     }
 
     return {
+      bases,
+      currentBase,
       mapWidth,
       mapHeight,
       mapOffsetX,
@@ -1335,10 +1380,13 @@ export const useBaseStore = defineStore(
       removePipeline,
       canBuyParcel,
       buyParcel,
-      isBuildingConnected,
-      getBuildingEntrancePos,
       setActiveBase,
       activeBaseId,
+      isAnyBuildingConnected,
+      isAnyBuildingConnectedInZone,
+      getBuildingEntrancePos,
+      isBuildingConnected,
+      isBuildingConnectedInBase,
     }
   },
   {},

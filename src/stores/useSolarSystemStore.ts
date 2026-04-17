@@ -117,7 +117,6 @@ export const useSolarSystemStore = defineStore('solarSystem', () => {
   const gameStore = useGameStore()
   const planets = ref<CelestialBody[]>(PLANETS)
   const activeTravels = ref<Travel[]>([
-    { id: 't1', name: 'Sonde Mars 1', originId: 'earth', destinationId: 'mars', departureDay: 0, duration: 200 }
   ])
 
   const getBodyPositionAt = (id: string, elapsedDays: number): { x: number, y: number } => {

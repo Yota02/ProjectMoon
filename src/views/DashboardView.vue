@@ -336,7 +336,6 @@ const missionMiniObjectives = computed(() => {
   })
 
   return [
-    { label: 'Ingénieurs prêts', done: personnelStore.hasIngenieur },
     { label: 'Lanceur compatible', done: hasCompatibleLauncher },
     { label: 'Fonds & Carburant', done: hasResources },
   ]

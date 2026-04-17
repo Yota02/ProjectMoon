@@ -1,3 +1,4 @@
+import { ref, computed, watch } from 'vue'
 import { defineStore } from 'pinia'
 import { useResourceStore } from './useResourceStore'
 import { useGameStore } from './useGameStore'
@@ -6,7 +7,7 @@ import { gameEvents } from '@/engine/EventBus'
 
 const isDebugMode = import.meta.env.VITE_DEBUG_MODE === 'test'
 
-export type ResearchStatus = 'locked' | 'available' | 'researching' | 'completed'
+export type ResearchStatus = 'locked' | 'available' | 'researching' | 'queued' | 'completed'
 export type ResearchType = 'standard' | 'breakthrough'
 
 export interface ResearchNode {
@@ -679,122 +680,196 @@ function createInitialResearches() {
   return researches
 }
 
-export const useResearchStore = defineStore('research', {
-  state: () => ({
-    researches: createInitialResearches(),
-    activeResearchId: null as string | null,
-  }),
-  getters: {
-    activeResearch: (state) =>
-      state.activeResearchId ? state.researches[state.activeResearchId] : null,
-    completedResearchIds: (state) =>
-      Object.values(state.researches)
-        .filter((r) => r.status === 'completed')
-        .map((r) => r.id),
-    getByCategory: (state) => (category: string) => {
-      return Object.values(state.researches).filter((r) => r.category === category)
-    },
-    getTierYear: () => (tier: number) => {
-      return TIER_YEARS[tier] || 2030
-    },
-    getDifficultyMultiplier: (state) => (id: string) => {
-      const research = state.researches[id]
-      if (!research) return 1
+export const useResearchStore = defineStore('research', () => {
+  const researches = ref<Record<string, ResearchNode>>(createInitialResearches())
+  const activeResearchIds = ref<string[]>([])
+  const researchQueue = ref<string[]>([])
 
-      const gameStore = useGameStore()
-      const currentYear = gameStore.currentYear
-      const forecastYear = TIER_YEARS[research.tier] || 2030
+  const activeResearches = computed(() =>
+    activeResearchIds.value.map((id) => researches.value[id]).filter(Boolean),
+  )
 
-      const diff = forecastYear - currentYear
+  const queuedResearches = computed(() =>
+    researchQueue.value.map((id) => researches.value[id]).filter(Boolean),
+  )
 
-      if (diff > 0) {
-        // En avance sur son temps: plus cher et plus long (20% par an)
-        return 1 + diff * 0.2
-      } else if (diff < 0) {
-        // En retard: plus facile (10% de réduction par an, min 50%)
-        return Math.max(0.5, 1 / (1 + Math.abs(diff) * 0.1))
+  const completedResearchIds = computed(() =>
+    Object.values(researches.value)
+      .filter((r) => r.status === 'completed')
+      .map((r) => r.id),
+  )
+
+const maxResearchSlots = computed(() => {
+    const baseStore = useBaseStore()
+    const bases = baseStore.bases || {}
+    let count = 0
+    
+    // On compte tous les labos dans toutes les bases
+    Object.values(bases).forEach(base => {
+      if (base && base.placedBuildings) {
+        const labs = base.placedBuildings.filter((b) => b.buildingId === 'lab')
+        count += labs.length
       }
+    })
+return Math.max(1, count)
+  })
 
-      return 1
-    },
-  },
-  actions: {
-    startResearch(id: string) {
-      const resourceStore = useResourceStore()
-      const research = this.researches[id]
+  // On surveille les changements de slots pour lancer des recherches en file d'attente
+  watch(maxResearchSlots, (newVal, oldVal) => {
+    if (newVal > (oldVal || 1)) {
+      processQueue()
+    }
+  })
 
-      if (!research || research.status !== 'available' || this.activeResearchId) return
+  const getByCategory = (category: string) => {
+    return Object.values(researches.value).filter((r) => r.category === category)
+  }
 
-      if (research.isPrototypeRequired && !research.prototypeSuccess) {
-        // Optionnel: log ou message d'erreur
-        return
-      }
+  const getTierYear = (tier: number) => {
+    return TIER_YEARS[tier] || 2030
+  }
 
-      const multiplier = this.getDifficultyMultiplier(id)
-      const adjustedCost = Math.round(research.cost * multiplier)
-      const materiauxCost = research.materiauxRaresCost || 0
+  const getDifficultyMultiplier = (id: string) => {
+    const research = researches.value[id]
+    if (!research) return 1
 
-      if (resourceStore.science >= adjustedCost && resourceStore.materiauxRares >= materiauxCost) {
-        resourceStore.addScience(-adjustedCost)
-        resourceStore.addMateriauxRares(-materiauxCost)
-        research.status = 'researching'
-        this.activeResearchId = id
-      }
-    },
+    const gameStore = useGameStore()
+    const currentYear = gameStore.currentYear
+    const forecastYear = TIER_YEARS[research.tier] || 2030
 
-    tick(deltaTime: number) {
-      if (!this.activeResearchId) return
+    const diff = forecastYear - currentYear
 
-      const baseStore = useBaseStore()
-      const hasConnectedLab = baseStore.placedBuildings.some(
-        (b) => b.buildingId === 'lab' && baseStore.isBuildingConnected(b),
+    if (diff > 0) {
+      return 1 + diff * 0.2
+    } else if (diff < 0) {
+      return Math.max(0.5, 1 / (1 + Math.abs(diff) * 0.1))
+    }
+
+    return 1
+  }
+
+  const startResearch = (id: string) => {
+    const resourceStore = useResourceStore()
+    const research = researches.value[id]
+
+    if (!research || (research.status !== 'available' && research.status !== 'locked')) return
+
+    if (research.status === 'locked') {
+      const allMet = research.prerequisites.every(
+        (preId) => researches.value[preId].status === 'completed',
       )
+      if (!allMet) return
+    }
 
-      if (!hasConnectedLab) return
+    if (activeResearchIds.value.includes(id) || researchQueue.value.includes(id)) return
 
-      const research = this.researches[this.activeResearchId]
+    const multiplier = getDifficultyMultiplier(id)
+    const adjustedCost = Math.round(research.cost * multiplier)
+    const materiauxCost = research.materiauxRaresCost || 0
+
+    if (resourceStore.science >= adjustedCost && resourceStore.materiauxRares >= materiauxCost) {
+      resourceStore.addScience(-adjustedCost)
+      resourceStore.addMateriauxRares(-materiauxCost)
+
+      if (activeResearchIds.value.length < maxResearchSlots.value) {
+        research.status = 'researching'
+        activeResearchIds.value.push(id)
+      } else {
+        research.status = 'queued'
+        researchQueue.value.push(id)
+      }
+    }
+  }
+
+  const tick = (deltaTime: number) => {
+    if (activeResearchIds.value.length === 0) return
+
+    const baseStore = useBaseStore()
+    const bases = baseStore.bases || {}
+    // On vérifie qu'au moins un labo existe au total
+    const hasAnyLab = Object.values(bases).some((base) =>
+      base && base.placedBuildings && base.placedBuildings.some((b) => b.buildingId === 'lab'),
+    )
+
+    if (!hasAnyLab) return
+
+    const slots = maxResearchSlots.value
+
+    activeResearchIds.value.forEach((id, index) => {
+      if (index >= slots) return
+
+      const research = researches.value[id]
       if (!research) return
 
-      const multiplier = this.getDifficultyMultiplier(this.activeResearchId)
+      const multiplier = getDifficultyMultiplier(id)
       const adjustedDuration = research.duration * multiplier
 
-      // deltaTime est en ms, on convertit en progression
       const increment = (deltaTime / 1000) * (100 / adjustedDuration)
       research.progress += increment
 
       if (research.progress >= 100) {
-        this.completeResearch(this.activeResearchId)
+        completeResearch(id)
       }
-    },
+    })
+  }
 
-    completeResearch(id: string) {
-      const research = this.researches[id]
-      if (!research) return
+  const completeResearch = (id: string) => {
+    const research = researches.value[id]
+    if (!research) return
 
-      const gameStore = useGameStore()
-      research.progress = 100
-      research.status = 'completed'
-      this.activeResearchId = null
+    const gameStore = useGameStore()
+    research.progress = 100
+    research.status = 'completed'
 
-      gameEvents.emit('research-completed', {
-        researchId: id,
-        researchName: research.name,
-        date: gameStore.formattedDate,
-      })
+    activeResearchIds.value = activeResearchIds.value.filter((activeId) => activeId !== id)
 
-      // Débloquer les suivants
-      Object.values(this.researches).forEach((r) => {
-        if (r.status === 'locked' && r.prerequisites.includes(id)) {
-          // Vérifier si toutes les prérequis sont complétés
-          const allMet = r.prerequisites.every(
-            (preId) => this.researches[preId].status === 'completed',
-          )
-          if (allMet) {
-            r.status = 'available'
-          }
+    gameEvents.emit('research-completed', {
+      researchId: id,
+      researchName: research.name,
+      date: gameStore.formattedDate,
+    })
+
+    Object.values(researches.value).forEach((r) => {
+      if (r.status === 'locked' && r.prerequisites.includes(id)) {
+        const allMet = r.prerequisites.every(
+          (preId) => researches.value[preId].status === 'completed',
+        )
+        if (allMet) {
+          r.status = 'available'
         }
-      })
-    },
-  },
+      }
+    })
 
+    processQueue()
+  }
+
+  const processQueue = () => {
+    while (activeResearchIds.value.length < maxResearchSlots.value && researchQueue.value.length > 0) {
+      const nextId = researchQueue.value.shift()
+      if (nextId) {
+        const research = researches.value[nextId]
+        if (research) {
+          research.status = 'researching'
+          activeResearchIds.value.push(nextId)
+        }
+      }
+    }
+  }
+
+  return {
+    researches,
+    activeResearchIds,
+    researchQueue,
+    activeResearches,
+    queuedResearches,
+    completedResearchIds,
+    maxResearchSlots,
+    getByCategory,
+    getTierYear,
+    getDifficultyMultiplier,
+    startResearch,
+    tick,
+    completeResearch,
+    processQueue,
+  }
 })

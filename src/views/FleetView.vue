@@ -239,6 +239,7 @@
                 ? 'rocket'
                 : 'globe'
             "
+            :is-stalled="fleetStore.isItemStalled(item.id)"
           />
         </div>
       </div>
